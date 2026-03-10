@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>code-tasks Design Directions</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/inter.css">
+    <style>
+        :root {
+            --github-bg: #0d1117;
+            --github-surface: #161b22;
+            --github-border: #30363d;
+            --github-blue: #58a6ff;
+            --github-green: #3fb950;
+            --github-text: #c9d1d9;
+            --github-text-muted: #8b949e;
+            --font-mono: 'SF Mono', 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background-color: #010409;
+            color: var(--github-text);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .showcase-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .showcase-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .showcase-header p {
+            color: var(--github-text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 40px;
+        }
+
+        .direction-card {
+            background-color: var(--github-bg);
+            border: 1px solid var(--github-border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .direction-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--github-blue);
+        }
+
+        .mockup-container {
+            height: 300px;
+            background-color: #010409;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            border-bottom: 1px solid var(--github-border);
+            position: relative;
+        }
+
+        .card-content {
+            padding: 24px;
+        }
+
+        .card-content h3 {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+        }
+
+        .card-content p {
+            color: var(--github-text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* Mockup Styles */
+        .mockup-pulse {
+            width: 80%;
+            padding: 16px;
+            background-color: var(--github-surface);
+            border: 2px solid var(--github-blue);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
+            font-size: 18px;
+            color: var(--github-text);
+        }
+
+        .mockup-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mockup-item {
+            padding: 12px;
+            background-color: var(--github-surface);
+            border: 1px solid var(--github-border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mockup-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--github-border);
+            border-radius: 4px;
+        }
+
+        .mockup-pill {
+            padding: 2px 8px;
+            background-color: rgba(88, 166, 255, 0.1);
+            border: 1px solid var(--github-blue);
+            border-radius: 20px;
+            color: var(--github-blue);
+            font-family: var(--font-mono);
+            font-size: 10px;
+        }
+
+        .mockup-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--github-green);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mockup-fab {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background-color: var(--github-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="showcase-header">
+        <h1>code-tasks Design Directions</h1>
+        <p>Exploring the intersection of GitHub's utility and Things' high-fidelity interaction design. Which direction feels right for your pocket-to-vault workflow?</p>
+    </div>
+
+    <div class="grid">
+        <!-- Direction 1: The Pulse Primary -->
+        <div class="direction-card">
+            <div class="mockup-container">
+                <div class="mockup-pulse">The next big technical idea...|</div>
+            </div>
+            <div class="card-content">
+                <h3>1. The Pulse Primary</h3>
+                <p>Pure focus on the moment of capture. The input field dominates the screen, with the existing task list ghosted below. Perfect for high-velocity, single-task entry.</p>
+            </div>
+        </div>
+
+        <!-- Direction 2: The Repo Hub -->
+        <div class="direction-card">
+            <div class="mockup-container" style="flex-direction: column; justify-content: flex-start;">
+                <div style="width: 100%; border-bottom: 1px solid var(--github-border); padding: 12px; margin-bottom: 20px; font-family: var(--font-mono); font-size: 12px; display: flex; justify-content: space-between;">
+                    <span>repo: captured-ideas-thomas</span>
+                    <span style="color: var(--github-green);">● online</span>
+                </div>
+                <div class="mockup-pulse" style="width: 90%; font-size: 14px;">Quick capture...</div>
+            </div>
+            <div class="card-content">
+                <h3>2. The Repo Hub</h3>
+                <p>Always visible repository context. Shows the current target branch and sync status at a glance. Reinforces the GitHub backend mental model from the start.</p>
+            </div>
+        </div>
+
+        <!-- Direction 3: The Interactive Card -->
+        <div class="direction-card">
+            <div class="mockup-container">
+                <div class="mockup-list" style="width: 90%;">
+                    <div class="mockup-item" style="border-color: var(--github-blue); transform: scale(1.02); box-shadow: 0 8px 16px rgba(0,0,0,0.4);">
+                        <div class="mockup-checkbox"></div>
+                        <span style="flex: 1;">Refactor auth module</span>
+                        <div class="mockup-pill">IMPORTANT</div>
+                    </div>
+                    <div class="mockup-item">
+                        <div class="mockup-checkbox"></div>
+                        <span>Update README.md</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-content">
+                <h3>3. The Interactive Card</h3>
+                <p>Focus on tactile list management. Task cards have rich spring physics and "lift" when dragged. Uses haptic-aligned animations to make management feel like a game.</p>
+            </div>
+        </div>
+
+        <!-- Direction 4: The Developer CLI -->
+        <div class="direction-card">
+            <div class="mockup-container">
+                <div style="width: 100%; font-family: var(--font-mono); font-size: 13px; line-height: 1.5;">
+                    <span style="color: var(--github-text-muted);">$ gitty log --last 2</span><br>
+                    <span style="color: var(--github-blue);">[commit]</span> Capture midnight spark<br>
+                    <span style="color: var(--github-blue);">[commit]</span> Add auth tests<br><br>
+                    <span style="color: var(--github-text-muted);">> _</span>
+                </div>
+            </div>
+            <div class="card-content">
+                <h3>4. The Developer CLI</h3>
+                <p>A hyper-utilitarian approach for developers who love the terminal. Uses monospaced typography, minimal borders, and CLI-inspired metaphors for all actions.</p>
+            </div>
+        </div>
+
+        <!-- Direction 5: The "Relief" Dark Mode -->
+        <div class="direction-card">
+            <div class="mockup-container" style="background-color: #010409;">
+                <div style="width: 100%; height: 100%; border-radius: 8px; background: radial-gradient(circle at center, #161b22 0%, #0d1117 100%); display: flex; align-items: center; justify-content: center;">
+                   <div class="mockup-pulse" style="background: transparent; border: none; text-align: center;">"Sparking ideas..."</div>
+                </div>
+            </div>
+            <div class="card-content">
+                <h3>5. The "Relief" Dark Mode</h3>
+                <p>Optimized for late-night usage. Uses soft gradients and "warm" dark-mode colors to reduce eye strain. The UI feels "quiet" and non-intrusive during 3 AM sessions.</p>
+            </div>
+        </div>
+
+        <!-- Direction 6: The Panel Detailer -->
+        <div class="direction-card">
+            <div class="mockup-container" style="justify-content: flex-end; padding: 0;">
+                <div style="width: 70%; height: 100%; background-color: var(--github-surface); border-left: 2px solid var(--github-border); padding: 20px;">
+                    <h4 style="margin: 0 0 16px 0;">Task Details</h4>
+                    <div style="font-size: 12px; color: var(--github-text-muted); margin-bottom: 20px;">### Description</div>
+                    <div style="width: 100%; height: 100px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
+                </div>
+            </div>
+            <div class="card-content">
+                <h3>6. The Panel Detailer</h3>
+                <p>Focus on the "Refinement" phase. Emphasizes the slide-in detail panel for editing checklists and writing long-form Markdown descriptions without leaving the list.</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
