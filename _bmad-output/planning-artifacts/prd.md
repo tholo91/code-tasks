@@ -1,5 +1,5 @@
 ---
-stepsCompleted: ["step-01-init"]
+stepsCompleted: ["step-01-init", "step-01b-continue"]
 inputDocuments: ["_bmad-output/planning-artifacts/product-brief-code-tasks-2026-03-10.md", "docs/vision.md", "docs/example-format.md", "docs/new-names.md", "docs/research-impulses.md", "README.md"]
 workflowType: 'prd'
 briefCount: 1
