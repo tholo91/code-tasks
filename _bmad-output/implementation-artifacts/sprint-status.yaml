@@ -15,7 +15,7 @@ sprint_info:
 development_status:
   # Epic 1: The Secure Vault
   epic-1: "in-progress"
-  1-1-project-initialization-pwa-core: "ready-for-dev"
+  1-1-project-initialization-pwa-core: "review"
   1-2-github-pat-authentication: "ready-for-dev"
   1-3-persistent-session-management: "ready-for-dev"
 
@@ -32,8 +32,8 @@ development_status:
   3-4-offline-persistence: "ready-for-dev"
 
   # Epic 4: The Bridge
-  epic-4: "backlog"
-  4-1-background-sync-engine: "backlog"
-  4-2-ai-ready-header-injection: "backlog"
-  4-3-conflict-free-user-scoping: "backlog"
-  4-4-manual-sync-trigger: "backlog"
+  epic-4: "in-progress"
+  4-1-background-sync-engine: "ready-for-dev"
+  4-2-ai-ready-header-injection: "ready-for-dev"
+  4-3-conflict-free-user-scoping: "ready-for-dev"
+  4-4-manual-sync-trigger: "ready-for-dev"
