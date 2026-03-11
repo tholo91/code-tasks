@@ -1,6 +1,10 @@
 ---
-stepsCompleted: ["step-01-init", "step-01b-continue", "step-02-discovery", "step-02b-vision", "step-02c-executive-summary", "step-03-success", "step-04-journeys", "step-05-domain", "step-06-innovation", "step-07-project-type", "step-08-scoping", "step-09-functional", "step-10-nonfunctional", "step-11-polish"]
-inputDocuments: ["_bmad-output/planning-artifacts/product-brief-code-tasks-2026-03-10.md", "docs/vision.md", "docs/example-format.md", "docs/new-names.md", "docs/research-impulses.md", "README.md"]
+stepsCompleted: ["step-01-init", "step-01b-continue", "step-02-discovery", "step-02b-vision", "step-02c-executive-summary", "step-03-success", "step-04-journeys", "step-05-domain", "step-06-innovation", "step-07-project-type", "step-08-scoping", "step-09-functional", "step-10-nonfunctional", "step-11-polish", "step-e-01-discovery", "step-e-02-review", "step-e-03-edit"]
+lastEdited: '2026-03-11'
+editHistory:
+  - date: '2026-03-11'
+    changes: 'Added mobile project-type requirements, refined FRs for measurability, added NFR measurement methods, removed technology leakage.'
+inputDocuments: ["_bmad-output/planning-artifacts/product-brief-code-tasks-2026-03-10.md", "docs/vision.md", "docs/example-format.md", "docs/new-names.md", "docs/research-impulses.md", "README.md", "_bmad-output/planning-artifacts/prd-validation-report.md"]
 workflowType: 'prd'
 briefCount: 1
 researchCount: 4
@@ -75,29 +79,44 @@ classification:
 - **Action:** Agent reads the AI-Ready header and follows the priority instructions.
 - **Outcome:** Agent executes tasks and updates Markdown status without manual human context.
 
+## Project-Type Requirements
+
+### Mobile Platform & Strategy
+- **Target:** Progressive Web App (PWA) with Capacitor wrapper for iOS/Android distribution.
+- **Offline Strategy:** "Overnight Offline" reliability via IndexedDB local persistence and background sync.
+
+### Device Permissions
+- **Notifications:** Required for sync status and agent execution milestones.
+- **Storage:** Required for local persistence of captured ideas and session tokens.
+- **Camera:** Not required for MVP.
+
+### Store Compliance
+- **PWA:** Manifest and Service Worker compliant for "Add to Home Screen" on iOS/Android.
+- **Capacitor:** Standard App Store/Play Store guidelines for WebView-based applications.
+
 ## Functional Requirements
 
 ### 1. Identity & Data Management
-- **FR1:** Users can authenticate securely via GitHub OAuth.
+- **FR1:** Users can authenticate via GitHub OAuth (AES-GCM encrypted token storage).
 - **FR2:** Users can select a target repository with a persistent "Last Used" default.
-- **FR3:** System can securely persist access tokens locally for recurring sessions.
+- **FR3:** System can persist access tokens in local storage (AES-GCM encrypted).
 
 ### 2. Capture & Interaction
 - **FR4:** Users can enter task titles/descriptions via the "Pulse" interface.
 - **FR5:** Users can toggle "Important" flags and trigger capture via a single gesture.
-- **FR6:** System can provide immediate animation-based feedback upon local capture.
+- **FR6:** System can provide visual animation-based feedback (latency < 100ms) upon local capture.
 
 ### 3. Synchronization & Formatting
-- **FR7:** System can store ideas in IndexedDB to prevent data loss during offline sessions.
+- **FR7:** System can store ideas in persistent local storage to prevent data loss during offline sessions.
 - **FR8:** System can automatically synchronize pending changes to GitHub upon reconnection.
 - **FR9:** System can inject standardized AI-Ready headers and metadata into `captured-ideas-{username}.md`.
 
 ## Non-Functional Requirements
 
 ### Performance & Quality
-- **Latency:** TTI < 1.5s; UI animations maintained at a consistent 60 FPS.
-- **Security:** Tokens and local data encrypted at rest; all API traffic over HTTPS.
-- **Reliability:** 100% data retention for captured ideas; exponential backoff for failed syncs.
+- **Latency:** TTI < 1.5s as measured by Lighthouse; UI animations maintained at 60 FPS.
+- **Security:** Tokens and local data encrypted at rest (AES-GCM); all API traffic over HTTPS.
+- **Reliability:** 100% data retention for captured ideas; exponential backoff for failed syncs as measured by local audit logs.
 
 ## Project Classification
 - **Type:** Mobile App (PWA-First / Cross-Platform Ready)
