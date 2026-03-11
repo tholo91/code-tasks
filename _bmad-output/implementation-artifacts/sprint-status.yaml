@@ -1,0 +1,39 @@
+# code-tasks - Sprint Status Report
+# Updated: 2026-03-11
+
+status_definitions:
+  backlog: "Story identified in epics but story file not yet created"
+  ready-for-dev: "Story file created and contexted, ready for implementation"
+  in-progress: "Developer is currently working on tests and code"
+  review: "Implementation complete, pending peer/AI review"
+  done: "Story complete and merged"
+
+sprint_info:
+  current_sprint: "Sprint 1: Foundations"
+  start_date: "2026-03-11"
+
+development_status:
+  # Epic 1: The Secure Vault
+  epic-1: "in-progress"
+  1-1-project-initialization-pwa-core: "ready-for-dev"
+  1-2-github-pat-authentication: "ready-for-dev"
+  1-3-persistent-session-management: "ready-for-dev"
+
+  # Epic 2: The Target
+  epic-2: "in-progress"
+  2-1-repository-discovery-selection: "ready-for-dev"
+  2-2-persistent-last-used-repo: "ready-for-dev"
+
+  # Epic 3: The Pulse
+  epic-3: "in-progress"
+  3-1-the-pulse-ui-capture: "ready-for-dev"
+  3-2-launch-gesture-feedback: "ready-for-dev"
+  3-3-priority-toggles: "ready-for-dev"
+  3-4-offline-persistence: "ready-for-dev"
+
+  # Epic 4: The Bridge
+  epic-4: "backlog"
+  4-1-background-sync-engine: "backlog"
+  4-2-ai-ready-header-injection: "backlog"
+  4-3-conflict-free-user-scoping: "backlog"
+  4-4-manual-sync-trigger: "backlog"
