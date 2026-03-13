@@ -1,4 +1,5 @@
 import { Octokit } from 'octokit'
+import { throttling } from '@octokit/plugin-throttling'
 
 export interface GitHubUser {
   login: string
@@ -9,6 +10,42 @@ export interface GitHubUser {
 export type TokenValidationResult =
   | { valid: true; user: GitHubUser }
   | { valid: false; error: string }
+
+const ThrottledOctokit = Octokit.plugin(throttling)
+
+let octokitInstance: Octokit | null = null
+
+export function getOctokit(token: string): Octokit {
+  if (!octokitInstance) {
+    octokitInstance = new ThrottledOctokit({
+      auth: token,
+      throttle: {
+        onRateLimit: (retryAfter, options: any, octokit, retryCount) => {
+          octokit.log.warn(
+            `Request quota exhausted for request ${options.method} ${options.url}`,
+          )
+
+          if (retryCount < 1) {
+            // only retry once
+            octokit.log.info(`Retrying after ${retryAfter} seconds!`)
+            return true
+          }
+        },
+        onSecondaryRateLimit: (retryAfter, options: any, octokit) => {
+          // does not retry, only logs a warning
+          octokit.log.warn(
+            `Secondary quota exhausted for request ${options.method} ${options.url}`,
+          )
+        },
+      },
+    })
+  }
+  return octokitInstance
+}
+
+export function clearOctokitInstance() {
+  octokitInstance = null
+}
 
 export async function getAuthenticatedUser(
   octokit: Octokit,
@@ -29,10 +66,11 @@ export async function validateToken(
   }
 
   try {
-    const octokit = new Octokit({ auth: token })
+    const octokit = getOctokit(token)
     const user = await getAuthenticatedUser(octokit)
     return { valid: true, user }
   } catch (err) {
+    clearOctokitInstance()
     const message =
       err instanceof Error ? err.message : 'Token validation failed'
     return { valid: false, error: message }

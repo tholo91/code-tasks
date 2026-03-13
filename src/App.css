@@ -24,3 +24,9 @@
   color: var(--color-text-secondary);
   margin: 0;
 }
+
+.app-repo {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  margin: 0.25rem 0 0;
+}

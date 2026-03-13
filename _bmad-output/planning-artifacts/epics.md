@@ -205,6 +205,58 @@ So that I never lose a spark due to a bad connection.
 **Then** the task is synchronously written to LocalStorage (or IndexedDB) (FR7, NFR5)
 **And** the task appears in the list with a "Sync Pending" indicator
 
+### Story 3.5: Fuzzy Task Search
+
+As a User,
+I want a search bar above my captured task list that fuzzy-searches across task titles and descriptions,
+so that I can quickly find specific ideas as my list grows.
+
+**Acceptance Criteria:**
+
+**Given** the task list has fewer than 5 tasks
+**When** the app renders
+**Then** the search bar is visible but visually de-emphasized (reduced opacity, muted placeholder)
+
+**Given** the task list has 5 or more tasks
+**When** the app renders
+**Then** the search bar becomes fully prominent and active
+
+**Given** a user types in the search bar
+**When** any character is entered
+**Then** the task list filters in real-time, fuzzy-matching against task title AND body/description
+
+**Given** the user clears the search bar
+**When** input is empty
+**Then** the full task list is restored
+
+**Given** no tasks match
+**When** the filtered list is empty
+**Then** an inline empty state is shown: "No tasks match '{{query}}'"
+
+### Story 3.6: Priority Filter
+
+As a User,
+I want to filter my captured task list by priority (All / Important / Not Important),
+so that I can focus on high-priority sparks without scrolling through everything.
+
+**Acceptance Criteria:**
+
+**Given** I am on the capture screen
+**When** the task list renders
+**Then** a filter control is visible with three states: All (default), Important, Not Important
+
+**Given** the filter is set to Important
+**When** active
+**Then** only tasks with isImportant: true are shown
+
+**Given** the priority filter is active AND the search bar has a query
+**When** both filters are in effect
+**Then** only tasks satisfying BOTH conditions are shown
+
+**Given** the filtered list is empty
+**When** no matching tasks exist
+**Then** an inline empty state is shown: "No {{filterLabel}} tasks"
+
 ## Epic 4: The Bridge (Sync Engine & AI Formatting)
 
 Build the automated sync engine that pushes your ideas to GitHub and formats them with the AI-Ready headers. After this, your ideas will be safely tucked away in your repo, perfectly formatted for your AI agents.

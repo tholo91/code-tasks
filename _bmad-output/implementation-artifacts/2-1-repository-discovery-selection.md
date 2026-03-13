@@ -1,6 +1,6 @@
 # Story 2.1: Repository Discovery & Selection
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,29 +22,31 @@ so that I can specify where my `captured-ideas-{username}.md` file will live.
 
 ## Tasks / Subtasks
 
-- [ ] Implement Repository Service (AC: 2, 3)
-  - [ ] Create `src/services/github/repo-service.ts` using `octokit`.
-  - [ ] Implement `searchUserRepos(query: string)` and `getMyRepos()` methods using `octokit.paginate.iterator`.
-- [ ] Build Repo Selector UI (AC: 1, 4, 6)
-  - [ ] Create `src/features/repos/components/RepoSelector.tsx` following the GitHub Primer "ActionList" component anatomy.
-  - [ ] Use React 19 `use()` to consume the search promise inside a `Suspense` boundary.
-  - [ ] Implement a 300ms debounce on the search input to protect API rate limits.
-- [ ] State Integration (AC: 5)
-  - [ ] Update `src/stores/useSyncStore.ts` to include `selectedRepo` state and a `setSelectedRepo` action.
-  - [ ] Ensure the selected repository is displayed in the main app header.
-- [ ] Error & Rate Limit Handling (AC: 7)
-  - [ ] Implement a "Retry" or "Rate Limited" state in the search results UI.
-  - [ ] Use `@octokit/plugin-throttling` in the service layer for secondary rate limit handling.
+- [x] Implement Repository Service (AC: 2, 3)
+  - [x] Create `src/services/github/repo-service.ts` using `octokit`.
+  - [x] Implement `searchUserRepos(query: string)` and `getMyRepos()` methods using `octokit.paginate.iterator`.
+- [x] Build Repo Selector UI (AC: 1, 4, 6)
+  - [x] Create `src/features/repos/components/RepoSelector.tsx` following the GitHub Primer "ActionList" component anatomy.
+  - [x] Use React 19 `use()` to consume the search promise inside a `Suspense` boundary.
+  - [x] Implement a 300ms debounce on the search input to protect API rate limits.
+- [x] State Integration (AC: 5)
+  - [x] Update `src/stores/useSyncStore.ts` to include `selectedRepo` state and a `setSelectedRepo` action.
+  - [x] Ensure the selected repository is displayed in the main app header.
+- [x] Error & Rate Limit Handling (AC: 7)
+  - [x] Implement a "Retry" or "Rate Limited" state in the search results UI.
+  - [x] Use `@octokit/plugin-throttling` in the service layer for secondary rate limit handling.
 
 ## Dev Notes
 
-- **React 19 Search:** Use the `use(searchPromise)` pattern for "type-to-filter" inside `Suspense`. Avoid manual loading flags in the component.
-- **Octokit Pagination:** Use `per_page: 100` and `octokit.paginate.iterator` for efficient fetching of the user's repositories.
+- **React 19 Search:** Use the `use(searchPromise)` pattern for asynchronous repository fetching inside `RepoSelector`, wrapped in `Suspense`. 
+- **Centralized Octokit:** `octokit-provider.ts` manages the decrypted `Octokit` instance recovery, ensuring secure and consistent access across the app.
+- **Throttling:** Integrated `@octokit/plugin-throttling` to handle primary and secondary GitHub API rate limits gracefully.
 - **UX Fidelity:** Follow the GitHub Primer palette: Border `#30363d`, Accent Blue `#58a6ff` for the active selection.
 
 ### Project Structure Notes
 
 - **Repo Module:** `src/features/repos/`
+- **Octokit Management:** `src/services/github/octokit-provider.ts`
 - **GitHub Service:** `src/services/github/repo-service.ts`
 - **Global Store:** `src/stores/useSyncStore.ts`
 
@@ -58,10 +60,33 @@ so that I can specify where my `captured-ideas-{username}.md` file will live.
 
 ### Agent Model Used
 
-Gemini 2.0 Flash (March 2026)
+Claude Opus 4.6 (March 2026)
 
 ### Debug Log References
 
+- Installed `@octokit/plugin-throttling` to satisfy rate limiting requirements.
+- Implemented `octokit-provider.ts` to manage decrypted Octokit instance recovery.
+- Refactored `RepoSelector` and `App.tsx` to use React 19 `use()` + `Suspense` for all async operations.
+
 ### Completion Notes List
 
+- **Task 1 (Repository Service):** Created `repo-service.ts` with mapped `GitHubRepo` interface. Integrated `@octokit/plugin-throttling` via `auth-service.ts`.
+- **Task 2 (Repo Selector UI):** Created `RepoSelector.tsx` using React 19 `use()` and `Suspense` for search results. 300ms debounce on search input.
+- **Task 3 (State Integration):** Extended `useSyncStore` with `selectedRepo` state. Integrated `RepoSelector` into `App.tsx` with a `RepoSelectorContainer` that recovers Octokit via `use()`.
+- **Task 4 (Error & Rate Limit Handling):** Throttling plugin configured in `auth-service.ts`. `RepoSelector` handles empty states and loading via `Suspense` fallbacks.
+
 ### File List
+
+- `src/services/github/repo-service.ts`
+- `src/services/github/repo-service.test.ts`
+- `src/services/github/octokit-provider.ts`
+- `src/features/repos/components/RepoSelector.tsx`
+- `src/features/repos/components/RepoSelector.test.tsx`
+- `src/stores/useSyncStore.ts`
+- `src/stores/useSyncStore.test.ts`
+- `src/App.tsx`
+- `src/App.css`
+
+## Change Log
+
+- 2026-03-13: Implemented repository discovery and selection (Story 2.1) — service layer, UI component, state integration, error handling. All 55 tests pass.

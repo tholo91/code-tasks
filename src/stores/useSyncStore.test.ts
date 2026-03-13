@@ -57,6 +57,7 @@ describe('useSyncStore', () => {
       isAuthenticated: false,
       user: null,
       encryptedToken: null,
+      selectedRepo: null,
     })
   })
 
@@ -121,6 +122,44 @@ describe('useSyncStore', () => {
       expect(state.isAuthenticated).toBe(false)
       expect(state.user).toBeNull()
       expect(state.encryptedToken).toBeNull()
+    })
+  })
+
+  describe('selectedRepo', () => {
+    it('has null selectedRepo in initial state', () => {
+      const state = useSyncStore.getState()
+      expect(state.selectedRepo).toBeNull()
+    })
+
+    it('sets selected repo via setSelectedRepo', () => {
+      const repo = {
+        id: 42,
+        fullName: 'testuser/my-repo',
+        owner: 'testuser',
+      }
+      useSyncStore.getState().setSelectedRepo(repo)
+
+      const state = useSyncStore.getState()
+      expect(state.selectedRepo).toEqual(repo)
+    })
+
+    it('clears selectedRepo when auth is cleared', async () => {
+      useSyncStore.getState().setSelectedRepo({
+        id: 42,
+        fullName: 'testuser/my-repo',
+        owner: 'testuser',
+      })
+
+      await useSyncStore.getState().setAuth(
+        'ghp_testtoken123',
+        { login: 'testuser', avatarUrl: 'https://example.com/avatar.png', name: 'Test User' },
+        'test-passphrase',
+      )
+
+      useSyncStore.getState().clearAuth()
+
+      const state = useSyncStore.getState()
+      expect(state.selectedRepo).toBeNull()
     })
   })
 

@@ -17,11 +17,11 @@ development_status:
   epic-1: "in-progress"
   1-1-project-initialization-pwa-core: "done"
   1-2-github-pat-authentication: "done"
-  1-3-persistent-session-management: "review"
+  1-3-persistent-session-management: "done"
 
   # Epic 2: The Target
   epic-2: "in-progress"
-  2-1-repository-discovery-selection: "ready-for-dev"
+  2-1-repository-discovery-selection: "done"
   2-2-persistent-last-used-repo: "ready-for-dev"
 
   # Epic 3: The Pulse
@@ -30,6 +30,8 @@ development_status:
   3-2-launch-gesture-feedback: "ready-for-dev"
   3-3-priority-toggles: "ready-for-dev"
   3-4-offline-persistence: "ready-for-dev"
+  3-5-fuzzy-task-search: "ready-for-dev"
+  3-6-priority-filter: "ready-for-dev"
 
   # Epic 4: The Bridge
   epic-4: "in-progress"
