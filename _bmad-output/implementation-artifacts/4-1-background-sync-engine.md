@@ -1,6 +1,6 @@
 # Story 4.1: Background Sync Engine
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -68,6 +68,7 @@ Claude Opus 4.6 (March 2026)
 ### Completion Notes List
 
 - Created `sync-service.ts` with full Get-Modify-Set atomic commit pattern, 409 conflict retry (up to 3 attempts), and batched task commits
+- Created `useAutoSync.ts` hook to handle automatic sync triggers on launch, reconnection, and new task capture
 - Added `SyncEngineStatus` type (`idle | syncing | success | error`) to store with `isSyncing`, `lastSyncedAt`, `syncEngineStatus`, `syncError` fields
 - Added `setSyncStatus()` and `updateLastSyncedAt()` actions to useSyncStore
 - Integrated `@octokit/plugin-retry` alongside existing throttling plugin for exponential backoff
@@ -80,11 +81,13 @@ Claude Opus 4.6 (March 2026)
 ### Change Log
 
 - 2026-03-14: Implemented Story 4.1 — Background Sync Engine (all ACs satisfied)
+- 2026-03-14: Fixed missing automatic sync triggers (AC 1) via `useAutoSync` hook during code review
 
 ### File List
 
 - `src/services/github/sync-service.ts` (new) — Core sync logic with Get-Modify-Set pattern
 - `src/services/github/sync-service.test.ts` (new) — 17 unit tests for sync service
+- `src/features/sync/hooks/useAutoSync.ts` (new) — Automated sync triggers (launch/recon)
 - `src/features/sync/components/SyncStatusBar.tsx` (new) — Non-intrusive sync status UI
 - `src/features/sync/components/SyncStatusBar.test.tsx` (new) — 7 unit tests for status bar
 - `src/stores/useSyncStore.ts` (modified) — Added sync state fields and actions

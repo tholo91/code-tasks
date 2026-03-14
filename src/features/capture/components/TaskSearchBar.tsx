@@ -55,17 +55,17 @@ export function TaskSearchBar({ value, onChange, taskCount }: TaskSearchBarProps
           data-testid="task-search-input"
           className="w-full rounded-md py-2 pl-9 pr-9 text-sm"
           style={{
-            backgroundColor: 'var(--color-surface, #161b22)',
-            color: 'var(--color-text-primary, #e6edf3)',
-            border: '1px solid var(--color-border, #30363d)',
+            backgroundColor: 'var(--color-canvas-subtle, #161b22)',
+            color: 'var(--color-fg-default, #e6edf3)',
+            border: '1px solid var(--color-border-default, #30363d)',
             minHeight: '44px',
             outline: 'none',
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--color-accent, #58a6ff)'
+            e.currentTarget.style.borderColor = 'var(--color-accent-emphasis, #58a6ff)'
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--color-border, #30363d)'
+            e.currentTarget.style.borderColor = 'var(--color-border-default, #30363d)'
           }}
         />
 

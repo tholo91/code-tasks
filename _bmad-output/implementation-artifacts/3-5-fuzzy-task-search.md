@@ -1,6 +1,6 @@
 # Story 3.5: Fuzzy Task Search
 
-Status: review
+Status: done
 
 ## Story
 
@@ -63,7 +63,7 @@ export const createTaskFuse = (tasks: Task[]) =>
     keys: ['title', 'body'],
     threshold: 0.4,       // 0 = exact match, 1 = match anything — 0.4 is the sweet spot
     ignoreLocation: true, // search full string, not just the start
-    minMatchCharLength: 2,
+    minMatchCharLength: 1,
   });
 ```
 
@@ -144,17 +144,18 @@ No debug issues encountered.
 
 ### Completion Notes List
 
-- Installed fuse.js for fuzzy search with threshold 0.4, ignoreLocation, minMatchCharLength 2
+- Installed fuse.js for fuzzy search with threshold 0.4, ignoreLocation, minMatchCharLength 1
 - Created `fuzzy-search.ts` utility with `createTaskFuse()` and `searchTasks()` functions
 - Built `TaskSearchBar` component with progressive disclosure (opacity 0.4 → 1.0 at 5+ tasks)
 - Uses Framer Motion `useReducedMotion()` to skip animations when user prefers reduced motion
 - Integrated search state into `App.tsx` with `useState` (ephemeral, not persisted)
-- Filtering uses `useMemo` for performance; only searches when query >= 2 chars
+- Optimized search performance by memoizing Fuse index independently of query
+- Filtering works for any character (minMatchCharLength: 1) as per AC #3
 - Inline empty state shows "No tasks match '{{query}}'" when no results
 - All touch targets meet 44×44px minimum
-- 14 new tests: 6 fuzzy-search utility tests, 8 TaskSearchBar component tests
+- 19 new tests: 7 fuzzy-search utility tests, 8 TaskSearchBar component tests, 4 App integration tests
 - No browser keyboard shortcuts intercepted (Cmd+F/Ctrl+F pass through)
-- Note: Task type does not have `isImportant` field (it's store-level state only); Fuse.js keys `title` and `body` match the Task interface correctly
+- Note: Task type includes `isImportant` field as of Story 3.6; Fuse.js keys `title` and `body` match the Task interface correctly
 
 ### File List
 

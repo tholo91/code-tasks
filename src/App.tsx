@@ -10,6 +10,7 @@ import { TaskCard } from './features/capture/components/TaskCard'
 import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
 import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
 import { SyncFAB } from './features/sync/components/SyncFAB'
+import { useAutoSync } from './features/sync/hooks/useAutoSync'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import type { PriorityFilter } from './types/task'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
@@ -95,11 +96,15 @@ function AppContent() {
     loadTasksFromIDB()
   }, [loadTasksFromIDB])
 
+  // Automatic sync triggers
+  useAutoSync()
+
+  const fuse = useMemo(() => createTaskFuse(tasks), [tasks])
+
   const searchFilteredTasks = useMemo(() => {
-    if (searchQuery.length < 2) return tasks
-    const fuse = createTaskFuse(tasks)
+    if (searchQuery.length < 1) return tasks
     return searchTasks(fuse, searchQuery)
-  }, [tasks, searchQuery])
+  }, [fuse, searchQuery, tasks])
 
   const displayedTasks = useMemo(() => {
     if (priorityFilter === 'all') return searchFilteredTasks
@@ -176,10 +181,10 @@ function AppContent() {
             ) : (
               <p
                 className="py-4 text-center text-sm"
-                style={{ color: 'var(--color-text-secondary, #8b949e)' }}
+                style={{ color: 'var(--color-fg-muted, var(--color-text-secondary, #8b949e))' }}
                 data-testid="filter-empty-state"
               >
-                {searchQuery.length >= 2
+                {searchQuery.length >= 1
                   ? `No tasks match '\u2018${searchQuery}\u2019'`
                   : priorityFilter === 'important'
                     ? 'No important tasks'

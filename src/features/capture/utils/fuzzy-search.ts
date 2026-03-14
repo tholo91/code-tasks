@@ -6,7 +6,7 @@ export const createTaskFuse = (tasks: Task[]) =>
     keys: ['title', 'body'],
     threshold: 0.4,
     ignoreLocation: true,
-    minMatchCharLength: 2,
+    minMatchCharLength: 1,
   })
 
 export const searchTasks = (fuse: Fuse<Task>, query: string): Task[] =>

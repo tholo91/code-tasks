@@ -40,6 +40,13 @@ describe('fuzzy-search', () => {
       expect(results[0].id).toBe('2')
     })
 
+    it('returns task on 1-character match', () => {
+      const fuse = createTaskFuse(sampleTasks)
+      const results = searchTasks(fuse, 'f')
+      expect(results.length).toBeGreaterThanOrEqual(1)
+      expect(results.some((t) => t.title.toLowerCase().includes('f'))).toBe(true)
+    })
+
     it('returns task on fuzzy title match (typo)', () => {
       const fuse = createTaskFuse(sampleTasks)
       const results = searchTasks(fuse, 'compnent')
