@@ -27,18 +27,18 @@ development_status:
   2-2-persistent-last-used-repo: "done"
 
   # Epic 3: The Pulse
-  epic-3: "in-progress"
+  epic-3: "done"
   3-1-the-pulse-ui-capture: "done"
   3-2-launch-gesture-feedback: "done"
   3-3-priority-toggles: "done"
   3-4-offline-persistence: "done"
   3-5-fuzzy-task-search: "done"
-  3-6-priority-filter: "review"
+  3-6-priority-filter: "done"
 
   # Epic 4: The Bridge
   epic-4: "in-progress"
   4-1-background-sync-engine: "done"
-  4-2-ai-ready-header-injection: "review"
+  4-2-ai-ready-header-injection: "done"
   4-3-conflict-free-user-scoping: "done"
   4-4-manual-sync-trigger: "done"
 

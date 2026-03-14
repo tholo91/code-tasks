@@ -1,6 +1,6 @@
 # Story 3.6: Priority Filter
 
-Status: review
+Status: done
 
 ## Story
 
