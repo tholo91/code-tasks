@@ -66,6 +66,7 @@ import {
   syncPendingTasks,
   getFileContent,
   commitTasks,
+  getScopedFileName,
 } from './sync-service'
 import { useSyncStore } from '../../stores/useSyncStore'
 import { HEADER_SIGNATURE } from '../../features/sync/utils/markdown-templates'
@@ -83,6 +84,24 @@ function createTask(overrides: Partial<Task> = {}): Task {
     ...overrides,
   }
 }
+
+describe('getScopedFileName', () => {
+  it('returns captured-ideas-{username}.md for a given username', () => {
+    expect(getScopedFileName('thomas')).toBe('captured-ideas-thomas.md')
+  })
+
+  it('handles usernames with hyphens and numbers', () => {
+    expect(getScopedFileName('dev-user-42')).toBe('captured-ideas-dev-user-42.md')
+  })
+
+  it('returns different file names for different users', () => {
+    const file1 = getScopedFileName('alice')
+    const file2 = getScopedFileName('bob')
+    expect(file1).not.toBe(file2)
+    expect(file1).toBe('captured-ideas-alice.md')
+    expect(file2).toBe('captured-ideas-bob.md')
+  })
+})
 
 describe('sync-service', () => {
   beforeEach(() => {
@@ -429,6 +448,20 @@ describe('sync-service', () => {
       const state = useSyncStore.getState()
       expect(state.tasks.find((t) => t.id === '1')?.syncStatus).toBe('synced')
       expect(state.tasks.find((t) => t.id === '2')?.syncStatus).toBe('pending')
+    })
+
+    it('uses getScopedFileName for the target file path', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      await syncPendingTasks()
+
+      const call =
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      expect(call.path).toBe('captured-ideas-testuser.md')
     })
 
     it('returns 0 when user is null', async () => {

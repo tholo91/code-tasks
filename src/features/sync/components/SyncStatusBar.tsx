@@ -1,13 +1,19 @@
 import { useSyncStore } from '../../../stores/useSyncStore'
+import { getScopedFileName } from '../../../services/github/sync-service'
 
 /**
  * Non-intrusive status bar that shows sync state.
  * Displays at the bottom of the screen as a subtle indicator.
+ * Also shows the user-scoped target file name for visual confirmation.
  */
 export function SyncStatusBar() {
   const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
   const syncError = useSyncStore((s) => s.syncError)
   const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt)
+  const user = useSyncStore((s) => s.user)
+  const selectedRepo = useSyncStore((s) => s.selectedRepo)
+
+  const targetFileName = user ? getScopedFileName(user.login) : null
 
   if (syncEngineStatus === 'idle' && !lastSyncedAt) {
     return null
@@ -78,6 +84,15 @@ export function SyncStatusBar() {
         </svg>
       )}
       <span>{config.text}</span>
+      {targetFileName && selectedRepo && (
+        <span
+          className="ml-2 opacity-70"
+          data-testid="target-file-indicator"
+          title={`Syncing to ${targetFileName} in ${selectedRepo.fullName}`}
+        >
+          &rarr; {targetFileName}
+        </span>
+      )}
     </div>
   )
 }
