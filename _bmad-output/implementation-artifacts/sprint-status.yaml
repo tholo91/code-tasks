@@ -14,12 +14,12 @@ sprint_info:
 
 development_status:
   # Epic 1: The Secure Vault
-  epic-1: "in-progress"
+  epic-1: "done"
   1-1-project-initialization-pwa-core: "done"
   1-2-github-pat-authentication: "done"
   1-3-persistent-session-management: "done"
 
-  1-4-github-pages-deployment: "ready-for-dev"
+  1-4-github-pages-deployment: "done"
 
   # Epic 2: The Target
   epic-2: "in-progress"
