@@ -19,6 +19,8 @@ development_status:
   1-2-github-pat-authentication: "done"
   1-3-persistent-session-management: "done"
 
+  1-4-github-pages-deployment: "ready-for-dev"
+
   # Epic 2: The Target
   epic-2: "in-progress"
   2-1-repository-discovery-selection: "done"
