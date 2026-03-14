@@ -132,6 +132,7 @@ export const useSyncStore = create<SyncState>()(
           username,
           title,
           body,
+          isImportant: get().isImportant,
           createdAt: new Date().toISOString(),
           syncStatus: 'pending',
           githubIssueNumber: null,

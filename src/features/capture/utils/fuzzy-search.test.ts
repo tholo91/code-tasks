@@ -8,6 +8,7 @@ function createTask(overrides: Partial<Task> = {}): Task {
     username: 'testuser',
     title: 'Fix login bug',
     body: 'The login button is broken on mobile',
+    isImportant: false,
     createdAt: '2026-03-14T10:00:00Z',
     syncStatus: 'pending',
     githubIssueNumber: null,

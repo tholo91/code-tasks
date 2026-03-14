@@ -31,7 +31,7 @@ development_status:
   3-3-priority-toggles: "done"
   3-4-offline-persistence: "done"
   3-5-fuzzy-task-search: "review"
-  3-6-priority-filter: "ready-for-dev"
+  3-6-priority-filter: "review"
 
   # Epic 4: The Bridge
   epic-4: "in-progress"
