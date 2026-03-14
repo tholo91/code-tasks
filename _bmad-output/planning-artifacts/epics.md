@@ -57,6 +57,13 @@ FR7 (Offline Persistence): Epic 3 - The Pulse
 FR8 (Background Sync): Epic 4 - The Bridge
 FR9 (AI-Ready Formatting): Epic 4 - The Bridge
 
+### CR Coverage Map (Community Requirements)
+
+CR1 (Roadmap Teaser): Epic 5 - The Village
+CR2 (Feature Voting): Epic 5 - The Village
+CR3 (Donation Prompt): Epic 5 - The Village
+CR4 (GitHub Sponsor Setup): Epic 5 - The Village
+
 ## Epic List
 
 ### Epic 1: The Secure Vault (Foundations & Auth)
@@ -74,6 +81,10 @@ The heart of the app. Implement the "Pulse" interface and the signature vertical
 ### Epic 4: The Bridge (Sync Engine & AI Formatting)
 Build the automated sync engine that pushes your ideas to GitHub and formats them with the AI-Ready headers. After this, your ideas will be safely tucked away in your repo, perfectly formatted for your AI agents.
 **FRs covered:** FR8, FR9
+
+### Epic 5: The Village (Community & Sustainability)
+Open the door between the app and its community. Users can see what's coming, vote on what matters, and optionally chip in to keep the lights on. The tone is honest, personal, and non-transactional: "Wir bauen das zusammen."
+**CRs covered:** CR1, CR2, CR3, CR4
 
 ## Epic 1: The Secure Vault (Foundations & Auth)
 
@@ -312,3 +323,68 @@ So that I have absolute control and visibility over my data's synchronization st
 **When** the Floating Action Button (FAB) appears or highlights in its "Sync Needed" state
 **Then** I can tap it to initiate an immediate push to GitHub (UX Requirement)
 **And** I see a "Syncing..." animation until the remote parity is achieved
+
+## Epic 5: The Village (Community & Sustainability)
+
+Open the door between the app and its community. This epic transforms Gitty from a solo tool into a shared project — users can see what's coming next, vote on what matters to them, and optionally chip in to keep the lights on. The tone is honest, personal, and non-transactional: "Wir bauen das zusammen."
+
+**Community Requirements covered:**
+- CR1: Users can view planned features (Roadmap Teaser)
+- CR2: Users can vote on upcoming features (Feature Voting)
+- CR3: Users are invited to support development costs (Donation Prompt)
+- CR4: GitHub repository is configured for sponsorship visibility (FUNDING.yml, README badge)
+
+### Story 5.1: Roadmap Teaser & Feature Data Model
+
+As a User,
+I want to see what features are planned for Gitty,
+So that I know the project is alive and I can look forward to what's coming.
+
+**Acceptance Criteria:**
+
+**Given** I am on the main screen
+**When** I tap the "Roadmap" entry in the menu or settings
+**Then** I see a list of planned features with title, short description, and status (planned/in-progress/shipped)
+**And** shipped features are visually distinguished (e.g. checkmark, muted style)
+
+### Story 5.2: Feature Voting
+
+As a User,
+I want to upvote features on the roadmap that matter to me,
+So that the developer knows what the community wants most.
+
+**Acceptance Criteria:**
+
+**Given** I am viewing the Roadmap
+**When** I tap the vote button on a feature
+**Then** my vote is recorded and the vote count increases by one
+**And** I cannot vote for the same feature more than once
+**And** my votes persist across sessions
+
+### Story 5.3: Donation Prompt ("Unterstütze Gitty")
+
+As a User,
+I want to be gently reminded that I can support the project financially,
+So that I have the option to contribute — but never feel pressured.
+
+**Acceptance Criteria:**
+
+**Given** I have used the app for at least 7 days and captured at least 5 ideas
+**When** the donation prompt has not been shown or was last dismissed more than 30 days ago
+**Then** a friendly, non-intrusive bottom sheet appears with a personal message and a link to the donation page
+**And** I can dismiss it ("Später") or mark it as done ("Schon unterstützt" / "Kein Interesse")
+**And** "Schon unterstützt" or "Kein Interesse" permanently hides the prompt
+
+### Story 5.4: GitHub Repository Sponsor Setup
+
+As a Project Maintainer,
+I want the GitHub repository to be configured for sponsorship and donations,
+So that visitors on GitHub can easily find ways to support the project.
+
+**Acceptance Criteria:**
+
+**Given** the repository is public on GitHub
+**When** a visitor views the repository page
+**Then** a "Sponsor" button is visible linking to the configured funding platforms
+**And** the README contains a tasteful support badge/section
+**And** FUNDING.yml is present with at least one platform configured

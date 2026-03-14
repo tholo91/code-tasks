@@ -31,3 +31,9 @@ This document outlines the planned progression from initial concept to a product
 - [ ] Cross-Browser Testing (Desktop & Mobile)
 - [ ] User Feedback and Iterative Design
 - [ ] Launch on GitHub Pages
+
+## Phase 6: Community & Sustainability ("The Village")
+- [ ] In-App Roadmap Teaser (show users what's planned and what shipped)
+- [ ] Feature Voting (let users upvote what matters to them)
+- [ ] Donation Prompt ("Unterstütze Gitty" — gentle, honest, non-intrusive)
+- [ ] GitHub Sponsor Setup (FUNDING.yml, README badge, platform account)
