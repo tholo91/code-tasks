@@ -1,6 +1,6 @@
-import { useSyncStore, base64ToArrayBuffer } from '../stores/useSyncStore'
-import { decryptData } from '../services/storage/crypto-utils'
-import { getOctokit } from '../services/github/auth-service'
+import { useSyncStore, base64ToArrayBuffer } from '../../stores/useSyncStore'
+import { decryptData } from '../storage/crypto-utils'
+import { getOctokit } from './auth-service'
 
 const PASSPHRASE_SESSION_KEY = 'code-tasks:passphrase'
 

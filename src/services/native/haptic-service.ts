@@ -18,3 +18,18 @@ export async function triggerLaunchHaptic(): Promise<void> {
     // Haptics not available (desktop browser or missing plugin) - silently ignore
   }
 }
+
+/**
+ * Trigger a selection-changed haptic for toggle interactions.
+ * Uses Capacitor Haptics plugin when available, otherwise no-op.
+ *
+ * Pattern: selectionChanged — subtle, tactile feedback for state flips.
+ */
+export async function triggerSelectionHaptic(): Promise<void> {
+  try {
+    const { Haptics } = await import('@capacitor/haptics')
+    await Haptics.selectionChanged()
+  } catch {
+    // Haptics not available (desktop browser or missing plugin) - silently ignore
+  }
+}

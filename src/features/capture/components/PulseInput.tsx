@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { useSyncStore } from '../../../stores/useSyncStore'
 import { LaunchAnimation } from './LaunchAnimation'
+import { PriorityPill } from './PriorityPill'
 import { triggerLaunchHaptic } from '../../../services/native/haptic-service'
 
 /**
@@ -37,7 +38,12 @@ interface LaunchingTask {
   text: string
 }
 
-export function PulseInput() {
+interface PulseInputProps {
+  /** Called after a task is "launched" with the parsed title and body */
+  onLaunch?: (title: string, body: string) => void
+}
+
+export function PulseInput({ onLaunch }: PulseInputProps = {}) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -122,6 +128,14 @@ export function PulseInput() {
     // Trigger haptic feedback (non-blocking)
     triggerLaunchHaptic()
 
+    // Parse title (first line) and body (remaining lines)
+    const lines = text.split('\n')
+    const title = lines[0]
+    const body = lines.slice(1).join('\n').trim()
+
+    // Notify parent to persist the task
+    onLaunch?.(title, body)
+
     // Start collapse animation
     setIsCollapsing(true)
 
@@ -138,6 +152,8 @@ export function PulseInput() {
       clearTimeout(debounceTimerRef.current)
     }
     setCurrentDraft('')
+    // Reset priority flag for the next draft
+    useSyncStore.setState({ isImportant: false })
     setDragOffsetY(0)
     setHasContent(false)
 
@@ -150,7 +166,7 @@ export function PulseInput() {
         textareaRef.current?.focus()
       }, 300)
     })
-  }, [currentDraft, setCurrentDraft, adjustHeight])
+  }, [currentDraft, setCurrentDraft, adjustHeight, onLaunch])
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -363,15 +379,26 @@ export function PulseInput() {
           }}
         />
 
-        {/* Hint text for launch shortcut */}
+        {/* Capture zone: hint text + priority pill */}
         {hasContent && !isCollapsing && (
-          <p
-            className="mt-1 text-center text-[10px]"
-            style={{ color: 'var(--color-text-secondary)' }}
-            data-testid="launch-hint"
+          <div
+            className="mt-2"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+            data-testid="capture-zone"
           >
-            Swipe up or press {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}+Enter to launch
-          </p>
+            <p
+              className="text-[10px]"
+              style={{ color: 'var(--color-text-secondary)' }}
+              data-testid="launch-hint"
+            >
+              Swipe up or press {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}+Enter to launch
+            </p>
+            <PriorityPill />
+          </div>
         )}
       </div>
     </div>

@@ -31,7 +31,7 @@ export function getOctokit(token: string): Octokit {
             return true
           }
         },
-        onSecondaryRateLimit: (retryAfter, options: any, octokit) => {
+        onSecondaryRateLimit: (_retryAfter, options: any, octokit) => {
           // does not retry, only logs a warning
           octokit.log.warn(
             `Secondary quota exhausted for request ${options.method} ${options.url}`,
