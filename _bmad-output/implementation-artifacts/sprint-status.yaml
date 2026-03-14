@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-03-11
+# Updated: 2026-03-14
 
 status_definitions:
   backlog: "Story identified in epics but story file not yet created"
@@ -39,3 +39,10 @@ development_status:
   4-2-ai-ready-header-injection: "ready-for-dev"
   4-3-conflict-free-user-scoping: "ready-for-dev"
   4-4-manual-sync-trigger: "ready-for-dev"
+
+  # Epic 5: The Village (Community & Sustainability)
+  epic-5: "backlog"
+  5-1-roadmap-teaser-data-model: "ready-for-dev"
+  5-2-feature-voting: "ready-for-dev"
+  5-3-donation-prompt: "ready-for-dev"
+  5-4-github-sponsor-setup: "ready-for-dev"
