@@ -1,6 +1,6 @@
 # Story 1.4: GitHub Pages Deployment & CI/CD
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
