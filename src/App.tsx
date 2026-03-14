@@ -4,6 +4,7 @@ import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AuthForm } from './features/auth/components/AuthForm'
 import { RepoSelector } from './features/repos/components/RepoSelector'
+import { PulseInput } from './features/capture/components/PulseInput'
 import { recoverOctokit } from './services/github/octokit-provider'
 import './App.css'
 
@@ -105,6 +106,9 @@ function AppContent() {
           </div>
         </div>
       </header>
+      <main className="flex w-full flex-1 items-start justify-center">
+        <PulseInput />
+      </main>
     </div>
   )
 }
