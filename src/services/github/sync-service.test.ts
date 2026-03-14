@@ -64,11 +64,11 @@ Object.defineProperty(globalThis, 'sessionStorage', { value: sessionStorageMock 
 // Import after mocks
 import {
   syncPendingTasks,
-  formatTasksAsMarkdown,
   getFileContent,
   commitTasks,
 } from './sync-service'
 import { useSyncStore } from '../../stores/useSyncStore'
+import { HEADER_SIGNATURE } from '../../features/sync/utils/markdown-templates'
 
 function createTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -103,41 +103,6 @@ describe('sync-service', () => {
       lastSyncedAt: null,
       syncEngineStatus: 'idle',
       syncError: null,
-    })
-  })
-
-  describe('formatTasksAsMarkdown', () => {
-    it('formats a single task without body', () => {
-      const task = createTask({ body: '', isImportant: false })
-      const result = formatTasksAsMarkdown([task])
-      expect(result).toBe(
-        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal)',
-      )
-    })
-
-    it('formats a task with body', () => {
-      const task = createTask()
-      const result = formatTasksAsMarkdown([task])
-      expect(result).toContain('- [ ] **Fix the login bug**')
-      expect(result).toContain(
-        '\n  Users are seeing an error on the login page',
-      )
-    })
-
-    it('formats an important task', () => {
-      const task = createTask({ isImportant: true })
-      const result = formatTasksAsMarkdown([task])
-      expect(result).toContain('Priority: 🔴 Important')
-    })
-
-    it('formats multiple tasks separated by newlines', () => {
-      const tasks = [
-        createTask({ id: '1', title: 'Task 1', body: '' }),
-        createTask({ id: '2', title: 'Task 2', body: '' }),
-      ]
-      const result = formatTasksAsMarkdown(tasks)
-      const lines = result.split('\n')
-      expect(lines).toHaveLength(2)
     })
   })
 
@@ -205,6 +170,7 @@ describe('sync-service', () => {
         'my-repo',
         'captured-ideas-testuser.md',
         [task],
+        'testuser',
       )
 
       expect(
@@ -240,6 +206,7 @@ describe('sync-service', () => {
         'my-repo',
         'captured-ideas-testuser.md',
         [task],
+        'testuser',
       )
 
       const call =
@@ -269,6 +236,7 @@ describe('sync-service', () => {
         'my-repo',
         'captured-ideas-testuser.md',
         [task],
+        'testuser',
       )
 
       expect(
@@ -297,6 +265,7 @@ describe('sync-service', () => {
           'my-repo',
           'captured-ideas-testuser.md',
           [task],
+          'testuser',
         ),
       ).rejects.toEqual({ status: 409 })
 
@@ -304,6 +273,84 @@ describe('sync-service', () => {
       expect(
         mockOctokit.rest.repos.createOrUpdateFileContents,
       ).toHaveBeenCalledTimes(3)
+    })
+
+    it('includes AI-Ready header when creating new file', async () => {
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const task = createTask({ body: '' })
+      await commitTasks(
+        mockOctokit as any,
+        'testuser',
+        'my-repo',
+        'captured-ideas-testuser.md',
+        [task],
+        'testuser',
+      )
+
+      const call =
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      const content = decodeURIComponent(escape(atob(call.content)))
+      expect(content).toContain(HEADER_SIGNATURE)
+      expect(content).toContain('# Captured Ideas — testuser')
+      expect(content).toContain('**Fix the login bug**')
+    })
+
+    it('injects header into existing file without header', async () => {
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: {
+          content: btoa('- [ ] Old manual task'),
+          sha: 'existing-sha',
+        },
+      })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const task = createTask({ body: '' })
+      await commitTasks(
+        mockOctokit as any,
+        'testuser',
+        'my-repo',
+        'captured-ideas-testuser.md',
+        [task],
+        'testuser',
+      )
+
+      const call =
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      const content = decodeURIComponent(escape(atob(call.content)))
+      expect(content).toContain(HEADER_SIGNATURE)
+      expect(content).toContain('Old manual task')
+      expect(content).toContain('**Fix the login bug**')
+    })
+
+    it('does not duplicate header for file that already has it', async () => {
+      const existingWithHeader = `${HEADER_SIGNATURE}\n# Captured Ideas\n\n- [ ] Existing task`
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: {
+          content: btoa(existingWithHeader),
+          sha: 'existing-sha',
+        },
+      })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const task = createTask({ body: '' })
+      await commitTasks(
+        mockOctokit as any,
+        'testuser',
+        'my-repo',
+        'captured-ideas-testuser.md',
+        [task],
+        'testuser',
+      )
+
+      const call =
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      const content = decodeURIComponent(escape(atob(call.content)))
+      // Should have only one header signature
+      const firstIdx = content.indexOf(HEADER_SIGNATURE)
+      const secondIdx = content.indexOf(HEADER_SIGNATURE, firstIdx + 1)
+      expect(secondIdx).toBe(-1)
     })
 
     it('uses plural in commit message for multiple tasks', async () => {
@@ -320,6 +367,7 @@ describe('sync-service', () => {
         'my-repo',
         'captured-ideas-testuser.md',
         tasks,
+        'testuser',
       )
 
       const call =

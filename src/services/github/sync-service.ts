@@ -2,6 +2,7 @@ import type { Octokit } from 'octokit'
 import type { Task } from '../../types/task'
 import { recoverOctokit } from './octokit-provider'
 import { useSyncStore } from '../../stores/useSyncStore'
+import { buildFileContent } from '../../features/sync/utils/markdown-templates'
 
 const MAX_CONFLICT_RETRIES = 3
 
@@ -42,25 +43,9 @@ async function getFileContent(
 }
 
 /**
- * Formats pending tasks as Markdown lines for appending to the captured-ideas file.
- */
-function formatTasksAsMarkdown(tasks: Task[]): string {
-  return tasks
-    .map((task) => {
-      const priority = task.isImportant ? '🔴 Important' : '⚪ Normal'
-      const date = task.createdAt.split('T')[0]
-      let line = `- [ ] **${task.title}** ([Created: ${date}]) (Priority: ${priority})`
-      if (task.body) {
-        line += `\n  ${task.body}`
-      }
-      return line
-    })
-    .join('\n')
-}
-
-/**
  * Creates or updates the captured-ideas file with appended tasks.
  * Uses the Atomic Commit (Get-Modify-Set) pattern to prevent data loss.
+ * Injects the AI-Ready header if the file is new or lacks it.
  */
 async function commitTasks(
   octokit: Octokit,
@@ -68,23 +53,17 @@ async function commitTasks(
   repo: string,
   filePath: string,
   tasks: Task[],
+  username: string,
 ): Promise<void> {
-  const newContent = formatTasksAsMarkdown(tasks)
-
   for (let attempt = 0; attempt < MAX_CONFLICT_RETRIES; attempt++) {
     const existing = await getFileContent(octokit, owner, repo, filePath)
 
-    let updatedContent: string
-    let sha: string | undefined
-
-    if (existing) {
-      // Append to existing content
-      updatedContent = existing.content.trimEnd() + '\n\n' + newContent + '\n'
-      sha = existing.sha
-    } else {
-      // Create new file
-      updatedContent = newContent + '\n'
-    }
+    const updatedContent = buildFileContent(
+      existing?.content ?? null,
+      tasks,
+      username,
+    )
+    const sha = existing?.sha
 
     try {
       const commitParams: {
@@ -159,7 +138,7 @@ export async function syncPendingTasks(): Promise<{
 
   const octokit = await recoverOctokit()
 
-  await commitTasks(octokit, owner, repo, filePath, pendingTasks)
+  await commitTasks(octokit, owner, repo, filePath, pendingTasks, user.login)
 
   // Mark all synced tasks in store
   const { markTaskSynced } = useSyncStore.getState()
@@ -171,4 +150,4 @@ export async function syncPendingTasks(): Promise<{
 }
 
 // Export for testing
-export { getFileContent, formatTasksAsMarkdown, commitTasks }
+export { getFileContent, commitTasks }
