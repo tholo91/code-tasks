@@ -33,6 +33,7 @@ so that visitors on GitHub can easily find ways to support the project.
   - [ ] Evaluate: GitHub Sponsors (most native, but requires approval), Buy Me a Coffee (quick setup), Ko-fi (no fees on donations).
   - [ ] Set up an account on the chosen platform.
   - [ ] Update `DONATION_URL` in `src/config/community.ts` (from Story 5.3) with the actual URL.
+  - [ ] **Placeholder Guard:** Ensure the DonationPrompt CTA button and settings link are hidden (or show "Coming soon") when `DONATION_URL` is still a placeholder. Add an `isPlaceholder` check (e.g., `DONATION_URL.includes('placeholder')` or a dedicated `DONATION_CONFIGURED = true` flag) so Story 5.3 can ship safely before 5.4 is complete.
 
 ## Dev Notes
 
@@ -50,6 +51,7 @@ so that visitors on GitHub can easily find ways to support the project.
   [![Support Gitty](https://img.shields.io/badge/Support-Gitty-ff5e5b?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/your-username)
   ```
 - **This is a meta-story:** Unlike the other stories, this one involves GitHub repo configuration and platform setup, not app code. It can be done independently and in parallel with Epics 3-4.
+- **Dependency Note:** Story 5.3 (Donation Prompt) creates a `DONATION_URL` placeholder in `src/config/community.ts`. If 5.3 ships before 5.4, the placeholder guard ensures users don't land on a broken URL. This story must update that constant once the real platform is live.
 - **Community Spirit:** The README section should feel inviting, not desperate. Think "Wenn du magst" not "Bitte spende".
 
 ### Project Structure Notes

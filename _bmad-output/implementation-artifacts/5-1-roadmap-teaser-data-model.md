@@ -16,6 +16,8 @@ so that I know the project is alive and I can look forward to what's coming.
 4. [ ] **Shipped Features:** Shipped features are visually distinguished — muted styling with a checkmark, shown in a collapsed "Already shipped" section at the bottom.
 5. [ ] **Empty State:** If no features are in the roadmap (edge case), a friendly message is shown: "Wir planen gerade — schau bald wieder rein!"
 6. [ ] **Mobile-First:** The roadmap view follows the existing mobile-first design language (44x44px tap targets, GitHub Dark Dimmed palette).
+7. [ ] **Description Truncation:** Feature descriptions longer than 3 lines are truncated with an ellipsis on mobile. No expand/collapse needed for MVP.
+8. [ ] **Unique IDs:** Roadmap item IDs must be unique. A runtime assertion (dev-only) guards against duplicate IDs to prevent React key collisions and vote-mapping errors (Story 5.2 dependency).
 
 ## Tasks / Subtasks
 
@@ -33,6 +35,9 @@ so that I know the project is alive and I can look forward to what's coming.
 - [ ] Style & Polish
   - [ ] Follow GitHub Dark Dimmed palette.
   - [ ] Ensure smooth scroll and correct touch targets on mobile.
+  - [ ] Apply `line-clamp-3` (or equivalent CSS) to feature description text on mobile viewports.
+- [ ] Data Integrity Guard
+  - [ ] Add a dev-only runtime assertion in `roadmap.ts` that verifies all IDs are unique: `new Set(items.map(i => i.id)).size === items.length`.
 
 ## Dev Notes
 
