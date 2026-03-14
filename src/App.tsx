@@ -2,12 +2,14 @@ import { Suspense, use, useMemo, useState, useEffect } from 'react'
 import { useSyncStore } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
+import { AppHeader } from './components/layout/AppHeader'
 import { AuthForm } from './features/auth/components/AuthForm'
 import { RepoSelector } from './features/repos/components/RepoSelector'
 import { PulseInput } from './features/capture/components/PulseInput'
 import { TaskCard } from './features/capture/components/TaskCard'
 import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
 import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
+import { SyncFAB } from './features/sync/components/SyncFAB'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import type { PriorityFilter } from './types/task'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
@@ -78,7 +80,6 @@ function OfflineNotification({
 
 function AppContent() {
   const isAuthenticated = useSyncStore((s) => s.isAuthenticated)
-  const user = useSyncStore((s) => s.user)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
   const clearAuth = useSyncStore((s) => s.clearAuth)
   const addTask = useSyncStore((s) => s.addTask)
@@ -137,42 +138,7 @@ function AppContent() {
         onDismiss={dismissOfflineNotification}
       />
 
-      <header className="app-header">
-        <div className="flex items-center justify-between">
-          <h1 className="app-title">code-tasks</h1>
-          {!isOnline && (
-            <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-              style={{
-                backgroundColor: 'rgba(210, 153, 34, 0.15)',
-                color: '#d29922',
-                border: '1px solid rgba(210, 153, 34, 0.2)',
-              }}
-              role="status"
-              data-testid="offline-badge"
-            >
-              Offline
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col items-center">
-          <p className="app-subtitle">
-            {user ? `Welcome, ${user.login}` : 'GitHub issue capture for developers on the go'}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="app-repo" data-testid="selected-repo">
-              {selectedRepo.fullName}
-            </p>
-            <button
-              onClick={() => useSyncStore.getState().setSelectedRepo(null as any)}
-              className="text-[10px] hover:underline"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              (change)
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader isOnline={isOnline} />
       <main className="flex w-full flex-1 flex-col items-center">
         <PulseInput onLaunch={(title, body) => addTask(title, body)} />
 
@@ -223,6 +189,8 @@ function AppContent() {
           </div>
         )}
       </main>
+
+      <SyncFAB />
     </div>
   )
 }
