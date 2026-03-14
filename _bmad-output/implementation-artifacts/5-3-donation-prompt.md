@@ -24,7 +24,9 @@ so that I have the option to contribute — but never feel pressured.
    - "Später": Hides the prompt and records the dismiss timestamp. Re-triggers after 30 days if conditions are still met.
    - "Schon unterstützt" / "Kein Interesse": Permanently hides the prompt (sets a `donationPromptDismissedPermanently: true` flag).
 4. [ ] **Non-Intrusive:** The prompt must not block the capture flow. It should appear after a successful capture, not during input.
-5. [ ] **Tone:** Warm, honest, humble. No guilt-tripping. No fake urgency. The message should feel like a friend asking, not a corporation upselling.
+5. [ ] **Once Per Session:** The prompt is shown at most ONCE per app session (page load). If dismissed, it does not re-appear until the next session — even if additional captures occur in the same session.
+6. [ ] **Undo Permanent Dismiss:** If the user permanently dismisses the prompt ("Schon unterstützt" / "Kein Interesse"), the donation link remains accessible in the app settings or About screen so they can still find it later.
+7. [ ] **Tone:** Warm, honest, humble. No guilt-tripping. No fake urgency. The message should feel like a friend asking, not a corporation upselling.
 
 ## Tasks / Subtasks
 
@@ -36,6 +38,7 @@ so that I have the option to contribute — but never feel pressured.
   - [ ] Create `src/features/community/hooks/useDonationPrompt.ts`.
   - [ ] Implement the trigger logic: check all 4 conditions from AC1.
   - [ ] Expose `shouldShowPrompt` boolean and `dismissPrompt(type: 'later' | 'permanent')` action.
+  - [ ] Add a `promptShownThisSession` in-memory flag (NOT persisted) to ensure the prompt shows at most once per page load.
 - [ ] Build Donation Prompt Component
   - [ ] Create `src/features/community/components/DonationPrompt.tsx`.
   - [ ] Implement as a bottom sheet with slide-up animation.
@@ -47,6 +50,9 @@ so that I have the option to contribute — but never feel pressured.
 - [ ] Integration
   - [ ] Show the DonationPrompt in the main App shell, triggered after a successful capture (not on app launch).
   - [ ] Ensure it does not interfere with the Pulse input flow.
+  - [ ] Guard against rapid-capture spam: only evaluate prompt trigger once per capture, skip if `promptShownThisSession` is true.
+- [ ] Donation Link in Settings
+  - [ ] Add a "Unterstütze Gitty" link in the settings/about area that opens the `DONATION_URL`. This ensures the donation link is always discoverable, even after permanent dismiss.
 
 ## Dev Notes
 
