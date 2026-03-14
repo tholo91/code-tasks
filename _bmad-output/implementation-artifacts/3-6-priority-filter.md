@@ -1,6 +1,6 @@
 # Story 3.6: Priority Filter
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -26,24 +26,24 @@ so that I can focus on high-priority sparks without scrolling through everything
 
 ## Tasks / Subtasks
 
-- [ ] Build `PriorityFilterPills` component (AC: #1, #2, #3, #4, #6)
-  - [ ] Create `src/features/capture/components/PriorityFilterPills.tsx`
-  - [ ] Three pill options: `All` | `Important` | `Not Important`
-  - [ ] Active pill: filled Primer `Label` with `#58a6ff` accent; inactive: ghost/outline style
-  - [ ] `onChange: (filter: PriorityFilter) => void` callback prop
-  - [ ] `currentFilter: PriorityFilter` prop for controlled state
-  - [ ] 44×44px min touch targets on mobile
-- [ ] Add `PriorityFilter` type to shared types (AC: #1)
-  - [ ] Add to `src/types/index.ts`: `export type PriorityFilter = 'all' | 'important' | 'not-important'`
-- [ ] Integrate filter state into capture screen (AC: #2, #3, #4, #5, #7)
-  - [ ] Add local `priorityFilter` state (`useState<PriorityFilter>('all')`) in the capture screen parent — same level as `searchQuery` from Story 3.5
-  - [ ] Apply priority filter to task list AFTER fuzzy search filter: `filteredTasks → priorityFilteredTasks`
-  - [ ] Filter logic: `all` → pass through; `important` → `task.isImportant === true`; `not-important` → `task.isImportant === false`
-  - [ ] Empty state: `"No important tasks"` / `"No non-important tasks"` as appropriate
-- [ ] Position filter pills in the UI (AC: #1)
-  - [ ] Place `PriorityFilterPills` directly below `TaskSearchBar` (Story 3.5), above the task list
-  - [ ] Use a horizontal scroll container if pills overflow on small screens (320px breakpoint)
-- [ ] Write unit tests (see Testing Requirements)
+- [x] Build `PriorityFilterPills` component (AC: #1, #2, #3, #4, #6)
+  - [x] Create `src/features/capture/components/PriorityFilterPills.tsx`
+  - [x] Three pill options: `All` | `Important` | `Not Important`
+  - [x] Active pill: filled Primer `Label` with `#58a6ff` accent; inactive: ghost/outline style
+  - [x] `onChange: (filter: PriorityFilter) => void` callback prop
+  - [x] `currentFilter: PriorityFilter` prop for controlled state
+  - [x] 44×44px min touch targets on mobile
+- [x] Add `PriorityFilter` type to shared types (AC: #1)
+  - [x] Add to `src/types/task.ts`: `export type PriorityFilter = 'all' | 'important' | 'not-important'`
+- [x] Integrate filter state into capture screen (AC: #2, #3, #4, #5, #7)
+  - [x] Add local `priorityFilter` state (`useState<PriorityFilter>('all')`) in the capture screen parent — same level as `searchQuery` from Story 3.5
+  - [x] Apply priority filter to task list AFTER fuzzy search filter: `filteredTasks → priorityFilteredTasks`
+  - [x] Filter logic: `all` → pass through; `important` → `task.isImportant === true`; `not-important` → `task.isImportant === false`
+  - [x] Empty state: `"No important tasks"` / `"No non-important tasks"` as appropriate
+- [x] Position filter pills in the UI (AC: #1)
+  - [x] Place `PriorityFilterPills` directly below `TaskSearchBar` (Story 3.5), above the task list
+  - [x] Use a horizontal scroll container if pills overflow on small screens (320px breakpoint)
+- [x] Write unit tests (see Testing Requirements)
 
 ## Dev Notes
 
@@ -125,10 +125,34 @@ Both `searchQuery` and `priorityFilter` are local state in the same parent. They
 
 ### Agent Model Used
 
-<!-- To be filled by dev agent -->
+Claude Opus 4.6
 
 ### Debug Log References
 
+No debug issues encountered.
+
 ### Completion Notes List
 
+- Added `isImportant: boolean` field to Task interface (was missing from Story 3.3's data model — only existed as store-level state)
+- Added `PriorityFilter` type ('all' | 'important' | 'not-important') to `src/types/task.ts`
+- Updated `addTask()` in useSyncStore to capture current `isImportant` state onto the Task object
+- Built `PriorityFilterPills` component with three pills: All, Important, Not Important
+- Active pill uses filled #58a6ff accent; inactive uses ghost/outline styling
+- Integrated priority filter into App.tsx with `useState<PriorityFilter>('all')` (ephemeral)
+- Filtering pipeline: tasks → search filter → priority filter → displayedTasks (two sequential `useMemo`)
+- Empty state messages: "No important tasks" / "No non-important tasks" depending on active filter
+- Horizontal scroll container with `-webkit-overflow-scrolling: touch` for small screens
+- 13 new tests: 8 PriorityFilterPills component tests, 5 filter pipeline tests
+- All 44×44px touch targets met
+- Combined search + priority filter works correctly (AC #5)
+
 ### File List
+
+- `src/types/task.ts` (modified — added `isImportant` field to Task, added `PriorityFilter` type)
+- `src/features/capture/components/PriorityFilterPills.tsx` (new)
+- `src/features/capture/components/PriorityFilterPills.test.tsx` (new)
+- `src/features/capture/utils/filter-tasks.test.ts` (new)
+- `src/App.tsx` (modified — added priority filter state, PriorityFilterPills, displayedTasks pipeline)
+- `src/stores/useSyncStore.ts` (modified — addTask now captures isImportant)
+- `src/features/capture/components/TaskCard.test.tsx` (modified — added isImportant to createTask)
+- `src/features/capture/utils/fuzzy-search.test.ts` (modified — added isImportant to createTask)

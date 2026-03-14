@@ -1,4 +1,4 @@
-import { Suspense, use, useMemo, useEffect } from 'react'
+import { Suspense, use, useMemo, useState, useEffect } from 'react'
 import { useSyncStore } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
@@ -6,6 +6,10 @@ import { AuthForm } from './features/auth/components/AuthForm'
 import { RepoSelector } from './features/repos/components/RepoSelector'
 import { PulseInput } from './features/capture/components/PulseInput'
 import { TaskCard } from './features/capture/components/TaskCard'
+import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
+import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
+import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
+import type { PriorityFilter } from './types/task'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
 import './App.css'
@@ -82,11 +86,25 @@ function AppContent() {
   const loadTasksFromIDB = useSyncStore((s) => s.loadTasksFromIDB)
 
   const { isOnline, showOfflineNotification, dismissOfflineNotification } = useNetworkStatus()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
 
   // Load tasks from IndexedDB on mount (merge with localStorage)
   useEffect(() => {
     loadTasksFromIDB()
   }, [loadTasksFromIDB])
+
+  const searchFilteredTasks = useMemo(() => {
+    if (searchQuery.length < 2) return tasks
+    const fuse = createTaskFuse(tasks)
+    return searchTasks(fuse, searchQuery)
+  }, [tasks, searchQuery])
+
+  const displayedTasks = useMemo(() => {
+    if (priorityFilter === 'all') return searchFilteredTasks
+    if (priorityFilter === 'important') return searchFilteredTasks.filter((t) => t.isImportant)
+    return searchFilteredTasks.filter((t) => !t.isImportant)
+  }, [searchFilteredTasks, priorityFilter])
 
   if (!isAuthenticated) {
     return <AuthForm onSuccess={() => {}} />
@@ -158,15 +176,50 @@ function AppContent() {
       <main className="flex w-full flex-1 flex-col items-center">
         <PulseInput onLaunch={(title, body) => addTask(title, body)} />
 
+        {/* Search bar */}
+        {tasks.length > 0 && (
+          <div className="mt-4 w-full max-w-[640px] px-4">
+            <TaskSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              taskCount={tasks.length}
+            />
+          </div>
+        )}
+
+        {/* Priority filter pills */}
+        {tasks.length > 0 && (
+          <div className="mt-2 w-full max-w-[640px] px-4">
+            <PriorityFilterPills
+              currentFilter={priorityFilter}
+              onChange={setPriorityFilter}
+            />
+          </div>
+        )}
+
         {/* Task list */}
         {tasks.length > 0 && (
           <div
-            className="mt-4 flex w-full max-w-[640px] flex-col gap-2 px-4"
+            className="mt-2 flex w-full max-w-[640px] flex-col gap-2 px-4"
             data-testid="task-list"
           >
-            {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
+            {displayedTasks.length > 0 ? (
+              displayedTasks.map((task) => (
+                <TaskCard key={task.id} task={task} />
+              ))
+            ) : (
+              <p
+                className="py-4 text-center text-sm"
+                style={{ color: 'var(--color-text-secondary, #8b949e)' }}
+                data-testid="filter-empty-state"
+              >
+                {searchQuery.length >= 2
+                  ? `No tasks match '\u2018${searchQuery}\u2019'`
+                  : priorityFilter === 'important'
+                    ? 'No important tasks'
+                    : 'No non-important tasks'}
+              </p>
+            )}
           </div>
         )}
       </main>
