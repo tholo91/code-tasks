@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.2.0",
+    "@capacitor/haptics": "^8.0.1",
     "@octokit/plugin-throttling": "^11.0.3",
+    "framer-motion": "^12.36.0",
     "octokit": "^5.0.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

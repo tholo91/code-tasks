@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { useSyncStore } from '../../../stores/useSyncStore'
 import { LaunchAnimation } from './LaunchAnimation'
+import { PriorityPill } from './PriorityPill'
 import { triggerLaunchHaptic } from '../../../services/native/haptic-service'
 
 /**
@@ -138,6 +139,8 @@ export function PulseInput() {
       clearTimeout(debounceTimerRef.current)
     }
     setCurrentDraft('')
+    // Reset priority flag for the next draft
+    useSyncStore.setState({ isImportant: false })
     setDragOffsetY(0)
     setHasContent(false)
 
@@ -363,15 +366,26 @@ export function PulseInput() {
           }}
         />
 
-        {/* Hint text for launch shortcut */}
+        {/* Capture zone: hint text + priority pill */}
         {hasContent && !isCollapsing && (
-          <p
-            className="mt-1 text-center text-[10px]"
-            style={{ color: 'var(--color-text-secondary)' }}
-            data-testid="launch-hint"
+          <div
+            className="mt-2"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+            data-testid="capture-zone"
           >
-            Swipe up or press {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}+Enter to launch
-          </p>
+            <p
+              className="text-[10px]"
+              style={{ color: 'var(--color-text-secondary)' }}
+              data-testid="launch-hint"
+            >
+              Swipe up or press {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}+Enter to launch
+            </p>
+            <PriorityPill />
+          </div>
         )}
       </div>
     </div>

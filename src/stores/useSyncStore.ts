@@ -22,11 +22,13 @@ interface SyncState {
   encryptedToken: string | null
   selectedRepo: SelectedRepo | null
   currentDraft: string
+  isImportant: boolean
 
   setAuth: (token: string, user: GitHubUser, passphrase: string) => Promise<void>
   clearAuth: () => void
   setSelectedRepo: (repo: SelectedRepo | null) => void
   setCurrentDraft: (draft: string) => void
+  toggleImportant: () => void
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -55,6 +57,7 @@ export const useSyncStore = create<SyncState>()(
       encryptedToken: null,
       selectedRepo: null,
       currentDraft: '',
+      isImportant: false,
 
       setAuth: async (token: string, user: GitHubUser, passphrase: string) => {
         // "Write-Through" Pattern: Encrypt and persist to buffer BEFORE updating store
@@ -90,7 +93,7 @@ export const useSyncStore = create<SyncState>()(
         // Cleanup Octokit instance
         clearOctokitInstance()
         
-        set({ isAuthenticated: false, user: null, encryptedToken: null, selectedRepo: null, currentDraft: '' })
+        set({ isAuthenticated: false, user: null, encryptedToken: null, selectedRepo: null, currentDraft: '', isImportant: false })
       },
 
       setSelectedRepo: (repo: SelectedRepo | null) => {
@@ -108,6 +111,10 @@ export const useSyncStore = create<SyncState>()(
         StorageService.setItem(DRAFT_STORAGE_KEY, draft)
         set({ currentDraft: draft })
       },
+
+      toggleImportant: () => {
+        set((state) => ({ isImportant: !state.isImportant }))
+      },
     }),
     {
       name: 'code-tasks:store',
@@ -118,6 +125,7 @@ export const useSyncStore = create<SyncState>()(
         encryptedToken: state.encryptedToken,
         selectedRepo: state.selectedRepo,
         currentDraft: state.currentDraft,
+        isImportant: state.isImportant,
       }),
       skipHydration: true,
     },

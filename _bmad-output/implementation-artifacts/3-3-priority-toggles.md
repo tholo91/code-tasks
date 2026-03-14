@@ -1,6 +1,6 @@
 # Story 3.3: Priority Toggles ("Important" Pills)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,18 +21,18 @@ so that I can prioritize high-value sparks for immediate action.
 
 ## Tasks / Subtasks
 
-- [ ] Build the Pill Component (AC: 1, 2, 5)
-  - [ ] Create `src/features/capture/components/PriorityPill.tsx`.
-  - [ ] Implement the "Pill" style using Tailwind v4 or Vanilla CSS following GitHub Primer's `Label` anatomy.
-- [ ] Implement Haptic Interaction (AC: 3)
-  - [ ] Integrate `@capacitor/haptics` into the pill's click handler.
-  - [ ] Call `Haptics.selectionChanged()` on every state flip.
-- [ ] State Management (AC: 4)
-  - [ ] Update `useSyncStore.ts` to include `isImportant` (boolean) in the `currentDraft` object.
-  - [ ] Implement `toggleImportant()` action in the store.
-- [ ] Layout & Positioning (AC: 6)
-  - [ ] Position the pill within the `PulseInput.tsx` container, ensuring a minimum 44x44px touch target.
-  - [ ] Add a subtle spring animation (Framer Motion) when transitioning between states.
+- [x] Build the Pill Component (AC: 1, 2, 5)
+  - [x] Create `src/features/capture/components/PriorityPill.tsx`.
+  - [x] Implement the "Pill" style using Tailwind v4 or Vanilla CSS following GitHub Primer's `Label` anatomy.
+- [x] Implement Haptic Interaction (AC: 3)
+  - [x] Integrate `@capacitor/haptics` into the pill's click handler.
+  - [x] Call `Haptics.selectionChanged()` on every state flip.
+- [x] State Management (AC: 4)
+  - [x] Update `useSyncStore.ts` to include `isImportant` (boolean) in the `currentDraft` object.
+  - [x] Implement `toggleImportant()` action in the store.
+- [x] Layout & Positioning (AC: 6)
+  - [x] Position the pill within the `PulseInput.tsx` container, ensuring a minimum 44x44px touch target.
+  - [x] Add a subtle spring animation (Framer Motion) when transitioning between states.
 
 ## Dev Notes
 
@@ -55,10 +55,38 @@ so that I can prioritize high-value sparks for immediate action.
 
 ### Agent Model Used
 
-Gemini 2.0 Flash (March 2026)
+Claude Opus 4 (claude-opus-4-6), March 2026
 
 ### Debug Log References
 
+No issues encountered during implementation.
+
 ### Completion Notes List
 
+- Created PriorityPill component with two visual states: ghost/outline (Standard) and filled accent (Important)
+- Added `triggerSelectionHaptic()` to haptic-service using Capacitor's `Haptics.selectionChanged()`
+- Added `isImportant` boolean and `toggleImportant()` action to useSyncStore
+- Integrated PriorityPill into PulseInput capture zone (bottom-right, flex layout with launch hint)
+- PriorityPill uses Framer Motion spring animation for state transitions (`whileTap` + spring config)
+- Minimum 44x44px touch target for mobile accessibility
+- `aria-pressed` attribute and keyboard accessibility (Space/Enter) implemented
+- `isImportant` resets to `false` after launch and on clearAuth
+- Added `framer-motion` and `@capacitor/haptics` as dependencies
+- 11 new PriorityPill tests, 4 new isImportant store tests, 2 new haptic service tests, 3 new PulseInput integration tests
+
+### Change Log
+
+- 2026-03-14: Implemented Story 3-3 Priority Toggles ("Important" Pills)
+
 ### File List
+
+- src/features/capture/components/PriorityPill.tsx (new)
+- src/features/capture/components/PriorityPill.test.tsx (new)
+- src/features/capture/components/PulseInput.tsx (modified)
+- src/features/capture/components/PulseInput.test.tsx (modified)
+- src/stores/useSyncStore.ts (modified)
+- src/stores/useSyncStore.test.ts (modified)
+- src/services/native/haptic-service.ts (modified)
+- src/services/native/haptic-service.test.ts (modified)
+- package.json (modified - added framer-motion, @capacitor/haptics)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (modified)

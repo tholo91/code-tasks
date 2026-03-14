@@ -12,6 +12,12 @@ vi.mock('../../../stores/useSyncStore', () => ({
 // Mock haptic service
 vi.mock('../../../services/native/haptic-service', () => ({
   triggerLaunchHaptic: vi.fn().mockResolvedValue(undefined),
+  triggerSelectionHaptic: vi.fn().mockResolvedValue(undefined),
+}))
+
+// Mock PriorityPill to avoid framer-motion dependency in PulseInput tests
+vi.mock('./PriorityPill', () => ({
+  PriorityPill: () => <button data-testid="priority-pill-mock">Important</button>,
 }))
 
 // Track animation finish callbacks for manual control
@@ -32,11 +38,16 @@ describe('PulseInput', () => {
         user: null,
         encryptedToken: null,
         selectedRepo: null,
+        isImportant: false,
         setAuth: vi.fn(),
         clearAuth: vi.fn(),
         setSelectedRepo: vi.fn(),
+        toggleImportant: vi.fn(),
       } as never),
     )
+
+    // Mock useSyncStore.setState for launch reset
+    ;(useSyncStore as unknown as { setState: ReturnType<typeof vi.fn> }).setState = vi.fn()
 
     // Mock Web Animations API
     const mockAnimate = vi.fn().mockImplementation(() => {
@@ -119,9 +130,11 @@ describe('PulseInput', () => {
         user: null,
         encryptedToken: null,
         selectedRepo: null,
+        isImportant: false,
         setAuth: vi.fn(),
         clearAuth: vi.fn(),
         setSelectedRepo: vi.fn(),
+        toggleImportant: vi.fn(),
       } as never),
     )
 
@@ -179,9 +192,11 @@ describe('PulseInput', () => {
         user: null,
         encryptedToken: null,
         selectedRepo: null,
+        isImportant: false,
         setAuth: vi.fn(),
         clearAuth: vi.fn(),
         setSelectedRepo: vi.fn(),
+        toggleImportant: vi.fn(),
       } as never),
     )
 
@@ -416,6 +431,37 @@ describe('PulseInput', () => {
     it('does not show hint when textarea is empty', () => {
       render(<PulseInput />)
       expect(screen.queryByTestId('launch-hint')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Priority pill integration', () => {
+    it('shows priority pill when there is content', async () => {
+      vi.useRealTimers()
+      const user = userEvent.setup()
+      render(<PulseInput />)
+
+      const textarea = screen.getByTestId('pulse-input')
+      await user.type(textarea, 'Some task')
+
+      expect(screen.getByTestId('priority-pill-mock')).toBeInTheDocument()
+    })
+
+    it('hides priority pill when input is empty', () => {
+      render(<PulseInput />)
+      expect(screen.queryByTestId('priority-pill-mock')).not.toBeInTheDocument()
+    })
+
+    it('renders capture zone with pill and hint', async () => {
+      vi.useRealTimers()
+      const user = userEvent.setup()
+      render(<PulseInput />)
+
+      const textarea = screen.getByTestId('pulse-input')
+      await user.type(textarea, 'Some task')
+
+      expect(screen.getByTestId('capture-zone')).toBeInTheDocument()
+      expect(screen.getByTestId('launch-hint')).toBeInTheDocument()
+      expect(screen.getByTestId('priority-pill-mock')).toBeInTheDocument()
     })
   })
 

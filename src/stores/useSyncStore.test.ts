@@ -59,6 +59,7 @@ describe('useSyncStore', () => {
       encryptedToken: null,
       selectedRepo: null,
       currentDraft: '',
+      isImportant: false,
     })
   })
 
@@ -207,6 +208,38 @@ describe('useSyncStore', () => {
       expect(state.currentDraft).toBe(multilineDraft)
       expect(state.currentDraft.split('\n')[0]).toBe('Fix login bug')
       expect(state.currentDraft.split('\n')[1]).toBe('The login button is not responding on mobile devices')
+    })
+  })
+
+  describe('isImportant', () => {
+    it('has false as initial isImportant', () => {
+      const state = useSyncStore.getState()
+      expect(state.isImportant).toBe(false)
+    })
+
+    it('toggles isImportant from false to true', () => {
+      useSyncStore.getState().toggleImportant()
+      expect(useSyncStore.getState().isImportant).toBe(true)
+    })
+
+    it('toggles isImportant from true to false', () => {
+      useSyncStore.getState().toggleImportant() // false -> true
+      useSyncStore.getState().toggleImportant() // true -> false
+      expect(useSyncStore.getState().isImportant).toBe(false)
+    })
+
+    it('resets isImportant when auth is cleared', async () => {
+      useSyncStore.getState().toggleImportant()
+      expect(useSyncStore.getState().isImportant).toBe(true)
+
+      await useSyncStore.getState().setAuth(
+        'ghp_testtoken123',
+        { login: 'testuser', avatarUrl: 'https://example.com/avatar.png', name: 'Test User' },
+        'test-passphrase',
+      )
+
+      useSyncStore.getState().clearAuth()
+      expect(useSyncStore.getState().isImportant).toBe(false)
     })
   })
 
