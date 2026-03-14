@@ -1,17 +1,19 @@
-import { Suspense, use, useMemo } from 'react'
+import { Suspense, use, useMemo, useEffect } from 'react'
 import { useSyncStore } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AuthForm } from './features/auth/components/AuthForm'
 import { RepoSelector } from './features/repos/components/RepoSelector'
 import { PulseInput } from './features/capture/components/PulseInput'
+import { TaskCard } from './features/capture/components/TaskCard'
+import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
 import './App.css'
 
 function RepoSelectorContainer() {
   const setSelectedRepo = useSyncStore((s) => s.setSelectedRepo)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
-  
+
   // React 19 use() for async resource
   const octokit = use(useMemo(() => recoverOctokit(), []))
 
@@ -38,12 +40,53 @@ function RepoSelectorContainer() {
   )
 }
 
+function OfflineNotification({
+  visible,
+  onDismiss,
+}: {
+  visible: boolean
+  onDismiss: () => void
+}) {
+  if (!visible) return null
+
+  return (
+    <div
+      className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center px-4 py-2"
+      style={{
+        backgroundColor: 'rgba(210, 153, 34, 0.95)',
+        color: '#1c2128',
+      }}
+      role="alert"
+      data-testid="offline-notification"
+    >
+      <span className="text-sm font-medium">Offline &mdash; Storing Locally</span>
+      <button
+        onClick={onDismiss}
+        className="ml-3 text-xs font-bold underline"
+        style={{ color: '#1c2128' }}
+        aria-label="Dismiss offline notification"
+      >
+        Dismiss
+      </button>
+    </div>
+  )
+}
+
 function AppContent() {
   const isAuthenticated = useSyncStore((s) => s.isAuthenticated)
   const user = useSyncStore((s) => s.user)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
   const clearAuth = useSyncStore((s) => s.clearAuth)
-  const isOffline = !navigator.onLine
+  const addTask = useSyncStore((s) => s.addTask)
+  const tasks = useSyncStore((s) => s.tasks)
+  const loadTasksFromIDB = useSyncStore((s) => s.loadTasksFromIDB)
+
+  const { isOnline, showOfflineNotification, dismissOfflineNotification } = useNetworkStatus()
+
+  // Load tasks from IndexedDB on mount (merge with localStorage)
+  useEffect(() => {
+    loadTasksFromIDB()
+  }, [loadTasksFromIDB])
 
   if (!isAuthenticated) {
     return <AuthForm onSuccess={() => {}} />
@@ -54,7 +97,7 @@ function AppContent() {
       <div className="app">
         <header className="app-header mb-8">
           <h1 className="app-title">code-tasks</h1>
-          <button 
+          <button
             onClick={clearAuth}
             className="text-xs underline"
             style={{ color: 'var(--color-text-secondary)' }}
@@ -71,10 +114,15 @@ function AppContent() {
 
   return (
     <div className="app">
+      <OfflineNotification
+        visible={showOfflineNotification}
+        onDismiss={dismissOfflineNotification}
+      />
+
       <header className="app-header">
         <div className="flex items-center justify-between">
           <h1 className="app-title">code-tasks</h1>
-          {isOffline && (
+          {!isOnline && (
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
               style={{
@@ -83,8 +131,9 @@ function AppContent() {
                 border: '1px solid rgba(210, 153, 34, 0.2)',
               }}
               role="status"
+              data-testid="offline-badge"
             >
-              Sync Required
+              Offline
             </span>
           )}
         </div>
@@ -96,7 +145,7 @@ function AppContent() {
             <p className="app-repo" data-testid="selected-repo">
               {selectedRepo.fullName}
             </p>
-            <button 
+            <button
               onClick={() => useSyncStore.getState().setSelectedRepo(null as any)}
               className="text-[10px] hover:underline"
               style={{ color: 'var(--color-text-secondary)' }}
@@ -106,8 +155,20 @@ function AppContent() {
           </div>
         </div>
       </header>
-      <main className="flex w-full flex-1 items-start justify-center">
-        <PulseInput />
+      <main className="flex w-full flex-1 flex-col items-center">
+        <PulseInput onLaunch={(title, body) => addTask(title, body)} />
+
+        {/* Task list */}
+        {tasks.length > 0 && (
+          <div
+            className="mt-4 flex w-full max-w-[640px] flex-col gap-2 px-4"
+            data-testid="task-list"
+          >
+            {tasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   )

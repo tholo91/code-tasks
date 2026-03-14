@@ -1,6 +1,6 @@
 # Story 3.4: "Overnight Offline" Local Persistence
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,18 +21,18 @@ so that I never lose a spark due to a bad connection.
 
 ## Tasks / Subtasks
 
-- [ ] Implement Offline State Logic (AC: 1, 4)
-  - [ ] Update `src/services/storage/storage-service.ts` to include a "Synchronous-then-Async" write pattern (Write to `localStorage` buffer first, then `IndexedDB` in background).
-  - [ ] Configure Zustand store to use the synchronous buffer for immediate UI responsiveness.
-- [ ] Build Local Task List (AC: 2, 3, 6)
-  - [ ] Implement the `TaskCard.tsx` with conditional "Sync Status" icons.
-  - [ ] Use `octicon-sync` (Amber: `#d29922`) for pending tasks and `octicon-check` (Green: `#3fb950`) for synced ones.
-- [ ] UUID & Collision Management (AC: 5)
-  - [ ] Integrate a lightweight UUID v4 generator for local task IDs.
-  - [ ] Ensure local tasks are scoped by `{username}` to avoid cross-user local collisions.
-- [ ] Network Monitoring (AC: 2)
-  - [ ] Implement a `useNetworkStatus()` hook in `src/hooks/` to track and display the "Offline" status bar.
-  - [ ] Show a subtle "Offline - Storing Locally" notification when connectivity is lost.
+- [x] Implement Offline State Logic (AC: 1, 4)
+  - [x] Update `src/services/storage/storage-service.ts` to include a "Synchronous-then-Async" write pattern (Write to `localStorage` buffer first, then `IndexedDB` in background).
+  - [x] Configure Zustand store to use the synchronous buffer for immediate UI responsiveness.
+- [x] Build Local Task List (AC: 2, 3, 6)
+  - [x] Implement the `TaskCard.tsx` with conditional "Sync Status" icons.
+  - [x] Use `octicon-sync` (Amber: `#d29922`) for pending tasks and `octicon-check` (Green: `#3fb950`) for synced ones.
+- [x] UUID & Collision Management (AC: 5)
+  - [x] Integrate a lightweight UUID v4 generator for local task IDs.
+  - [x] Ensure local tasks are scoped by `{username}` to avoid cross-user local collisions.
+- [x] Network Monitoring (AC: 2)
+  - [x] Implement a `useNetworkStatus()` hook in `src/hooks/` to track and display the "Offline" status bar.
+  - [x] Show a subtle "Offline - Storing Locally" notification when connectivity is lost.
 
 ## Dev Notes
 
@@ -56,10 +56,42 @@ so that I never lose a spark due to a bad connection.
 
 ### Agent Model Used
 
-Gemini 2.0 Flash (March 2026)
+Claude Opus 4.6 (March 2026)
 
 ### Debug Log References
 
+No blocking issues encountered during implementation.
+
 ### Completion Notes List
 
+- Implemented synchronous-then-async write pattern in StorageService: localStorage writes happen synchronously as a crash-safe buffer, then IndexedDB writes fire asynchronously for durable long-term storage.
+- Added Task type with SyncStatus ('pending' | 'synced'), UUID v4 generation using crypto.randomUUID() with fallback.
+- Extended Zustand store (useSyncStore) with tasks array, addTask (write-through), markTaskSynced, removeTask, and loadTasksFromIDB for IDB recovery on app start. Tasks are part of persisted state.
+- Tasks are scoped by username (user.login) to prevent cross-user local collisions.
+- Built TaskCard component with octicon-sync (amber #d29922) for pending and octicon-check (green #3fb950) for synced status, including color-coded pills and left border.
+- Created useNetworkStatus hook tracking online/offline events with transient "Offline - Storing Locally" notification banner.
+- Integrated task list display in App.tsx below PulseInput, wired PulseInput's onLaunch callback to addTask.
+- Fixed pre-existing broken imports in octokit-provider.ts and unused parameter warning in auth-service.ts.
+- All 69 new/modified tests pass. Build succeeds.
+
+### Change Log
+
+- 2026-03-14: Implemented Story 3-4 "Overnight Offline" local persistence
+
 ### File List
+
+- src/services/storage/storage-service.ts (modified - added IndexedDB methods)
+- src/services/storage/storage-service.test.ts (new)
+- src/types/task.ts (new)
+- src/utils/uuid.ts (new)
+- src/utils/uuid.test.ts (new)
+- src/stores/useSyncStore.ts (modified - added tasks state and actions)
+- src/hooks/useNetworkStatus.ts (new)
+- src/hooks/useNetworkStatus.test.ts (new)
+- src/features/capture/components/TaskCard.tsx (new)
+- src/features/capture/components/TaskCard.test.tsx (new)
+- src/features/capture/components/PulseInput.tsx (modified - added onLaunch prop)
+- src/App.tsx (modified - integrated task list, offline notification, onLaunch wiring)
+- src/App.test.tsx (modified - updated mocks for new store fields and useNetworkStatus)
+- src/services/github/octokit-provider.ts (modified - fixed pre-existing broken imports)
+- src/services/github/auth-service.ts (modified - fixed pre-existing unused parameter)

@@ -5,7 +5,20 @@ import { useSyncStore } from './stores/useSyncStore'
 
 // Mock the store
 vi.mock('./stores/useSyncStore', () => ({
-  useSyncStore: vi.fn(),
+  useSyncStore: Object.assign(vi.fn(), {
+    getState: vi.fn(() => ({
+      setSelectedRepo: vi.fn(),
+    })),
+  }),
+}))
+
+// Mock useNetworkStatus
+vi.mock('./hooks/useNetworkStatus', () => ({
+  useNetworkStatus: () => ({
+    isOnline: true,
+    showOfflineNotification: false,
+    dismissOfflineNotification: vi.fn(),
+  }),
 }))
 
 // Mock AuthGuard to render children immediately (tested separately)
@@ -30,8 +43,19 @@ describe('App', () => {
         isAuthenticated: false,
         user: null,
         encryptedToken: null,
+        selectedRepo: null,
+        currentDraft: '',
+        isImportant: false,
+        tasks: [],
         setAuth: vi.fn(),
         clearAuth: vi.fn(),
+        setSelectedRepo: vi.fn(),
+        setCurrentDraft: vi.fn(),
+        toggleImportant: vi.fn(),
+        addTask: vi.fn(),
+        markTaskSynced: vi.fn(),
+        removeTask: vi.fn(),
+        loadTasksFromIDB: vi.fn(),
       } as never),
     )
 
@@ -48,8 +72,19 @@ describe('App', () => {
         isAuthenticated: true,
         user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
         encryptedToken: null,
+        selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+        currentDraft: '',
+        isImportant: false,
+        tasks: [],
         setAuth: vi.fn(),
         clearAuth: vi.fn(),
+        setSelectedRepo: vi.fn(),
+        setCurrentDraft: vi.fn(),
+        toggleImportant: vi.fn(),
+        addTask: vi.fn(),
+        markTaskSynced: vi.fn(),
+        removeTask: vi.fn(),
+        loadTasksFromIDB: vi.fn(),
       } as never),
     )
 

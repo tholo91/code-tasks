@@ -38,7 +38,12 @@ interface LaunchingTask {
   text: string
 }
 
-export function PulseInput() {
+interface PulseInputProps {
+  /** Called after a task is "launched" with the parsed title and body */
+  onLaunch?: (title: string, body: string) => void
+}
+
+export function PulseInput({ onLaunch }: PulseInputProps = {}) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -123,6 +128,14 @@ export function PulseInput() {
     // Trigger haptic feedback (non-blocking)
     triggerLaunchHaptic()
 
+    // Parse title (first line) and body (remaining lines)
+    const lines = text.split('\n')
+    const title = lines[0]
+    const body = lines.slice(1).join('\n').trim()
+
+    // Notify parent to persist the task
+    onLaunch?.(title, body)
+
     // Start collapse animation
     setIsCollapsing(true)
 
@@ -153,7 +166,7 @@ export function PulseInput() {
         textareaRef.current?.focus()
       }, 300)
     })
-  }, [currentDraft, setCurrentDraft, adjustHeight])
+  }, [currentDraft, setCurrentDraft, adjustHeight, onLaunch])
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {

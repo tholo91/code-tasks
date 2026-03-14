@@ -29,7 +29,7 @@ development_status:
   3-1-the-pulse-ui-capture: "done"
   3-2-launch-gesture-feedback: "done"
   3-3-priority-toggles: "done"
-  3-4-offline-persistence: "ready-for-dev"
+  3-4-offline-persistence: "done"
   3-5-fuzzy-task-search: "ready-for-dev"
   3-6-priority-filter: "ready-for-dev"
 
