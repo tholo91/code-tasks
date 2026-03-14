@@ -19,6 +19,8 @@ export interface SelectedRepo {
   owner: string
 }
 
+export type SyncEngineStatus = 'idle' | 'syncing' | 'success' | 'error'
+
 interface SyncState {
   isAuthenticated: boolean
   user: GitHubUser | null
@@ -27,6 +29,10 @@ interface SyncState {
   currentDraft: string
   isImportant: boolean
   tasks: Task[]
+  isSyncing: boolean
+  lastSyncedAt: string | null
+  syncEngineStatus: SyncEngineStatus
+  syncError: string | null
 
   setAuth: (token: string, user: GitHubUser, passphrase: string) => Promise<void>
   clearAuth: () => void
@@ -37,6 +43,8 @@ interface SyncState {
   markTaskSynced: (taskId: string, githubIssueNumber: number) => void
   removeTask: (taskId: string) => void
   loadTasksFromIDB: () => Promise<void>
+  setSyncStatus: (status: SyncEngineStatus, error?: string) => void
+  updateLastSyncedAt: () => void
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -67,6 +75,10 @@ export const useSyncStore = create<SyncState>()(
       currentDraft: '',
       isImportant: false,
       tasks: [],
+      isSyncing: false,
+      lastSyncedAt: null,
+      syncEngineStatus: 'idle' as SyncEngineStatus,
+      syncError: null,
 
       setAuth: async (token: string, user: GitHubUser, passphrase: string) => {
         // "Write-Through" Pattern: Encrypt and persist to buffer BEFORE updating store
@@ -203,6 +215,18 @@ export const useSyncStore = create<SyncState>()(
           set({ tasks: merged })
         }
       },
+
+      setSyncStatus: (status: SyncEngineStatus, error?: string) => {
+        set({
+          syncEngineStatus: status,
+          isSyncing: status === 'syncing',
+          syncError: error ?? null,
+        })
+      },
+
+      updateLastSyncedAt: () => {
+        set({ lastSyncedAt: new Date().toISOString() })
+      },
     }),
     {
       name: 'code-tasks:store',
@@ -215,6 +239,7 @@ export const useSyncStore = create<SyncState>()(
         currentDraft: state.currentDraft,
         isImportant: state.isImportant,
         tasks: state.tasks,
+        lastSyncedAt: state.lastSyncedAt,
       }),
       skipHydration: true,
     },

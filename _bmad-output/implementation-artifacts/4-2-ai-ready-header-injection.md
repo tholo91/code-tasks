@@ -1,6 +1,6 @@
 # Story 4.2: AI-Ready Header Injection
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -20,20 +20,20 @@ so that I can immediately understand the context and priority of the tasks I nee
 
 ## Tasks / Subtasks
 
-- [ ] Define the AI-Ready Header (AC: 1, 4)
-  - [ ] Create `src/features/sync/utils/markdown-templates.ts` containing the standardized AI-Ready instruction header.
-- [ ] Implement Markdown Generator (AC: 2, 3)
-  - [ ] Implement `formatTaskAsMarkdown(task: Task)`:
+- [x] Define the AI-Ready Header (AC: 1, 4)
+  - [x] Create `src/features/sync/utils/markdown-templates.ts` containing the standardized AI-Ready instruction header.
+- [x] Implement Markdown Generator (AC: 2, 3)
+  - [x] Implement `formatTaskAsMarkdown(task: Task)`:
     - **Format:** `- [ ] **Task Title** ([Created: 2026-03-11]) (Priority: {{isImportant}})`
     - **Description:** Included on the next line if available.
-- [ ] Integrate Header Injection (AC: 1, 5)
-  - [ ] Update `syncPendingTasks()` in `sync-service.ts`:
+- [x] Integrate Header Injection (AC: 1, 5)
+  - [x] Update `syncPendingTasks()` in `sync-service.ts`:
     - **Step 1:** Check if file content contains the signature header.
     - **Step 2:** If missing, prepend the header to the content.
     - **Step 3:** Append the new tasks.
     - **Step 4:** Push the final content to GitHub.
-- [ ] Validation & Test (AC: 2)
-  - [ ] Verify the formatting against a sample `captured-ideas.md` file (using the format from `docs/example-format.md`).
+- [x] Validation & Test (AC: 2)
+  - [x] Verify the formatting against a sample `captured-ideas.md` file (using the format from `docs/example-format.md`).
 
 ## Dev Notes
 
@@ -57,10 +57,33 @@ so that I can immediately understand the context and priority of the tasks I nee
 
 ### Agent Model Used
 
-Gemini 2.0 Flash (March 2026)
+Claude Opus 4.6 (March 2026)
 
 ### Debug Log References
 
+- None
+
 ### Completion Notes List
 
+- Created `markdown-templates.ts` with AI-Ready header template, signature detection (`HEADER_SIGNATURE`), and `buildFileContent()` orchestrator
+- Header includes AI agent instructions, priority legend, and "Living Document" guidance per BMad standard
+- `formatTaskAsMarkdown()` generates per-task markdown with title, ISO date, priority indicator, and indented description
+- `buildFileContent()` handles 3 scenarios: new file (header+tasks), existing without header (inject header+append), existing with header (append only)
+- Refactored `sync-service.ts` to delegate markdown formatting and header logic to `markdown-templates.ts`
+- Updated `commitTasks()` to pass username for header personalization
+- 19 new unit tests in markdown-templates.test.ts + 3 header injection tests in sync-service.test.ts
+- Format verified against `docs/example-format.md` — uses `- [ ]` checkboxes, timestamps, and structured metadata
+- No regressions introduced
+
+### Change Log
+
+- 2026-03-14: Implemented Story 4.2 — AI-Ready Header Injection (all ACs satisfied)
+
 ### File List
+
+- `src/features/sync/utils/markdown-templates.ts` (new) — AI-Ready header template, task formatting, file content builder
+- `src/features/sync/utils/markdown-templates.test.ts` (new) — 19 unit tests for all template functions
+- `src/services/github/sync-service.ts` (modified) — Integrated header injection via buildFileContent, removed inline formatting
+- `src/services/github/sync-service.test.ts` (modified) — Added 3 header injection tests, updated commitTasks calls
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — Status update
+- `_bmad-output/implementation-artifacts/4-2-ai-ready-header-injection.md` (modified) — Story completion
