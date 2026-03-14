@@ -1,6 +1,6 @@
 # Story 3.5: Fuzzy Task Search
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,23 +24,23 @@ so that I can quickly find specific ideas as my list grows beyond a handful of i
 
 ## Tasks / Subtasks
 
-- [ ] Install and configure `fuse.js` (AC: #3)
-  - [ ] `npm install fuse.js`
-  - [ ] Create `src/features/capture/utils/fuzzy-search.ts` — exports a configured `Fuse` instance with `keys: ['title', 'body']`, `threshold: 0.4`, `includeScore: false`
-- [ ] Build `TaskSearchBar` component (AC: #1, #2, #4, #6)
-  - [ ] Create `src/features/capture/components/TaskSearchBar.tsx`
-  - [ ] Implement progressive disclosure: prop `taskCount: number` drives opacity/style variant
-  - [ ] Include clear (✕) icon button when input has value
-  - [ ] Apply Primer token styling (`--color-border-default`, `--color-fg-muted`, `--color-accent-fg`)
-  - [ ] Ensure 44×44px min touch targets on mobile
-- [ ] Integrate search state and filtering into task list (AC: #3, #4, #5)
-  - [ ] Add local `searchQuery` state (`useState<string>`) in the parent capture screen component — do NOT persist to Zustand
-  - [ ] Pass `searchQuery` to `TaskSearchBar` and a filtered task array to the task list renderer
-  - [ ] Filtering: if `searchQuery` is empty → pass all tasks; else → run `fuse.search(searchQuery)` and extract items
-  - [ ] Empty state: render inline message `"No tasks match '{{searchQuery}}'"` when filtered list is empty
-- [ ] Ensure animation respects `prefers-reduced-motion` (AC: #2)
-  - [ ] Opacity transition on threshold change uses Framer Motion with `useReducedMotion()` guard
-- [ ] Write unit tests (see Testing Requirements)
+- [x] Install and configure `fuse.js` (AC: #3)
+  - [x] `npm install fuse.js`
+  - [x] Create `src/features/capture/utils/fuzzy-search.ts` — exports a configured `Fuse` instance with `keys: ['title', 'body']`, `threshold: 0.4`, `includeScore: false`
+- [x] Build `TaskSearchBar` component (AC: #1, #2, #4, #6)
+  - [x] Create `src/features/capture/components/TaskSearchBar.tsx`
+  - [x] Implement progressive disclosure: prop `taskCount: number` drives opacity/style variant
+  - [x] Include clear (✕) icon button when input has value
+  - [x] Apply Primer token styling (`--color-border-default`, `--color-fg-muted`, `--color-accent-fg`)
+  - [x] Ensure 44×44px min touch targets on mobile
+- [x] Integrate search state and filtering into task list (AC: #3, #4, #5)
+  - [x] Add local `searchQuery` state (`useState<string>`) in the parent capture screen component — do NOT persist to Zustand
+  - [x] Pass `searchQuery` to `TaskSearchBar` and a filtered task array to the task list renderer
+  - [x] Filtering: if `searchQuery` is empty → pass all tasks; else → run `fuse.search(searchQuery)` and extract items
+  - [x] Empty state: render inline message `"No tasks match '{{searchQuery}}'"` when filtered list is empty
+- [x] Ensure animation respects `prefers-reduced-motion` (AC: #2)
+  - [x] Opacity transition on threshold change uses Framer Motion with `useReducedMotion()` guard
+- [x] Write unit tests (see Testing Requirements)
 
 ## Dev Notes
 
@@ -136,10 +136,32 @@ If `body` is stored differently (e.g., `description`), update the Fuse keys acco
 
 ### Agent Model Used
 
-<!-- To be filled by dev agent -->
+Claude Opus 4.6
 
 ### Debug Log References
 
+No debug issues encountered.
+
 ### Completion Notes List
 
+- Installed fuse.js for fuzzy search with threshold 0.4, ignoreLocation, minMatchCharLength 2
+- Created `fuzzy-search.ts` utility with `createTaskFuse()` and `searchTasks()` functions
+- Built `TaskSearchBar` component with progressive disclosure (opacity 0.4 → 1.0 at 5+ tasks)
+- Uses Framer Motion `useReducedMotion()` to skip animations when user prefers reduced motion
+- Integrated search state into `App.tsx` with `useState` (ephemeral, not persisted)
+- Filtering uses `useMemo` for performance; only searches when query >= 2 chars
+- Inline empty state shows "No tasks match '{{query}}'" when no results
+- All touch targets meet 44×44px minimum
+- 14 new tests: 6 fuzzy-search utility tests, 8 TaskSearchBar component tests
+- No browser keyboard shortcuts intercepted (Cmd+F/Ctrl+F pass through)
+- Note: Task type does not have `isImportant` field (it's store-level state only); Fuse.js keys `title` and `body` match the Task interface correctly
+
 ### File List
+
+- `src/features/capture/utils/fuzzy-search.ts` (new)
+- `src/features/capture/utils/fuzzy-search.test.ts` (new)
+- `src/features/capture/components/TaskSearchBar.tsx` (new)
+- `src/features/capture/components/TaskSearchBar.test.tsx` (new)
+- `src/App.tsx` (modified — added search state, TaskSearchBar, filtered task list)
+- `package.json` (modified — added fuse.js dependency)
+- `package-lock.json` (modified — lockfile update)

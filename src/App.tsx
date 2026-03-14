@@ -1,4 +1,4 @@
-import { Suspense, use, useMemo, useEffect } from 'react'
+import { Suspense, use, useMemo, useState, useEffect } from 'react'
 import { useSyncStore } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
@@ -6,6 +6,8 @@ import { AuthForm } from './features/auth/components/AuthForm'
 import { RepoSelector } from './features/repos/components/RepoSelector'
 import { PulseInput } from './features/capture/components/PulseInput'
 import { TaskCard } from './features/capture/components/TaskCard'
+import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
+import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
 import './App.css'
@@ -82,11 +84,18 @@ function AppContent() {
   const loadTasksFromIDB = useSyncStore((s) => s.loadTasksFromIDB)
 
   const { isOnline, showOfflineNotification, dismissOfflineNotification } = useNetworkStatus()
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Load tasks from IndexedDB on mount (merge with localStorage)
   useEffect(() => {
     loadTasksFromIDB()
   }, [loadTasksFromIDB])
+
+  const filteredTasks = useMemo(() => {
+    if (searchQuery.length < 2) return tasks
+    const fuse = createTaskFuse(tasks)
+    return searchTasks(fuse, searchQuery)
+  }, [tasks, searchQuery])
 
   if (!isAuthenticated) {
     return <AuthForm onSuccess={() => {}} />
@@ -158,15 +167,36 @@ function AppContent() {
       <main className="flex w-full flex-1 flex-col items-center">
         <PulseInput onLaunch={(title, body) => addTask(title, body)} />
 
+        {/* Search bar */}
+        {tasks.length > 0 && (
+          <div className="mt-4 w-full max-w-[640px] px-4">
+            <TaskSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              taskCount={tasks.length}
+            />
+          </div>
+        )}
+
         {/* Task list */}
         {tasks.length > 0 && (
           <div
-            className="mt-4 flex w-full max-w-[640px] flex-col gap-2 px-4"
+            className="mt-2 flex w-full max-w-[640px] flex-col gap-2 px-4"
             data-testid="task-list"
           >
-            {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
+            {filteredTasks.length > 0 ? (
+              filteredTasks.map((task) => (
+                <TaskCard key={task.id} task={task} />
+              ))
+            ) : searchQuery.length >= 2 ? (
+              <p
+                className="py-4 text-center text-sm"
+                style={{ color: 'var(--color-text-secondary, #8b949e)' }}
+                data-testid="search-empty-state"
+              >
+                No tasks match &lsquo;{searchQuery}&rsquo;
+              </p>
+            ) : null}
           </div>
         )}
       </main>
