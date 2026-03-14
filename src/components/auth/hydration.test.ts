@@ -7,11 +7,23 @@ vi.mock('../../services/storage/crypto-utils', () => ({
 }))
 
 // Mock auth-service
-const { mockValidateToken } = vi.hoisted(() => ({
+const { mockValidateToken, mockGetOctokit, mockClearOctokitInstance } = vi.hoisted(() => ({
   mockValidateToken: vi.fn(),
+  mockGetOctokit: vi.fn(),
+  mockClearOctokitInstance: vi.fn(),
 }))
 vi.mock('../../services/github/auth-service', () => ({
   validateToken: mockValidateToken,
+  getOctokit: mockGetOctokit,
+  clearOctokitInstance: mockClearOctokitInstance,
+}))
+
+// Mock repo-service
+const { mockValidateRepoAccess } = vi.hoisted(() => ({
+  mockValidateRepoAccess: vi.fn(),
+}))
+vi.mock('../../services/github/repo-service', () => ({
+  validateRepoAccess: mockValidateRepoAccess,
 }))
 
 // Mock localStorage
@@ -54,6 +66,8 @@ describe('hydration', () => {
     })
     vi.spyOn(useSyncStore.persist, 'rehydrate').mockImplementation(() => Promise.resolve())
     mockValidateToken.mockResolvedValue({ valid: true, user: { login: 'test', avatarUrl: '', name: null } })
+    mockGetOctokit.mockReturnValue({} as never)
+    mockValidateRepoAccess.mockResolvedValue(true)
   })
 
   it('clears auth when no token exists after rehydration', async () => {
@@ -148,5 +162,65 @@ describe('hydration', () => {
     const promise2 = getHydrationPromise()
     expect(promise1).toBe(promise2)
     await promise1
+  })
+
+  describe('last-used repo validation (Story 2.2)', () => {
+    const validAuthState = {
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: '', name: 'Test' },
+      encryptedToken: 'dGVzdA==',
+      selectedRepo: { id: 42, fullName: 'testuser/my-repo', owner: 'testuser' },
+    }
+
+    it('keeps selectedRepo when validation succeeds (AC 3, 4)', async () => {
+      useSyncStore.setState(validAuthState)
+      sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
+      mockValidateRepoAccess.mockResolvedValueOnce(true)
+
+      await getHydrationPromise()
+
+      const state = useSyncStore.getState()
+      expect(state.selectedRepo).toEqual(validAuthState.selectedRepo)
+      expect(mockValidateRepoAccess).toHaveBeenCalledWith(expect.anything(), 42)
+    })
+
+    it('clears selectedRepo when repo is no longer accessible (AC 5)', async () => {
+      useSyncStore.setState(validAuthState)
+      sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
+      mockValidateRepoAccess.mockResolvedValueOnce(false)
+
+      await getHydrationPromise()
+
+      const state = useSyncStore.getState()
+      expect(state.selectedRepo).toBeNull()
+      expect(state.isAuthenticated).toBe(true) // auth should remain valid
+    })
+
+    it('skips repo validation when no selectedRepo is persisted', async () => {
+      useSyncStore.setState({
+        ...validAuthState,
+        selectedRepo: null,
+      })
+      sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
+
+      await getHydrationPromise()
+
+      expect(mockValidateRepoAccess).not.toHaveBeenCalled()
+    })
+
+    it('skips repo validation when offline (trusts local state)', async () => {
+      const originalOnLine = navigator.onLine
+      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+
+      useSyncStore.setState(validAuthState)
+
+      await getHydrationPromise()
+
+      expect(mockValidateRepoAccess).not.toHaveBeenCalled()
+      const state = useSyncStore.getState()
+      expect(state.selectedRepo).toEqual(validAuthState.selectedRepo)
+
+      Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true })
+    })
   })
 })

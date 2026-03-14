@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Octokit } from 'octokit'
-import { searchUserRepos, getMyRepos, type GitHubRepo } from './repo-service'
+import { searchUserRepos, getMyRepos, validateRepoAccess, type GitHubRepo } from './repo-service'
 
 interface MockOctokit extends Octokit {
   rest: Octokit['rest'] & {
@@ -138,6 +138,44 @@ describe('repo-service', () => {
         userReposError: new Error('Bad credentials'),
       })
       await expect(getMyRepos(octokit)).rejects.toThrow('Bad credentials')
+    })
+  })
+
+  describe('validateRepoAccess', () => {
+    it('returns true when repo is found in cached repos', async () => {
+      const octokit = createMockOctokit()
+      const result = await validateRepoAccess(octokit, 1, sampleRepos)
+      expect(result).toBe(true)
+      // Should not call API when cache is provided
+      expect(octokit.rest.repos.listForAuthenticatedUser).not.toHaveBeenCalled()
+    })
+
+    it('returns false when repo is not found in cached repos', async () => {
+      const octokit = createMockOctokit()
+      const result = await validateRepoAccess(octokit, 999, sampleRepos)
+      expect(result).toBe(false)
+      expect(octokit.rest.repos.listForAuthenticatedUser).not.toHaveBeenCalled()
+    })
+
+    it('fetches repos from API when no cache is provided', async () => {
+      const octokit = createMockOctokit({ userRepos: sampleRepos })
+      const result = await validateRepoAccess(octokit, 1)
+      expect(result).toBe(true)
+      expect(octokit.rest.repos.listForAuthenticatedUser).toHaveBeenCalled()
+    })
+
+    it('returns false when repo not found via API', async () => {
+      const octokit = createMockOctokit({ userRepos: sampleRepos })
+      const result = await validateRepoAccess(octokit, 999)
+      expect(result).toBe(false)
+    })
+
+    it('returns false when API call fails', async () => {
+      const octokit = createMockOctokit({
+        userReposError: new Error('Network error'),
+      })
+      const result = await validateRepoAccess(octokit, 1)
+      expect(result).toBe(false)
     })
   })
 })
