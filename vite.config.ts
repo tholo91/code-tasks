@@ -43,6 +43,20 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.github\.com\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              backgroundSync: {
+                name: 'github-sync-queue',
+                options: {
+                  maxRetentionTime: 24 * 60, // 24 hours in minutes
+                },
+              },
+            },
+          },
+        ],
       },
     }),
   ],

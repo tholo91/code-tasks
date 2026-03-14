@@ -1,5 +1,6 @@
 import { Octokit } from 'octokit'
 import { throttling } from '@octokit/plugin-throttling'
+import { retry } from '@octokit/plugin-retry'
 
 export interface GitHubUser {
   login: string
@@ -11,7 +12,7 @@ export type TokenValidationResult =
   | { valid: true; user: GitHubUser }
   | { valid: false; error: string }
 
-const ThrottledOctokit = Octokit.plugin(throttling)
+const ThrottledOctokit = Octokit.plugin(throttling).plugin(retry)
 
 let octokitInstance: Octokit | null = null
 
@@ -20,7 +21,7 @@ export function getOctokit(token: string): Octokit {
     octokitInstance = new ThrottledOctokit({
       auth: token,
       throttle: {
-        onRateLimit: (retryAfter, options: any, octokit, retryCount) => {
+        onRateLimit: (retryAfter: number, options: Record<string, string>, octokit: Octokit, retryCount: number) => {
           octokit.log.warn(
             `Request quota exhausted for request ${options.method} ${options.url}`,
           )
@@ -31,7 +32,7 @@ export function getOctokit(token: string): Octokit {
             return true
           }
         },
-        onSecondaryRateLimit: (_retryAfter, options: any, octokit) => {
+        onSecondaryRateLimit: (_retryAfter: number, options: Record<string, string>, octokit: Octokit) => {
           // does not retry, only logs a warning
           octokit.log.warn(
             `Secondary quota exhausted for request ${options.method} ${options.url}`,

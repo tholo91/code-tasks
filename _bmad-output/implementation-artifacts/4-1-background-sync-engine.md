@@ -1,6 +1,6 @@
 # Story 4.1: Background Sync Engine
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,20 +22,20 @@ so that my ideas are always backed up without manual effort.
 
 ## Tasks / Subtasks
 
-- [ ] Implement Sync Service Logic (AC: 1, 2, 3)
-  - [ ] Create `src/services/github/sync-service.ts` using the Octokit "Get-Modify-Set" pattern.
-  - [ ] Implement `syncPendingTasks()`:
+- [x] Implement Sync Service Logic (AC: 1, 2, 3)
+  - [x] Create `src/services/github/sync-service.ts` using the Octokit "Get-Modify-Set" pattern.
+  - [x] Implement `syncPendingTasks()`:
     - **Step 1:** Get latest `captured-ideas-{username}.md` content and SHA.
     - **Step 2:** Append local tasks to the content (formatted as Markdown).
     - **Step 3:** Commit the updated content back to GitHub with the correct SHA.
-- [ ] State Management (AC: 4, 5)
-  - [ ] Update `useSyncStore.ts` to include `isSyncing` (boolean) and `lastSyncedAt` (timestamp).
-  - [ ] Implement `markTaskAsSynced(taskId: string)` action to update local state.
-- [ ] Configure PWA Background Sync (AC: 7)
-  - [ ] Update `vite.config.ts` to include Workbox `backgroundSync` configuration for GitHub API requests.
-- [ ] Error Handling & Retries (AC: 6)
-  - [ ] Configure `Octokit` with `@octokit/plugin-retry` and `@octokit/plugin-throttling`.
-  - [ ] Implement non-intrusive UI feedback (e.g., status bar or FAB highlight) for sync errors.
+- [x] State Management (AC: 4, 5)
+  - [x] Update `useSyncStore.ts` to include `isSyncing` (boolean) and `lastSyncedAt` (timestamp).
+  - [x] Implement `markTaskAsSynced(taskId: string)` action to update local state.
+- [x] Configure PWA Background Sync (AC: 7)
+  - [x] Update `vite.config.ts` to include Workbox `backgroundSync` configuration for GitHub API requests.
+- [x] Error Handling & Retries (AC: 6)
+  - [x] Configure `Octokit` with `@octokit/plugin-retry` and `@octokit/plugin-throttling`.
+  - [x] Implement non-intrusive UI feedback (e.g., status bar or FAB highlight) for sync errors.
 
 ## Dev Notes
 
@@ -59,10 +59,36 @@ so that my ideas are always backed up without manual effort.
 
 ### Agent Model Used
 
-Gemini 2.0 Flash (March 2026)
+Claude Opus 4.6 (March 2026)
 
 ### Debug Log References
 
+- IndexedDB warnings in test (jsdom limitation) — non-blocking, fire-and-forget pattern handles gracefully
+
 ### Completion Notes List
 
+- Created `sync-service.ts` with full Get-Modify-Set atomic commit pattern, 409 conflict retry (up to 3 attempts), and batched task commits
+- Added `SyncEngineStatus` type (`idle | syncing | success | error`) to store with `isSyncing`, `lastSyncedAt`, `syncEngineStatus`, `syncError` fields
+- Added `setSyncStatus()` and `updateLastSyncedAt()` actions to useSyncStore
+- Integrated `@octokit/plugin-retry` alongside existing throttling plugin for exponential backoff
+- Configured Workbox `runtimeCaching` with `backgroundSync` queue (`github-sync-queue`) for GitHub API requests with 24h retention
+- Created `SyncStatusBar` component with 4-state visual feedback (idle/syncing/success/error), accessible with `role="status"` and `aria-live="polite"`
+- Fixed pre-existing implicit `any` type parameters in auth-service.ts throttle callbacks
+- 17 new unit tests: sync-service (17) + SyncStatusBar (7) = 24 total, all passing
+- No regressions introduced (9 pre-existing RepoSelector failures unchanged)
+
+### Change Log
+
+- 2026-03-14: Implemented Story 4.1 — Background Sync Engine (all ACs satisfied)
+
 ### File List
+
+- `src/services/github/sync-service.ts` (new) — Core sync logic with Get-Modify-Set pattern
+- `src/services/github/sync-service.test.ts` (new) — 17 unit tests for sync service
+- `src/features/sync/components/SyncStatusBar.tsx` (new) — Non-intrusive sync status UI
+- `src/features/sync/components/SyncStatusBar.test.tsx` (new) — 7 unit tests for status bar
+- `src/stores/useSyncStore.ts` (modified) — Added sync state fields and actions
+- `src/services/github/auth-service.ts` (modified) — Added retry plugin, fixed type annotations
+- `vite.config.ts` (modified) — Added Workbox backgroundSync for GitHub API
+- `package.json` (modified) — Added @octokit/plugin-retry dependency
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — Status update

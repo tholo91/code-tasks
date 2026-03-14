@@ -15,6 +15,7 @@
   "dependencies": {
     "@capacitor/core": "^8.2.0",
     "@capacitor/haptics": "^8.0.1",
+    "@octokit/plugin-retry": "^8.1.0",
     "@octokit/plugin-throttling": "^11.0.3",
     "framer-motion": "^12.36.0",
     "fuse.js": "^7.1.0",
