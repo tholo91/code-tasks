@@ -1,6 +1,8 @@
 import { useSyncStore, base64ToArrayBuffer } from '../../stores/useSyncStore'
 import { decryptData } from '../../services/storage/crypto-utils'
 import { validateToken } from '../../services/github/auth-service'
+import { validateRepoAccess } from '../../services/github/repo-service'
+import { getOctokit } from '../../services/github/auth-service'
 
 const PASSPHRASE_KEY = 'code-tasks:passphrase'
 
@@ -45,6 +47,18 @@ async function performHydration(): Promise<void> {
 
     if (!result.valid) {
       useSyncStore.getState().clearAuth()
+      return
+    }
+
+    // Validate persisted "Last Used" repository access (Story 2.2, AC 4 & 5)
+    const { selectedRepo } = useSyncStore.getState()
+    if (selectedRepo) {
+      const octokit = getOctokit(token)
+      const hasAccess = await validateRepoAccess(octokit, selectedRepo.id)
+      if (!hasAccess) {
+        // Clear stale repo selection — user will be prompted to select a new repo
+        useSyncStore.getState().setSelectedRepo(null)
+      }
     }
   } catch {
     useSyncStore.getState().clearAuth()

@@ -1,6 +1,6 @@
 # Story 2.2: Persistent "Last Used" Repository Intelligence
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -20,15 +20,15 @@ so that I don't have to select it every time I want to capture a new idea.
 
 ## Tasks / Subtasks
 
-- [ ] Implement Persistence Logic (AC: 1, 2)
-  - [ ] Update `setSelectedRepo` in `useSyncStore.ts` to include a "Write-Through" to `LocalStorage`.
-  - [ ] Configure Zustand's `persist` middleware to include the `selectedRepo` state.
-- [ ] Implement Hydration & Validation (AC: 2, 4)
-  - [ ] Update the `AuthGuard` or a dedicated `RepoGuard` to validate the hydrated repository ID on app launch.
-  - [ ] Implement `validateRepoAccess(repoId: string)` in `repo-service.ts`.
-- [ ] Build Fallback UI (AC: 5)
-  - [ ] Implement a "Repo Not Found" error state in the app header or Pulse input.
-  - [ ] Ensure automatic redirect to the `RepoSelector` if the last-used repo is missing.
+- [x] Implement Persistence Logic (AC: 1, 2)
+  - [x] Update `setSelectedRepo` in `useSyncStore.ts` to include a "Write-Through" to `LocalStorage`.
+  - [x] Configure Zustand's `persist` middleware to include the `selectedRepo` state.
+- [x] Implement Hydration & Validation (AC: 2, 4)
+  - [x] Update the `AuthGuard` or a dedicated `RepoGuard` to validate the hydrated repository ID on app launch.
+  - [x] Implement `validateRepoAccess(repoId: number)` in `repo-service.ts`.
+- [x] Build Fallback UI (AC: 5)
+  - [x] Implement a "Repo Not Found" error state in the app header or Pulse input.
+  - [x] Ensure automatic redirect to the `RepoSelector` if the last-used repo is missing.
 
 ## Dev Notes
 
@@ -52,10 +52,21 @@ so that I don't have to select it every time I want to capture a new idea.
 
 ### Agent Model Used
 
-Gemini 2.0 Flash (March 2026)
+Claude Opus 4.6 (March 2026)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- AC1 (Selection Persistence): Already implemented in prior story — `setSelectedRepo` uses Write-Through pattern to LocalStorage, and `selectedRepo` is included in Zustand `persist` `partialize` config.
+- AC2 (Smart Hydration): Zustand persist middleware with `skipHydration: true` rehydrates `selectedRepo` from localStorage during the hydration promise flow established in Story 1.3.
+- AC3 (Default Selection): App.tsx already checks `selectedRepo` state and skips the RepoSelector when a persisted repo exists.
+- AC4 (Validation on Load): Added `validateRepoAccess()` to `repo-service.ts` and integrated it into `hydration.ts` to validate the persisted repo after successful token validation.
+- AC5 (Fallback Logic): If `validateRepoAccess` returns false, the hydration flow clears `selectedRepo` via `setSelectedRepo(null)`, which triggers the RepoSelector UI in App.tsx.
+
 ### File List
+
+- `src/services/github/repo-service.ts` — Added `validateRepoAccess()` function
+- `src/services/github/repo-service.test.ts` — Added 5 tests for `validateRepoAccess`
+- `src/components/auth/hydration.ts` — Added repo validation during hydration flow
+- `src/components/auth/hydration.test.ts` — Added 4 tests for last-used repo validation

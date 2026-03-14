@@ -7,6 +7,7 @@ import type { GitHubUser } from '../services/github/auth-service'
 
 const AUTH_STORAGE_KEY = 'auth'
 const REPO_STORAGE_KEY = 'selected-repo'
+const DRAFT_STORAGE_KEY = 'current-draft'
 const PASSPHRASE_SESSION_KEY = 'code-tasks:passphrase'
 
 export interface SelectedRepo {
@@ -20,10 +21,12 @@ interface SyncState {
   user: GitHubUser | null
   encryptedToken: string | null
   selectedRepo: SelectedRepo | null
+  currentDraft: string
 
   setAuth: (token: string, user: GitHubUser, passphrase: string) => Promise<void>
   clearAuth: () => void
   setSelectedRepo: (repo: SelectedRepo | null) => void
+  setCurrentDraft: (draft: string) => void
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -51,6 +54,7 @@ export const useSyncStore = create<SyncState>()(
       user: null,
       encryptedToken: null,
       selectedRepo: null,
+      currentDraft: '',
 
       setAuth: async (token: string, user: GitHubUser, passphrase: string) => {
         // "Write-Through" Pattern: Encrypt and persist to buffer BEFORE updating store
@@ -86,7 +90,7 @@ export const useSyncStore = create<SyncState>()(
         // Cleanup Octokit instance
         clearOctokitInstance()
         
-        set({ isAuthenticated: false, user: null, encryptedToken: null, selectedRepo: null })
+        set({ isAuthenticated: false, user: null, encryptedToken: null, selectedRepo: null, currentDraft: '' })
       },
 
       setSelectedRepo: (repo: SelectedRepo | null) => {
@@ -98,6 +102,12 @@ export const useSyncStore = create<SyncState>()(
         }
         set({ selectedRepo: repo })
       },
+
+      setCurrentDraft: (draft: string) => {
+        // "Write-Through" Pattern: Persist draft to buffer before updating store
+        StorageService.setItem(DRAFT_STORAGE_KEY, draft)
+        set({ currentDraft: draft })
+      },
     }),
     {
       name: 'code-tasks:store',
@@ -107,6 +117,7 @@ export const useSyncStore = create<SyncState>()(
         user: state.user,
         encryptedToken: state.encryptedToken,
         selectedRepo: state.selectedRepo,
+        currentDraft: state.currentDraft,
       }),
       skipHydration: true,
     },

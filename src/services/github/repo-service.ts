@@ -56,3 +56,27 @@ export async function getMyRepos(octokit: Octokit): Promise<GitHubRepo[]> {
 
   return data.map(mapRepo)
 }
+
+/**
+ * Validates that the user still has access to a repository by its ID.
+ * First checks the cached repo list from getMyRepos, then falls back
+ * to a direct API call if not found in cache.
+ */
+export async function validateRepoAccess(
+  octokit: Octokit,
+  repoId: number,
+  cachedRepos?: GitHubRepo[],
+): Promise<boolean> {
+  // Check cached repos first to avoid redundant API calls
+  if (cachedRepos) {
+    return cachedRepos.some((repo) => repo.id === repoId)
+  }
+
+  try {
+    const repos = await getMyRepos(octokit)
+    return repos.some((repo) => repo.id === repoId)
+  } catch {
+    // If we can't verify access (e.g. network error), return false
+    return false
+  }
+}

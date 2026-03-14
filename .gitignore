@@ -40,3 +40,6 @@ ios/
 
 # TypeScript
 *.tsbuildinfo
+
+# Claude Code
+.claude/
