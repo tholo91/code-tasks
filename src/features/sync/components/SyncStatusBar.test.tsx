@@ -107,4 +107,39 @@ describe('SyncStatusBar', () => {
     render(<SyncStatusBar />)
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
+
+  it('shows target file name when user and repo are set', () => {
+    useSyncStore.setState({
+      syncEngineStatus: 'syncing',
+      isSyncing: true,
+      user: { login: 'thomas', avatarUrl: '', name: 'Thomas' },
+      selectedRepo: { id: 1, fullName: 'thomas/my-repo', owner: 'thomas' },
+    })
+    render(<SyncStatusBar />)
+    expect(screen.getByTestId('target-file-indicator')).toHaveTextContent(
+      'captured-ideas-thomas.md',
+    )
+  })
+
+  it('does not show target file name when user is null', () => {
+    useSyncStore.setState({
+      syncEngineStatus: 'syncing',
+      isSyncing: true,
+      user: null,
+      selectedRepo: { id: 1, fullName: 'org/repo', owner: 'org' },
+    })
+    render(<SyncStatusBar />)
+    expect(screen.queryByTestId('target-file-indicator')).not.toBeInTheDocument()
+  })
+
+  it('does not show target file name when no repo is selected', () => {
+    useSyncStore.setState({
+      syncEngineStatus: 'syncing',
+      isSyncing: true,
+      user: { login: 'thomas', avatarUrl: '', name: 'Thomas' },
+      selectedRepo: null,
+    })
+    render(<SyncStatusBar />)
+    expect(screen.queryByTestId('target-file-indicator')).not.toBeInTheDocument()
+  })
 })

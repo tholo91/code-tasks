@@ -6,6 +6,15 @@ import { buildFileContent } from '../../features/sync/utils/markdown-templates'
 
 const MAX_CONFLICT_RETRIES = 3
 
+/**
+ * Returns the user-scoped file name for captured ideas.
+ * Each user gets their own file to prevent merge conflicts in shared repos.
+ * Format: `captured-ideas-{username}.md`
+ */
+export function getScopedFileName(username: string): string {
+  return `captured-ideas-${username}.md`
+}
+
 interface FileContent {
   content: string
   sha: string
@@ -133,7 +142,7 @@ export async function syncPendingTasks(): Promise<{
     return { syncedCount: 0 }
   }
 
-  const filePath = `captured-ideas-${user.login}.md`
+  const filePath = getScopedFileName(user.login)
   const [owner, repo] = selectedRepo.fullName.split('/')
 
   const octokit = await recoverOctokit()
@@ -151,3 +160,4 @@ export async function syncPendingTasks(): Promise<{
 
 // Export for testing
 export { getFileContent, commitTasks }
+// Re-export getScopedFileName (already exported at definition)
