@@ -22,7 +22,7 @@ development_status:
   # Epic 2: The Target
   epic-2: "in-progress"
   2-1-repository-discovery-selection: "done"
-  2-2-persistent-last-used-repo: "ready-for-dev"
+  2-2-persistent-last-used-repo: "done"
 
   # Epic 3: The Pulse
   epic-3: "in-progress"
