@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { encryptData } from '../services/storage/crypto-utils'
+import { encryptData, decryptData } from '../services/storage/crypto-utils'
 import { StorageService } from '../services/storage/storage-service'
-import { clearOctokitInstance } from '../services/github/auth-service'
+import { clearOctokitInstance, getOctokit, validateToken } from '../services/github/auth-service'
 import { generateUUID } from '../utils/uuid'
 import type { GitHubUser } from '../services/github/auth-service'
 import type { Task } from '../types/task'
@@ -25,6 +25,7 @@ interface SyncState {
   isAuthenticated: boolean
   user: GitHubUser | null
   encryptedToken: string | null
+  needsPassphrase: boolean
   selectedRepo: SelectedRepo | null
   currentDraft: string
   isImportant: boolean
@@ -36,6 +37,8 @@ interface SyncState {
 
   setAuth: (token: string, user: GitHubUser, passphrase: string) => Promise<void>
   clearAuth: () => void
+  setNeedsPassphrase: (needs: boolean) => void
+  unlockWithPassphrase: (passphrase: string) => Promise<boolean>
   setSelectedRepo: (repo: SelectedRepo | null) => void
   setCurrentDraft: (draft: string) => void
   toggleImportant: () => void
@@ -71,6 +74,7 @@ export const useSyncStore = create<SyncState>()(
       isAuthenticated: false,
       user: null,
       encryptedToken: null,
+      needsPassphrase: false,
       selectedRepo: null,
       currentDraft: '',
       isImportant: false,
@@ -114,7 +118,37 @@ export const useSyncStore = create<SyncState>()(
         // Cleanup Octokit instance
         clearOctokitInstance()
 
-        set({ isAuthenticated: false, user: null, encryptedToken: null, selectedRepo: null, currentDraft: '', isImportant: false })
+        set({ isAuthenticated: false, user: null, encryptedToken: null, needsPassphrase: false, selectedRepo: null, currentDraft: '', isImportant: false })
+      },
+
+      setNeedsPassphrase: (needs: boolean) => {
+        set({ needsPassphrase: needs })
+      },
+
+      unlockWithPassphrase: async (passphrase: string): Promise<boolean> => {
+        const { encryptedToken } = get()
+        if (!encryptedToken) return false
+
+        try {
+          const buffer = base64ToArrayBuffer(encryptedToken)
+          const token = await decryptData(buffer, passphrase)
+          const result = await validateToken(token)
+
+          if (!result.valid) {
+            // Token expired or revoked — full re-login needed
+            get().clearAuth()
+            return false
+          }
+
+          // Token is valid — restore session
+          sessionStorage.setItem(PASSPHRASE_SESSION_KEY, passphrase)
+          getOctokit(token)
+          set({ needsPassphrase: false })
+          return true
+        } catch {
+          // Wrong passphrase (decryption failure) — let user retry
+          return false
+        }
       },
 
       setSelectedRepo: (repo: SelectedRepo | null) => {
