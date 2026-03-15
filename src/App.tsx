@@ -1,4 +1,5 @@
 import { Suspense, use, useMemo, useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useSyncStore } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
@@ -9,6 +10,7 @@ import { PulseInput } from './features/capture/components/PulseInput'
 import { TaskCard } from './features/capture/components/TaskCard'
 import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
 import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
+import { RoadmapView } from './features/community/components/RoadmapView'
 import { SyncFAB } from './features/sync/components/SyncFAB'
 import { useAutoSync } from './features/sync/hooks/useAutoSync'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
@@ -90,6 +92,7 @@ function AppContent() {
   const { isOnline, showOfflineNotification, dismissOfflineNotification } = useNetworkStatus()
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
+  const [isRoadmapOpen, setIsRoadmapOpen] = useState(false)
 
   // Load tasks from IndexedDB on mount (merge with localStorage)
   useEffect(() => {
@@ -193,9 +196,26 @@ function AppContent() {
             )}
           </div>
         )}
+
+        <button 
+          onClick={() => setIsRoadmapOpen(true)}
+          className="mt-8 mb-12 text-xs font-medium opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1.5"
+          style={{ color: 'var(--color-text-primary)' }}
+        >
+          <span>Was kommt als Nächstes?</span>
+          <span className="text-[10px] px-1 py-0.5 rounded border border-[rgba(255,255,255,0.2)]">Roadmap</span>
+        </button>
       </main>
 
       <SyncFAB />
+
+      <AnimatePresence>
+        {isRoadmapOpen && (
+          <div className="fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto bg-[var(--color-canvas)]">
+            <RoadmapView onClose={() => setIsRoadmapOpen(false)} />
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

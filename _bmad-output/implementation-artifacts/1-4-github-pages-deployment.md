@@ -32,19 +32,19 @@ so that the latest version of Gitty is always publicly accessible at a stable UR
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Set Vite base URL for GitHub Pages (AC: #2)
-  - [ ] Add `base: '/code-tasks/'` to `vite.config.ts`
-  - [ ] Update PWA manifest `start_url` to `/code-tasks/` and `scope` to `/code-tasks/`
+- [x] Task 1: Set Vite base URL for GitHub Pages (AC: #2)
+  - [x] Add `base: '/code-tasks/'` to `vite.config.ts`
+  - [x] Update PWA manifest `start_url` to `/code-tasks/` and `scope` to `/code-tasks/`
 
-- [ ] Task 2: Create GitHub Actions deployment workflow (AC: #1, #5)
-  - [ ] Create `.github/workflows/deploy.yml`
-  - [ ] Configure workflow: trigger on push to `main`, run `npm ci`, `npm run build`, deploy `dist/` to Pages
-  - [ ] Use `actions/upload-pages-artifact` + `actions/deploy-pages` (official GitHub Pages actions)
-  - [ ] Set correct permissions: `contents: read`, `pages: write`, `id-token: write`
+- [x] Task 2: Create GitHub Actions deployment workflow (AC: #1, #5)
+  - [x] Create `.github/workflows/deploy.yml`
+  - [x] Configure workflow: trigger on push to `main`, run `npm ci`, `npm run build`, deploy `dist/` to Pages
+  - [x] Use `actions/upload-pages-artifact` + `actions/deploy-pages` (official GitHub Pages actions)
+  - [x] Set correct permissions: `contents: read`, `pages: write`, `id-token: write`
 
-- [ ] Task 3: Configure GitHub Pages in repo settings (AC: #2, #3)
-  - [ ] Enable GitHub Pages via Settings → Pages → Source: "GitHub Actions"
-  - [ ] Verify deployment URL is `https://tholo91.github.io/code-tasks/`
+- [x] Task 3: Configure GitHub Pages in repo settings (AC: #2, #3)
+  - [x] Enable GitHub Pages via Settings → Pages → Source: "GitHub Actions"
+  - [x] Verify deployment URL is `https://tholo91.github.io/code-tasks/`
 
 - [ ] Task 4: Verify PWA installability (AC: #3, #4)
   - [ ] Open deployed URL in Chrome DevTools → Lighthouse → PWA audit
@@ -187,8 +187,12 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- `eslint-plugin-react-hooks@7.0.1` does not support ESLint v10 (peer dep range caps at v9). Fixed by adding `.npmrc` with `legacy-peer-deps=true` — this allows `npm ci` on GitHub Actions to install without conflict.
+- The `deploy` job in `deploy.yml` required its own `permissions` block (`pages: write`, `id-token: write`) in addition to the top-level block; without it the job silently lacked deploy rights.
+- Task 4 (PWA installability verification on device) and Task 5 (SPA 404 routing) remain pending — these require manual testing on a real device. SPA routing is not yet needed as the app uses no client-side path routing.
+
 ### File List
 
 - `vite.config.ts` (modified — add `base`, update PWA `start_url`/`scope`)
-- `.github/workflows/deploy.yml` (new)
-- `public/404.html` (new — optional, only if SPA routing needed)
+- `.github/workflows/deploy.yml` (new, later patched: added `permissions` to `deploy` job)
+- `.npmrc` (new — `legacy-peer-deps=true` to resolve ESLint v10 peer dep conflict in CI)
