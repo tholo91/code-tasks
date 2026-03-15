@@ -1,18 +1,8 @@
 import { motion } from 'framer-motion'
 import { useSyncStore } from '../../../stores/useSyncStore'
 import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
+import { TRANSITION_SPRING } from '../../../config/motion'
 
-/**
- * "Important" priority pill toggle for the Pulse capture area.
- *
- * Story 3-3: Priority Toggles
- * - Two states: Standard (ghost/outline) and Important (filled accent)
- * - Haptic feedback via selectionChanged() on toggle
- * - aria-pressed for accessibility, keyboard accessible (Space/Enter)
- * - GitHub Primer palette: Border #30363d, Active #58a6ff
- * - Spring animation on state transition (Framer Motion)
- * - Minimum 44x44px touch target
- */
 export function PriorityPill() {
   const isImportant = useSyncStore((s) => s.isImportant)
   const toggleImportant = useSyncStore((s) => s.toggleImportant)
@@ -39,18 +29,13 @@ export function PriorityPill() {
       onClick={handleToggle}
       onKeyDown={handleKeyDown}
       animate={{
-        backgroundColor: isImportant ? '#58a6ff' : 'transparent',
-        borderColor: isImportant ? '#58a6ff' : '#30363d',
-        color: isImportant ? '#0d1117' : '#8b949e',
+        backgroundColor: isImportant ? 'var(--color-accent)' : 'transparent',
+        borderColor: isImportant ? 'var(--color-accent)' : 'var(--color-border)',
+        color: isImportant ? 'var(--color-canvas)' : 'var(--color-text-secondary)',
         scale: 1,
       }}
       whileTap={{ scale: 0.95 }}
-      transition={{
-        type: 'spring',
-        stiffness: 500,
-        damping: 30,
-        mass: 0.8,
-      }}
+      transition={TRANSITION_SPRING}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -60,7 +45,6 @@ export function PriorityPill() {
         padding: '6px 14px',
         borderRadius: '9999px',
         border: '1px solid',
-        fontSize: '12px',
         fontWeight: 600,
         lineHeight: '1',
         cursor: 'pointer',
@@ -68,7 +52,7 @@ export function PriorityPill() {
         WebkitTapHighlightColor: 'transparent',
         outline: 'none',
       }}
-      className="focus-visible:ring-2 focus-visible:ring-[#58a6ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1117]"
+      className="text-label focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-canvas)]"
     >
       Important
     </motion.button>

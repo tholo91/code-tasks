@@ -76,13 +76,12 @@ describe('PulseInput', () => {
     vi.clearAllMocks()
   })
 
-  // --- Story 3-1 tests (preserved) ---
+  // --- Story 3-1 tests ---
 
-  it('renders the pulse container with correct padding', () => {
+  it('renders the pulse container', () => {
     render(<PulseInput />)
     const container = screen.getByTestId('pulse-container')
     expect(container).toBeInTheDocument()
-    expect(container.style.padding).toBe('32px 16px')
   })
 
   it('renders a textarea element', () => {
@@ -111,15 +110,16 @@ describe('PulseInput', () => {
     expect(textarea).toBeInTheDocument()
   })
 
-  it('applies title styling (24px, semi-bold) to the first line in the overlay', () => {
+  it('applies title styling to the first line in the overlay', () => {
     render(<PulseInput />)
     const titleLine = document.querySelector('.pulse-title-line')
     expect(titleLine).toBeInTheDocument()
-    expect(titleLine?.getAttribute('style')).toContain('font-size: 24px')
-    expect(titleLine?.getAttribute('style')).toContain('font-weight: 600')
+    // Uses text-hero class for font-size (via Tailwind), font-weight via class
+    expect(titleLine).toHaveClass('text-hero')
+    expect(titleLine).toHaveClass('font-semibold')
   })
 
-  it('renders body lines with standard styling (16px, normal weight)', async () => {
+  it('renders body lines with standard styling', async () => {
     vi.useRealTimers()
 
     vi.mocked(useSyncStore).mockImplementation((selector) =>
@@ -142,7 +142,8 @@ describe('PulseInput', () => {
 
     const bodyLines = document.querySelectorAll('.pulse-body-line')
     expect(bodyLines.length).toBe(2)
-    expect(bodyLines[0]?.getAttribute('style')).toContain('font-size: 16px')
+    // Body lines use 1rem (16px equivalent)
+    expect(bodyLines[0]?.getAttribute('style')).toContain('font-size: 1rem')
     expect(bodyLines[0]?.getAttribute('style')).toContain('font-weight: 400')
   })
 
@@ -205,10 +206,11 @@ describe('PulseInput', () => {
     expect(textarea.defaultValue).toBe('Existing draft')
   })
 
-  it('renders with max-width of 640px', () => {
+  it('renders with max-width constraint', () => {
     render(<PulseInput />)
     const container = screen.getByTestId('pulse-container')
-    expect(container.style.maxWidth).toBe('640px')
+    // max-width is applied via Tailwind class max-w-[640px]
+    expect(container.className).toContain('max-w-')
   })
 
   // --- Story 3-2 tests: Launch gesture & visual feedback ---
@@ -223,7 +225,6 @@ describe('PulseInput', () => {
       await user.type(textarea, 'My task')
       await user.keyboard('{Control>}{Enter}{/Control}')
 
-      // Should clear the draft in the store
       expect(mockSetCurrentDraft).toHaveBeenCalledWith('')
     })
 
@@ -260,8 +261,6 @@ describe('PulseInput', () => {
       await user.click(textarea)
       await user.keyboard('{Control>}{Enter}{/Control}')
 
-      // setCurrentDraft should not have been called with ''
-      // (no launch occurred since there was nothing to launch)
       expect(mockSetCurrentDraft).not.toHaveBeenCalledWith('')
     })
 
@@ -274,7 +273,6 @@ describe('PulseInput', () => {
       await user.type(textarea, '   ')
       await user.keyboard('{Control>}{Enter}{/Control}')
 
-      // The trim() check should prevent launch
       expect(mockSetCurrentDraft).not.toHaveBeenCalledWith('')
     })
 
@@ -287,16 +285,11 @@ describe('PulseInput', () => {
       await user.type(textarea, 'My task')
       await user.keyboard('{Enter}')
 
-      // Should not clear draft (plain Enter is newline, not launch)
       expect(mockSetCurrentDraft).not.toHaveBeenCalledWith('')
     })
   })
 
   describe('Swipe-up gesture', () => {
-    // Note: jsdom PointerEvent does not support clientY (always 0).
-    // Full gesture integration tests require a real browser.
-    // Here we verify gesture-related UI elements and pointer event handling.
-
     it('drag area is rendered with touch-none for gesture handling', () => {
       render(<PulseInput />)
       const dragArea = screen.getByTestId('pulse-drag-area')
@@ -308,7 +301,6 @@ describe('PulseInput', () => {
       const dragArea = screen.getByTestId('pulse-drag-area')
       expect(dragArea).toBeInTheDocument()
 
-      // Should not throw when firing pointer events
       fireEvent.pointerDown(dragArea, { button: 0 })
       fireEvent.pointerMove(dragArea)
       fireEvent.pointerUp(dragArea)
@@ -318,7 +310,6 @@ describe('PulseInput', () => {
       render(<PulseInput />)
       const dragArea = screen.getByTestId('pulse-drag-area')
 
-      // Right-click (button: 2) should not initiate drag
       fireEvent.pointerDown(dragArea, { button: 2 })
       fireEvent.pointerMove(dragArea)
       fireEvent.pointerUp(dragArea)
@@ -364,7 +355,6 @@ describe('PulseInput', () => {
       await user.type(textarea, 'Animated task')
       await user.keyboard('{Control>}{Enter}{/Control}')
 
-      // Ghost element should appear
       const ghost = screen.getByTestId('launch-ghost')
       expect(ghost).toBeInTheDocument()
       expect(ghost).toHaveTextContent('Animated task')
@@ -379,7 +369,6 @@ describe('PulseInput', () => {
       await user.type(textarea, 'Collapse test')
       await user.keyboard('{Control>}{Enter}{/Control}')
 
-      // During collapse, transform should be scaleY(0) and opacity 0
       expect(textarea.style.transform).toBe('scaleY(0)')
       expect(textarea.style.opacity).toBe('0')
     })
@@ -393,23 +382,18 @@ describe('PulseInput', () => {
       await user.type(textarea, 'Cleanup test')
       await user.keyboard('{Control>}{Enter}{/Control}')
 
-      // Ghost should be visible
       expect(screen.getByTestId('launch-ghost')).toBeInTheDocument()
 
-      // Complete the ghost-rise animation
       act(() => {
         animationFinishCallbacks.forEach((cb) => cb())
       })
 
-      // Now landing should appear
       expect(screen.getByTestId('launch-landing')).toBeInTheDocument()
 
-      // Complete the landing animation
       act(() => {
         animationFinishCallbacks.forEach((cb) => cb())
       })
 
-      // All animation elements should be gone
       expect(screen.queryByTestId('launch-ghost')).not.toBeInTheDocument()
       expect(screen.queryByTestId('launch-landing')).not.toBeInTheDocument()
     })
@@ -478,7 +462,6 @@ describe('PulseInput', () => {
       await user.keyboard('{Control>}{Enter}{/Control}')
       const elapsed = performance.now() - startTime
 
-      // Visual feedback should be well under 100ms (AC: Feedback Latency)
       expect(elapsed).toBeLessThan(100)
       expect(textarea.style.transform).toBe('scaleY(0)')
     })

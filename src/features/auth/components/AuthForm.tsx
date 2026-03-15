@@ -1,4 +1,5 @@
 import { useState, useActionState } from 'react'
+import { motion } from 'framer-motion'
 import { validateToken } from '../../../services/github/auth-service'
 import { useSyncStore } from '../../../stores/useSyncStore'
 
@@ -50,31 +51,18 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <form
-        action={formAction}
-        className="w-full max-w-md rounded-lg border p-6"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          borderColor: 'var(--color-border)',
-        }}
-      >
-        <h2
-          className="mb-2 text-xl font-semibold"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+      <form action={formAction} className="card w-full max-w-md p-6">
+        <h2 className="mb-2 text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           Authenticate
         </h2>
-        <p
-          className="mb-6 text-sm"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
+        <p className="mb-6 text-body" style={{ color: 'var(--color-text-secondary)' }}>
           Enter your GitHub Personal Access Token and a master passphrase to encrypt it.
         </p>
 
         <div className="mb-4">
           <label
             htmlFor="pat-input"
-            className="mb-2 block text-sm font-medium"
+            className="mb-2 block text-body font-medium"
             style={{ color: 'var(--color-text-primary)' }}
           >
             Personal Access Token
@@ -86,12 +74,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             autoComplete="off"
             placeholder="ghp_..."
             disabled={isPending}
-            className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-            style={{
-              backgroundColor: 'var(--color-canvas)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-            }}
+            className="input-field"
           />
 
           {/* Accordion toggle */}
@@ -100,10 +83,10 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             onClick={() => setHelpOpen((prev) => !prev)}
             aria-expanded={helpOpen}
             aria-controls="token-help"
-            className="mt-2 flex min-h-[44px] items-center text-xs underline"
+            className="mt-2 flex min-h-[44px] items-center text-label underline"
             style={{ color: 'var(--color-accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
           >
-            How do I get a token? →
+            How do I get a token?
           </button>
 
           {/* Accordion content */}
@@ -114,40 +97,33 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             style={{ maxHeight: helpOpen ? '600px' : '0' }}
           >
             <div
-              className="mt-2 rounded-md border p-3 text-xs"
-              style={{
-                borderColor: 'var(--color-border)',
-                backgroundColor: 'var(--color-canvas)',
-                color: 'var(--color-text-secondary)',
-              }}
+              className="card mt-2 p-3 text-label"
+              style={{ color: 'var(--color-text-secondary)' }}
             >
-              {/* Privacy / trust paragraph */}
               <p className="mb-3">
                 Your token connects Gitty directly to GitHub from your device.
                 It's encrypted with your passphrase (AES-256 GCM) and stored
                 locally only. It's never sent to any server — because there are none.
               </p>
 
-              {/* Step-by-step instructions */}
               <ol className="mb-3 list-decimal pl-4 space-y-1">
-                <li>Click the button below → you'll land on GitHub's "New fine-grained token" page</li>
-                <li>Under "Repository access" → select "Only select repositories" → pick your repo</li>
-                <li>Under "Repository permissions" → find "Contents" → set it to "Read and Write"</li>
-                <li>Click "Generate token" → copy it → paste it above</li>
+                <li>Click the button below — you'll land on GitHub's "New fine-grained token" page</li>
+                <li>Under "Repository access" — select "Only select repositories" — pick your repo</li>
+                <li>Under "Repository permissions" — find "Contents" — set it to "Read and Write"</li>
+                <li>Click "Generate token" — copy it — paste it above</li>
               </ol>
 
-              {/* Deep-link CTA */}
               <a
                 href="https://github.com/settings/personal-access-tokens/new"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block rounded-md px-3 py-1 text-xs font-medium"
+                className="inline-block rounded-md px-3 py-1 text-label font-medium"
                 style={{
                   backgroundColor: 'var(--color-accent)',
                   color: '#ffffff',
                 }}
               >
-                Open GitHub Token Page →
+                Open GitHub Token Page
               </a>
             </div>
           </div>
@@ -156,7 +132,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
         <div className="mb-6">
           <label
             htmlFor="passphrase-input"
-            className="mb-2 block text-sm font-medium"
+            className="mb-2 block text-body font-medium"
             style={{ color: 'var(--color-text-primary)' }}
           >
             App Passphrase (Encryption Key)
@@ -168,14 +144,9 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             autoComplete="new-password"
             placeholder="Your master key"
             disabled={isPending}
-            className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-            style={{
-              backgroundColor: 'var(--color-canvas)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-            }}
+            className="input-field"
           />
-          <p className="mt-1 text-[10px]" style={{ color: 'var(--color-text-secondary)' }}>
+          <p className="mt-1 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
             This is never stored. You'll need it to unlock your token on other sessions.
           </p>
         </div>
@@ -183,10 +154,10 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
         {state.error && (
           <div
             role="alert"
-            className="mb-4 rounded-md border px-3 py-2 text-sm"
+            className="mb-4 rounded-md border px-3 py-2 text-body"
             style={{
-              borderColor: '#f85149',
-              color: '#f85149',
+              borderColor: 'var(--color-danger)',
+              color: 'var(--color-danger)',
               backgroundColor: 'rgba(248, 81, 73, 0.1)',
             }}
           >
@@ -194,22 +165,18 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           </div>
         )}
 
-        {/* Always-visible trust line */}
-        <p className="mb-3 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          🔒 Your token never leaves this device.
+        <p className="mb-3 text-label" style={{ color: 'var(--color-text-secondary)' }}>
+          Your token never leaves this device.
         </p>
 
-        <button
+        <motion.button
           type="submit"
           disabled={isPending}
-          className="w-full rounded-md px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-50"
-          style={{
-            backgroundColor: 'var(--color-accent)',
-            color: '#ffffff',
-          }}
+          className="btn-primary"
+          whileTap={{ scale: 0.97 }}
         >
           {isPending ? 'Authenticating...' : 'Authenticate'}
-        </button>
+        </motion.button>
       </form>
     </div>
   )

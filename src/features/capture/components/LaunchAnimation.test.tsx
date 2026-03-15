@@ -48,7 +48,7 @@ describe('LaunchAnimation', () => {
         expect.objectContaining({ transform: 'translateY(-200px)', opacity: 0 }),
       ]),
       expect.objectContaining({
-        duration: 400,
+        duration: 300,
         fill: 'forwards',
       }),
     )
@@ -85,7 +85,7 @@ describe('LaunchAnimation', () => {
     const calls = (Element.prototype.animate as ReturnType<typeof vi.fn>).mock.calls
     expect(calls.length).toBe(2)
     expect(calls[1][1]).toMatchObject({
-      duration: 350,
+      duration: 300,
       easing: expect.stringContaining('cubic-bezier'),
       fill: 'forwards',
     })

@@ -165,8 +165,7 @@ describe('PriorityPill', () => {
     render(<PriorityPill />)
     const pill = screen.getByTestId('priority-pill')
     expect(pill.style.backgroundColor).toBe('transparent')
-    // jsdom normalizes hex to rgb
-    expect(pill.style.borderColor).toBe('rgb(48, 54, 61)')
+    expect(pill.style.borderColor).toBe('var(--color-border)')
   })
 
   it('renders with filled accent style when important', () => {
@@ -188,8 +187,7 @@ describe('PriorityPill', () => {
 
     render(<PriorityPill />)
     const pill = screen.getByTestId('priority-pill')
-    // jsdom normalizes hex to rgb
-    expect(pill.style.backgroundColor).toBe('rgb(88, 166, 255)')
-    expect(pill.style.borderColor).toBe('rgb(88, 166, 255)')
+    expect(pill.style.backgroundColor).toBe('var(--color-accent)')
+    expect(pill.style.borderColor).toBe('var(--color-accent)')
   })
 })

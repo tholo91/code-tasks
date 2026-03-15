@@ -7,15 +7,6 @@ interface TaskSearchBarProps {
   taskCount: number
 }
 
-/**
- * Fuzzy search bar for the task list.
- *
- * Story 3-5: Fuzzy Task Search
- * - Progressive disclosure: de-emphasized when < 5 tasks, prominent when >= 5
- * - Clear (✕) button when input has value
- * - 44×44px min touch targets on mobile
- * - Opacity animation respects prefers-reduced-motion
- */
 export function TaskSearchBar({ value, onChange, taskCount }: TaskSearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const shouldReduceMotion = useReducedMotion()
@@ -36,7 +27,7 @@ export function TaskSearchBar({ value, onChange, taskCount }: TaskSearchBarProps
           height="16"
           viewBox="0 0 16 16"
           fill="currentColor"
-          style={{ color: 'var(--color-text-secondary, #8b949e)' }}
+          style={{ color: 'var(--color-text-secondary)' }}
           aria-hidden="true"
         >
           <path
@@ -53,20 +44,7 @@ export function TaskSearchBar({ value, onChange, taskCount }: TaskSearchBarProps
           placeholder="Search tasks..."
           aria-label="Search tasks"
           data-testid="task-search-input"
-          className="w-full rounded-md py-2 pl-9 pr-9 text-sm"
-          style={{
-            backgroundColor: 'var(--color-canvas-subtle, #161b22)',
-            color: 'var(--color-fg-default, #e6edf3)',
-            border: '1px solid var(--color-border-default, #30363d)',
-            minHeight: '44px',
-            outline: 'none',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--color-accent-emphasis, #58a6ff)'
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--color-border-default, #30363d)'
-          }}
+          className="input-field pl-9 pr-9"
         />
 
         {/* Clear button */}
@@ -83,7 +61,7 @@ export function TaskSearchBar({ value, onChange, taskCount }: TaskSearchBarProps
             style={{
               minWidth: '44px',
               minHeight: '44px',
-              color: 'var(--color-text-secondary, #8b949e)',
+              color: 'var(--color-text-secondary)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',

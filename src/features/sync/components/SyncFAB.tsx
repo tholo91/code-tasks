@@ -2,14 +2,8 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSyncStore } from '../../../stores/useSyncStore'
 import { syncPendingTasks } from '../../../services/github/sync-service'
+import { TRANSITION_SPRING } from '../../../config/motion'
 
-/**
- * Ghost-Writer FAB — Floating Action Button for manual sync.
- *
- * Appears only when pendingSyncCount > 0 with a "breathe" animation.
- * Tapping triggers syncPendingTasks(), shows a spinner while syncing,
- * and fades out once pendingSyncCount returns to zero.
- */
 export function SyncFAB() {
   const tasks = useSyncStore((s) => s.tasks)
   const user = useSyncStore((s) => s.user)
@@ -54,9 +48,7 @@ export function SyncFAB() {
           }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{
-            type: 'spring',
-            stiffness: 400,
-            damping: 30,
+            ...TRANSITION_SPRING,
             scale: isSyncing
               ? { duration: 0.2 }
               : { repeat: Infinity, duration: 2.5, ease: 'easeInOut' },
@@ -71,7 +63,7 @@ export function SyncFAB() {
             height: 56,
             backgroundColor: isSyncing
               ? 'rgba(56, 139, 253, 0.85)'
-              : 'rgba(56, 139, 253, 1)',
+              : 'var(--color-info)',
             color: '#ffffff',
             border: 'none',
             cursor: isSyncing ? 'wait' : 'pointer',
@@ -83,18 +75,13 @@ export function SyncFAB() {
               : `Sync ${pendingSyncCount} pending task${pendingSyncCount !== 1 ? 's' : ''} to GitHub`
           }
         >
-          {isSyncing ? (
-            <SyncSpinner />
-          ) : (
-            <SyncIcon />
-          )}
+          {isSyncing ? <SyncSpinner /> : <SyncIcon />}
         </motion.button>
       )}
     </AnimatePresence>
   )
 }
 
-/** Octicon sync icon (16x16) */
 function SyncIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -103,7 +90,6 @@ function SyncIcon() {
   )
 }
 
-/** Spinning sync icon for in-progress state */
 function SyncSpinner() {
   return (
     <svg

@@ -1,5 +1,5 @@
-import { Suspense, use, useMemo, useState, useEffect, Component, type ReactNode } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { Suspense, use, useMemo, useState, useEffect, useCallback, Component, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useSyncStore } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
@@ -17,33 +17,34 @@ import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-sear
 import type { PriorityFilter } from './types/task'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
-import './App.css'
+import { pageVariants, listContainerVariants, listItemVariants, TRANSITION_NORMAL } from './config/motion'
 
-function RepoSelectorContainer() {
+function RepoSelectorContainer({ onSelect }: { onSelect?: () => void }) {
   const setSelectedRepo = useSyncStore((s) => s.setSelectedRepo)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
-
-  // React 19 use() for async resource
   const octokit = use(useMemo(() => recoverOctokit(), []))
 
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="text-center">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+        <h2 className="text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           Select a Repository
         </h2>
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+        <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>
           Specify where your capture file will be stored.
         </p>
       </div>
       <RepoSelector
         octokit={octokit}
         selectedRepoId={selectedRepo?.id ?? null}
-        onSelect={(repo) => setSelectedRepo({
-          id: repo.id,
-          fullName: repo.fullName,
-          owner: repo.owner
-        })}
+        onSelect={(repo) => {
+          setSelectedRepo({
+            id: repo.id,
+            fullName: repo.fullName,
+            owner: repo.owner
+          })
+          onSelect?.()
+        }}
       />
     </div>
   )
@@ -67,14 +68,10 @@ class OctokitErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div className="flex flex-col items-center gap-4 py-8">
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>
             Failed to initialize GitHub access. Please log in again.
           </p>
-          <button
-            onClick={this.props.onLogout}
-            className="rounded-md px-4 py-2 text-sm font-medium"
-            style={{ backgroundColor: 'var(--color-accent)', color: '#ffffff' }}
-          >
+          <button onClick={this.props.onLogout} className="btn-primary max-w-xs">
             Log in again
           </button>
         </div>
@@ -91,28 +88,34 @@ function OfflineNotification({
   visible: boolean
   onDismiss: () => void
 }) {
-  if (!visible) return null
-
   return (
-    <div
-      className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center px-4 py-2"
-      style={{
-        backgroundColor: 'rgba(210, 153, 34, 0.95)',
-        color: '#1c2128',
-      }}
-      role="alert"
-      data-testid="offline-notification"
-    >
-      <span className="text-sm font-medium">Offline &mdash; Storing Locally</span>
-      <button
-        onClick={onDismiss}
-        className="ml-3 text-xs font-bold underline"
-        style={{ color: '#1c2128' }}
-        aria-label="Dismiss offline notification"
-      >
-        Dismiss
-      </button>
-    </div>
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ y: -40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -40, opacity: 0 }}
+          transition={TRANSITION_NORMAL}
+          className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center px-4 py-2"
+          style={{
+            backgroundColor: 'rgba(210, 153, 34, 0.95)',
+            color: '#1c2128',
+          }}
+          role="alert"
+          data-testid="offline-notification"
+        >
+          <span className="text-body font-medium">Offline &mdash; Storing Locally</span>
+          <button
+            onClick={onDismiss}
+            className="ml-3 text-label font-bold underline"
+            style={{ color: '#1c2128' }}
+            aria-label="Dismiss offline notification"
+          >
+            Dismiss
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -143,24 +146,11 @@ function PassphraseUnlock() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-lg border p-6"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          borderColor: 'var(--color-border)',
-        }}
-      >
-        <h2
-          className="mb-2 text-xl font-semibold"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+      <form onSubmit={handleSubmit} className="card w-full max-w-md p-6">
+        <h2 className="mb-2 text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           Welcome back{user?.name ? `, ${user.name}` : ''}
         </h2>
-        <p
-          className="mb-6 text-sm"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
+        <p className="mb-6 text-body" style={{ color: 'var(--color-text-secondary)' }}>
           Enter your passphrase to unlock your encrypted token.
         </p>
 
@@ -172,22 +162,17 @@ function PassphraseUnlock() {
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
             disabled={isPending}
-            className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-            style={{
-              backgroundColor: 'var(--color-canvas)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-            }}
+            className="input-field"
           />
         </div>
 
         {error && (
           <div
             role="alert"
-            className="mb-4 rounded-md border px-3 py-2 text-sm"
+            className="mb-4 rounded-md border px-3 py-2 text-body"
             style={{
-              borderColor: '#f85149',
-              color: '#f85149',
+              borderColor: 'var(--color-danger)',
+              color: 'var(--color-danger)',
               backgroundColor: 'rgba(248, 81, 73, 0.1)',
             }}
           >
@@ -195,28 +180,69 @@ function PassphraseUnlock() {
           </div>
         )}
 
-        <button
+        <motion.button
           type="submit"
           disabled={isPending}
-          className="w-full rounded-md px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-50"
-          style={{
-            backgroundColor: 'var(--color-accent)',
-            color: '#ffffff',
-          }}
+          className="btn-primary"
+          whileTap={{ scale: 0.97 }}
         >
           {isPending ? 'Unlocking...' : 'Unlock'}
-        </button>
+        </motion.button>
 
         <button
           type="button"
           onClick={clearAuth}
-          className="mt-3 w-full text-xs underline"
-          style={{ color: 'var(--color-text-secondary)' }}
+          className="btn-ghost mt-3 w-full"
         >
           Log in with a different token instead
         </button>
       </form>
     </div>
+  )
+}
+
+/** Bottom sheet overlay for repo picker */
+function RepoPickerSheet({ onClose }: { onClose: () => void }) {
+  const clearAuth = useSyncStore((s) => s.clearAuth)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-end"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" />
+
+      {/* Sheet */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        className="relative z-10 w-full max-w-lg rounded-t-2xl p-6 pb-8"
+        style={{ backgroundColor: 'var(--color-surface)' }}
+      >
+        {/* Handle */}
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full" style={{ backgroundColor: 'var(--color-border)' }} />
+
+        <OctokitErrorBoundary onLogout={clearAuth}>
+          <Suspense
+            fallback={
+              <p className="text-body py-8 text-center" style={{ color: 'var(--color-text-secondary)' }}>
+                Loading repositories...
+              </p>
+            }
+          >
+            <RepoSelectorContainer onSelect={onClose} />
+          </Suspense>
+        </OctokitErrorBoundary>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -233,13 +259,14 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false)
+  const [showRepoPicker, setShowRepoPicker] = useState(false)
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
+  const [newestTaskId, setNewestTaskId] = useState<string | null>(null)
 
-  // Load tasks from IndexedDB on mount (merge with localStorage)
   useEffect(() => {
     loadTasksFromIDB()
   }, [loadTasksFromIDB])
 
-  // Automatic sync triggers
   useAutoSync()
 
   const fuse = useMemo(() => createTaskFuse(tasks), [tasks])
@@ -255,114 +282,199 @@ function AppContent() {
     return searchFilteredTasks.filter((t) => !t.isImportant)
   }, [searchFilteredTasks, priorityFilter])
 
-  if (!isAuthenticated) {
-    return <AuthForm onSuccess={() => {}} />
+  const handleLaunch = useCallback((title: string, body: string) => {
+    const newTask = addTask(title, body)
+    if (newTask?.id) {
+      setNewestTaskId(newTask.id)
+      setTimeout(() => setNewestTaskId(null), 1500)
+    }
+  }, [addTask])
+
+  // Determine which view to show
+  const getViewKey = () => {
+    if (!isAuthenticated) return 'auth'
+    if (needsPassphrase) return 'passphrase'
+    if (!selectedRepo) return 'repo-select'
+    return 'main'
   }
 
-  if (needsPassphrase) {
-    return <PassphraseUnlock />
-  }
-
-  if (!selectedRepo) {
-    return (
-      <div className="app">
-        <header className="app-header mb-8">
-          <h1 className="app-title">code-tasks</h1>
-          <button
-            onClick={clearAuth}
-            className="text-xs underline"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Logout
-          </button>
-        </header>
-        <OctokitErrorBoundary onLogout={clearAuth}>
-          <Suspense fallback={<p className="text-sm">Initializing GitHub access...</p>}>
-            <RepoSelectorContainer />
-          </Suspense>
-        </OctokitErrorBoundary>
-      </div>
-    )
-  }
+  const viewKey = getViewKey()
 
   return (
-    <div className="app">
-      <OfflineNotification
-        visible={showOfflineNotification}
-        onDismiss={dismissOfflineNotification}
-      />
+    <AnimatePresence mode="wait">
+      {viewKey === 'auth' && (
+        <motion.div key="auth" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+          <AuthForm onSuccess={() => {}} />
+        </motion.div>
+      )}
 
-      <AppHeader isOnline={isOnline} />
-      <main className="flex w-full flex-1 flex-col items-center">
-        <PulseInput onLaunch={(title, body) => addTask(title, body)} />
+      {viewKey === 'passphrase' && (
+        <motion.div key="passphrase" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+          <PassphraseUnlock />
+        </motion.div>
+      )}
 
-        {/* Search bar */}
-        {tasks.length > 0 && (
-          <div className="mt-4 w-full max-w-[640px] px-4">
-            <TaskSearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              taskCount={tasks.length}
-            />
-          </div>
-        )}
-
-        {/* Priority filter pills */}
-        {tasks.length > 0 && (
-          <div className="mt-2 w-full max-w-[640px] px-4">
-            <PriorityFilterPills
-              currentFilter={priorityFilter}
-              onChange={setPriorityFilter}
-            />
-          </div>
-        )}
-
-        {/* Task list */}
-        {tasks.length > 0 && (
-          <div
-            className="mt-2 flex w-full max-w-[640px] flex-col gap-2 px-4"
-            data-testid="task-list"
-          >
-            {displayedTasks.length > 0 ? (
-              displayedTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))
-            ) : (
-              <p
-                className="py-4 text-center text-sm"
-                style={{ color: 'var(--color-fg-muted, var(--color-text-secondary, #8b949e))' }}
-                data-testid="filter-empty-state"
-              >
-                {searchQuery.length >= 1
-                  ? `No tasks match '\u2018${searchQuery}\u2019'`
-                  : priorityFilter === 'important'
-                    ? 'No important tasks'
-                    : 'No non-important tasks'}
-              </p>
-            )}
-          </div>
-        )}
-
-        <button 
-          onClick={() => setIsRoadmapOpen(true)}
-          className="mt-8 mb-12 text-xs font-medium opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1.5"
-          style={{ color: 'var(--color-text-primary)' }}
+      {viewKey === 'repo-select' && (
+        <motion.div
+          key="repo-select"
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="min-h-screen flex flex-col items-center justify-center p-4"
         >
-          <span>Was kommt als Nächstes?</span>
-          <span className="text-[10px] px-1 py-0.5 rounded border border-[rgba(255,255,255,0.2)]">Roadmap</span>
-        </button>
-      </main>
+          <header className="text-center mb-8">
+            <h1 className="text-hero font-semibold" style={{ color: 'var(--color-accent)' }}>
+              code-tasks
+            </h1>
+            <button onClick={clearAuth} className="btn-ghost mt-2">
+              Logout
+            </button>
+          </header>
+          <OctokitErrorBoundary onLogout={clearAuth}>
+            <Suspense fallback={<p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>Initializing GitHub access...</p>}>
+              <RepoSelectorContainer />
+            </Suspense>
+          </OctokitErrorBoundary>
+        </motion.div>
+      )}
 
-      <SyncFAB />
+      {viewKey === 'main' && (
+        <motion.div
+          key="main"
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="min-h-screen flex flex-col items-center p-4"
+        >
+          <OfflineNotification
+            visible={showOfflineNotification}
+            onDismiss={dismissOfflineNotification}
+          />
 
-      <AnimatePresence>
-        {isRoadmapOpen && (
-          <div className="fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto bg-[var(--color-canvas)]">
-            <RoadmapView onClose={() => setIsRoadmapOpen(false)} />
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
+          <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} />
+
+          <main className="flex w-full flex-1 flex-col items-center">
+            <PulseInput onLaunch={handleLaunch} />
+
+            {/* Search bar */}
+            {tasks.length > 0 && (
+              <div className="mt-4 w-full max-w-[640px] px-4">
+                <TaskSearchBar
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  taskCount={tasks.length}
+                />
+              </div>
+            )}
+
+            {/* Priority filter pills */}
+            {tasks.length > 0 && (
+              <div className="mt-2 w-full max-w-[640px] px-4">
+                <PriorityFilterPills
+                  currentFilter={priorityFilter}
+                  onChange={setPriorityFilter}
+                />
+              </div>
+            )}
+
+            {/* Task list */}
+            {tasks.length > 0 ? (
+              <motion.div
+                className="mt-2 flex w-full max-w-[640px] flex-col gap-2 px-4"
+                variants={listContainerVariants}
+                initial="initial"
+                animate="animate"
+                data-testid="task-list"
+              >
+                {displayedTasks.length > 0 ? (
+                  displayedTasks.map((task) => (
+                    <motion.div key={task.id} variants={listItemVariants}>
+                      <TaskCard
+                        task={task}
+                        isExpanded={expandedTaskId === task.id}
+                        onToggle={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+                        isNewest={newestTaskId === task.id}
+                      />
+                    </motion.div>
+                  ))
+                ) : (
+                  <p
+                    className="py-4 text-center text-body"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    data-testid="filter-empty-state"
+                  >
+                    {searchQuery.length >= 1
+                      ? `No tasks match \u2018${searchQuery}\u2019`
+                      : priorityFilter === 'important'
+                        ? 'No important tasks'
+                        : 'No non-important tasks'}
+                  </p>
+                )}
+              </motion.div>
+            ) : (
+              /* Empty state */
+              <motion.div
+                className="mt-12 flex flex-col items-center gap-3 px-4"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+              >
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: 'var(--color-text-secondary)', opacity: 0.3 }}
+                >
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" />
+                  <path d="M2 12l10 5 10-5" />
+                </svg>
+                <p className="text-body font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                  No tasks yet
+                </p>
+                <p className="text-label" style={{ color: 'var(--color-text-secondary)', opacity: 0.7 }}>
+                  Type above and swipe up to launch your first task
+                </p>
+              </motion.div>
+            )}
+
+            <button
+              onClick={() => setIsRoadmapOpen(true)}
+              className="mt-8 mb-12 text-label font-medium opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1.5"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              <span>Was kommt als Nächstes?</span>
+              <span className="text-caption px-1 py-0.5 rounded border border-[rgba(255,255,255,0.2)]">Roadmap</span>
+            </button>
+          </main>
+
+          <SyncFAB />
+
+          {/* Repo picker bottom sheet */}
+          <AnimatePresence>
+            {showRepoPicker && (
+              <RepoPickerSheet onClose={() => setShowRepoPicker(false)} />
+            )}
+          </AnimatePresence>
+
+          {/* Roadmap overlay */}
+          <AnimatePresence>
+            {isRoadmapOpen && (
+              <div className="fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto bg-[var(--color-canvas)]">
+                <RoadmapView onClose={() => setIsRoadmapOpen(false)} />
+              </div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 

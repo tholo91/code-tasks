@@ -1,36 +1,13 @@
 import { useRef, useCallback, useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useSyncStore } from '../../../stores/useSyncStore'
 import { LaunchAnimation } from './LaunchAnimation'
 import { PriorityPill } from './PriorityPill'
 import { triggerLaunchHaptic } from '../../../services/native/haptic-service'
-
-/**
- * "The Pulse" — a focused, borderless, auto-expanding text area
- * for instant thought capture with signature "Launch" gesture.
- *
- * Story 3-1 features:
- * - AC1: Auto-focused on mount (keyboard active)
- * - AC2: 60 FPS typing performance (minimal re-renders)
- * - AC3: Auto-expanding vertically with 32px vertical padding
- * - AC4: First line styled as title (24px semi-bold), rest as body (16px)
- * - AC5: Instant visual feedback, no layout shift
- * - AC6: Draft stored in useSyncStore for persistence
- *
- * Story 3-2 features (Launch gesture):
- * - Vertical swipe-up gesture triggers "Launch" sequence
- * - Animated collapse with ghost task rising upward
- * - Spring bounce landing animation
- * - Haptic feedback on launch (Capacitor)
- * - Cmd+Enter / Ctrl+Enter keyboard shortcut
- * - State clearance after launch
- */
+import { successFlash } from '../../../config/motion'
 
 const DEBOUNCE_MS = 300
-
-/** Minimum upward drag distance (px) to trigger launch */
 const LAUNCH_THRESHOLD = 50
-
-/** Spring-like resistance factor for drag */
 const DRAG_ELASTIC = 0.4
 
 interface LaunchingTask {
@@ -39,7 +16,6 @@ interface LaunchingTask {
 }
 
 interface PulseInputProps {
-  /** Called after a task is "launched" with the parsed title and body */
   onLaunch?: (title: string, body: string) => void
 }
 
@@ -51,8 +27,8 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
   const currentDraft = useSyncStore((s) => s.currentDraft)
   const setCurrentDraft = useSyncStore((s) => s.setCurrentDraft)
 
-  // Launch gesture state
   const [isCollapsing, setIsCollapsing] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [launchingTasks, setLaunchingTasks] = useState<LaunchingTask[]>([])
   const [dragOffsetY, setDragOffsetY] = useState(0)
   const [hasContent, setHasContent] = useState(!!currentDraft.trim())
@@ -62,7 +38,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
   const dragOffsetRef = useRef(0)
   const launchIdCounter = useRef(0)
 
-  // Auto-resize textarea to fit content
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current
     if (!textarea) return
@@ -70,7 +45,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     textarea.style.height = `${textarea.scrollHeight}px`
   }, [])
 
-  // Sync overlay scroll with textarea
   const syncScroll = useCallback(() => {
     const textarea = textareaRef.current
     const overlay = overlayRef.current
@@ -79,7 +53,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     }
   }, [])
 
-  // Debounced write-through to store/LocalStorage
   const debouncedSetDraft = useCallback(
     (value: string) => {
       if (debounceTimerRef.current) {
@@ -92,7 +65,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     [setCurrentDraft],
   )
 
-  // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -101,7 +73,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     }
   }, [])
 
-  // Auto-resize on mount and when draft loads from store
   useEffect(() => {
     adjustHeight()
   }, [currentDraft, adjustHeight])
@@ -109,8 +80,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.target.value
-      // Update textarea value immediately for responsiveness (AC5)
-      // Debounce the store write (AC6)
       debouncedSetDraft(value)
       adjustHeight()
       setHasContent(!!value.trim())
@@ -118,51 +87,41 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     [debouncedSetDraft, adjustHeight],
   )
 
-  // --- Launch gesture logic ---
-
   const performLaunch = useCallback(() => {
     const textarea = textareaRef.current
     const text = (textarea?.value ?? currentDraft).trim()
     if (!text) return
 
-    // Trigger haptic feedback (non-blocking)
     triggerLaunchHaptic()
 
-    // Parse title (first line) and body (remaining lines)
     const lines = text.split('\n')
     const title = lines[0]
     const body = lines.slice(1).join('\n').trim()
 
-    // Notify parent to persist the task
     onLaunch?.(title, body)
 
-    // Start collapse animation
     setIsCollapsing(true)
+    setShowSuccess(true)
 
-    // Create a launching task for the animation
     const launchId = ++launchIdCounter.current
     setLaunchingTasks((prev) => [...prev, { id: launchId, text }])
 
-    // Clear the input immediately (AC: State Clearance)
     if (textarea) {
       textarea.value = ''
     }
-    // Cancel any pending debounce and clear the store draft
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
     }
     setCurrentDraft('')
-    // Reset priority flag for the next draft
     useSyncStore.setState({ isImportant: false })
     setDragOffsetY(0)
     setHasContent(false)
 
-    // End collapse after animation duration
     requestAnimationFrame(() => {
       setTimeout(() => {
         setIsCollapsing(false)
+        setShowSuccess(false)
         adjustHeight()
-        // Refocus the textarea for the next spark
         textareaRef.current?.focus()
       }, 300)
     })
@@ -170,7 +129,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      // Only track primary pointer (touch or left mouse)
       if (e.button !== 0) return
       dragStartY.current = e.clientY
       isDragging.current = false
@@ -182,14 +140,11 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (dragStartY.current === null) return
-
       const deltaY = dragStartY.current - e.clientY
       if (deltaY > 10) {
         isDragging.current = true
       }
-
       if (isDragging.current) {
-        // Apply elastic resistance for a tactile, springy feel
         const elasticDelta = deltaY * DRAG_ELASTIC
         const clamped = Math.max(0, elasticDelta)
         dragOffsetRef.current = clamped
@@ -211,14 +166,12 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     if (wasDragging && finalOffset >= threshold) {
       performLaunch()
     } else {
-      // Snap back with no launch
       setDragOffsetY(0)
     }
   }, [performLaunch])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      // Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         performLaunch()
@@ -231,11 +184,6 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     setLaunchingTasks((prev) => prev.filter((t) => t.id !== launchId))
   }, [])
 
-  /**
-   * Render styled overlay for visual weight shifts (AC4).
-   * The first line is rendered as a title, subsequent lines as body text.
-   * The overlay sits behind the textarea which has transparent text for caret visibility.
-   */
   const renderOverlay = (text: string) => {
     const lines = text.split('\n')
     const firstLine = lines[0] || ''
@@ -244,23 +192,17 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     return (
       <>
         <span
-          className="pulse-title-line"
-          style={{
-            fontSize: '24px',
-            fontWeight: 600,
-            lineHeight: '1.4',
-            color: 'var(--color-text-primary)',
-          }}
+          className="pulse-title-line text-hero font-semibold"
+          style={{ color: 'var(--color-text-primary)' }}
         >
           {firstLine || '\u00A0'}
         </span>
         {restLines.map((line, i) => (
           <span
             key={i}
-            className="pulse-body-line"
+            className="pulse-body-line block"
             style={{
-              display: 'block',
-              fontSize: '16px',
+              fontSize: '1rem',
               fontWeight: 400,
               lineHeight: '1.5',
               color: 'var(--color-text-secondary)',
@@ -273,22 +215,38 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
     )
   }
 
-  // Get textarea value - use ref for current value or fall back to store
   const getDisplayValue = () => {
     return textareaRef.current?.value ?? currentDraft
   }
 
   return (
     <div
-      className="pulse-container"
-      style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: '640px',
-        padding: '32px 16px',
-      }}
+      className="pulse-container relative w-full max-w-[640px] px-4 py-8"
       data-testid="pulse-container"
     >
+      {/* Success checkmark flash */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            variants={successFlash}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
+          >
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 16 16"
+              fill="var(--color-success)"
+              aria-hidden="true"
+            >
+              <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z" />
+            </svg>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Launched task animations */}
       <div aria-live="polite">
         {launchingTasks.map((task) => (
@@ -300,7 +258,7 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
         ))}
       </div>
 
-      {/* Drag gesture area wrapping the input */}
+      {/* Drag gesture area */}
       <div
         className="touch-none select-none"
         onPointerDown={handlePointerDown}
@@ -310,7 +268,7 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
         data-testid="pulse-drag-area"
         style={{ position: 'relative' }}
       >
-        {/* Styled overlay for visual weight differentiation */}
+        {/* Styled overlay */}
         <div
           ref={overlayRef}
           className="pulse-overlay"
@@ -330,16 +288,16 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
             opacity: isCollapsing ? 0 : 1,
             transformOrigin: 'bottom',
             transition: isCollapsing
-              ? 'transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 250ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+              ? 'transform var(--duration-normal) var(--ease-spring), opacity var(--duration-normal) var(--ease-spring)'
               : dragOffsetY > 0
                 ? 'none'
-                : 'transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                : 'transform var(--duration-fast) var(--ease-spring)',
           }}
         >
           {renderOverlay(getDisplayValue())}
         </div>
 
-        {/* Actual textarea — transparent text, visible caret */}
+        {/* Actual textarea */}
         <textarea
           ref={textareaRef}
           autoFocus
@@ -351,7 +309,7 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
           rows={1}
           aria-label="Capture your thought"
           data-testid="pulse-input"
-          className="pulse-textarea"
+          className="pulse-textarea text-hero"
           style={{
             position: 'relative',
             width: '100%',
@@ -360,8 +318,7 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
             outline: 'none',
             resize: 'none',
             overflow: 'hidden',
-            fontSize: '24px',
-            lineHeight: '1.4',
+            lineHeight: '1.3',
             fontFamily: 'inherit',
             color: 'transparent',
             caretColor: 'var(--color-accent)',
@@ -372,29 +329,20 @@ export function PulseInput({ onLaunch }: PulseInputProps = {}) {
             opacity: isCollapsing ? 0 : 1,
             transformOrigin: 'bottom',
             transition: isCollapsing
-              ? 'transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 250ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+              ? 'transform var(--duration-normal) var(--ease-spring), opacity var(--duration-normal) var(--ease-spring)'
               : dragOffsetY > 0
                 ? 'none'
-                : 'transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                : 'transform var(--duration-fast) var(--ease-spring)',
           }}
         />
 
-        {/* Capture zone: hint text + priority pill */}
+        {/* Capture zone */}
         {hasContent && !isCollapsing && (
           <div
-            className="mt-2"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
+            className="mt-2 flex items-center justify-between"
             data-testid="capture-zone"
           >
-            <p
-              className="text-[10px]"
-              style={{ color: 'var(--color-text-secondary)' }}
-              data-testid="launch-hint"
-            >
+            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }} data-testid="launch-hint">
               Swipe up or press {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}+Enter to launch
             </p>
             <PriorityPill />
