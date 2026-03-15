@@ -1,6 +1,6 @@
 # code-tasks
 
-> **Frictionless "Quick Capture" for developers who live in GitHub.**
+> **Frictionless "Quick Capture" for developers who work with AI agents in GitHub.**
 
 `code-tasks` is an offline-first, high-fidelity Progressive Web App (PWA) designed to bridge the gap between late-night inspiration and GitHub execution. Inspired by the sleek UX of "Things" and "Sorted 3," it provides a beautiful, stable interface for managing ideas directly in your GitHub repositories.
 
