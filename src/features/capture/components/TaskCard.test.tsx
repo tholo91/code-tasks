@@ -35,52 +35,37 @@ describe('TaskCard', () => {
     expect(screen.queryByTestId('task-body-test-uuid-1')).not.toBeInTheDocument()
   })
 
-  it('shows amber sync icon and "Pending" pill for pending tasks', () => {
+  it('shows "Pending" status badge for pending tasks', () => {
     render(<TaskCard task={createTask({ syncStatus: 'pending' })} />)
-
     const statusPill = screen.getByTestId('sync-status-test-uuid-1')
     expect(statusPill).toHaveTextContent('Pending')
-
-    const icon = screen.getByLabelText('Sync pending')
-    expect(icon).toBeInTheDocument()
-    expect(icon).toHaveAttribute('fill', '#d29922')
   })
 
-  it('shows green check icon and "Synced" pill for synced tasks', () => {
+  it('shows "Synced" status badge for synced tasks', () => {
     render(
       <TaskCard
         task={createTask({ syncStatus: 'synced', githubIssueNumber: 42 })}
       />,
     )
-
     const statusPill = screen.getByTestId('sync-status-test-uuid-1')
     expect(statusPill).toHaveTextContent('Synced')
-
-    const icon = screen.getByLabelText('Synced to GitHub')
-    expect(icon).toBeInTheDocument()
-    expect(icon).toHaveAttribute('fill', '#3fb950')
   })
 
-  it('applies amber left border for pending tasks', () => {
+  it('shows sync status dot indicator', () => {
     render(<TaskCard task={createTask({ syncStatus: 'pending' })} />)
-    const card = screen.getByTestId('task-card-test-uuid-1')
-    // jsdom converts hex to rgb, so check for either format
-    const border = card.style.borderLeft
-    expect(
-      border.includes('#d29922') || border.includes('rgb(210, 153, 34)'),
-    ).toBe(true)
+    const dot = screen.getByTestId('sync-icon-test-uuid-1')
+    expect(dot).toBeInTheDocument()
+    expect(dot.title).toBe('Sync pending')
   })
 
-  it('applies green left border for synced tasks', () => {
+  it('shows synced dot indicator for synced tasks', () => {
     render(
       <TaskCard
         task={createTask({ syncStatus: 'synced', githubIssueNumber: 42 })}
       />,
     )
-    const card = screen.getByTestId('task-card-test-uuid-1')
-    const border = card.style.borderLeft
-    expect(
-      border.includes('#3fb950') || border.includes('rgb(63, 185, 80)'),
-    ).toBe(true)
+    const dot = screen.getByTestId('sync-icon-test-uuid-1')
+    expect(dot).toBeInTheDocument()
+    expect(dot.title).toBe('Synced to GitHub')
   })
 })

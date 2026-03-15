@@ -73,9 +73,11 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    // Advance timers for initial useEffect
     await act(async () => {
       vi.advanceTimersByTime(300)
+      // Let the resolved promise settle
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(await screen.findByText('testuser/alpha-repo')).toBeInTheDocument()
@@ -90,6 +92,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     const repoItem = await screen.findByText('testuser/alpha-repo')
@@ -104,6 +108,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     const repoItem = await screen.findByText('testuser/alpha-repo')
@@ -120,6 +126,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
     await screen.findByText('testuser/alpha-repo')
 
@@ -129,6 +137,8 @@ describe('RepoSelector', () => {
     // Wait for debounce
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(await screen.findByText('org/search-result')).toBeInTheDocument()
@@ -141,6 +151,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(await screen.findByText('Alpha project')).toBeInTheDocument()
@@ -153,6 +165,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(await screen.findByText('Private')).toBeInTheDocument()
@@ -167,6 +181,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(await screen.findByText(/rate limit/i)).toBeInTheDocument()
@@ -185,6 +201,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     const retryBtn = await screen.findByRole('button', { name: /retry/i })
@@ -192,6 +210,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(await screen.findByText('testuser/alpha-repo')).toBeInTheDocument()
@@ -206,6 +226,8 @@ describe('RepoSelector', () => {
 
     await act(async () => {
       vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(await screen.findByText(/failed to load/i)).toBeInTheDocument()

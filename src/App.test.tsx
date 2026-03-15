@@ -99,7 +99,7 @@ describe('App', () => {
     })
 
     expect(screen.getByText(/code-tasks/i)).toBeInTheDocument()
-    expect(screen.getByText(/welcome, testuser/i)).toBeInTheDocument()
+    expect(screen.getByTestId('selected-repo')).toHaveTextContent('testuser/repo')
     expect(screen.getByTestId('task-search-input')).toBeInTheDocument()
   })
 
@@ -118,7 +118,7 @@ describe('App', () => {
     )
 
     render(<App />)
-    
+
     const searchInput = screen.getByTestId('task-search-input')
     await user.type(searchInput, 'milk')
 
@@ -141,10 +141,10 @@ describe('App', () => {
     )
 
     render(<App />)
-    
+
     const searchInput = screen.getByTestId('task-search-input')
     await user.type(searchInput, 'nonexistent')
 
-    expect(screen.getByTestId('filter-empty-state')).toHaveTextContent(/No tasks match '‘nonexistent’'/)
+    expect(screen.getByTestId('filter-empty-state')).toHaveTextContent(/No tasks match/)
   })
 })

@@ -49,9 +49,6 @@ class RepoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState
   }
 }
 
-/**
- * Internal component that consumes the search results promise via use()
- */
 function RepoList({
   resultsPromise,
   onSelect,
@@ -65,7 +62,7 @@ function RepoList({
 
   if (repos.length === 0) {
     return (
-      <li className="px-3 py-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+      <li className="px-3 py-4 text-center text-body" style={{ color: 'var(--color-text-secondary)' }}>
         No repositories found
       </li>
     )
@@ -90,25 +87,19 @@ function RepoList({
           >
             <div className="flex items-center gap-2">
               <span
-                className="text-sm font-medium"
+                className="text-body font-medium"
                 style={{ color: isSelected ? 'var(--color-accent)' : 'var(--color-text-primary)' }}
               >
                 {repo.fullName}
               </span>
               {repo.isPrivate && (
-                <span
-                  className="rounded-full border px-1.5 py-0.5 text-[10px]"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
+                <span className="badge" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
                   Private
                 </span>
               )}
             </div>
             {repo.description && (
-              <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <p className="mt-0.5 text-label" style={{ color: 'var(--color-text-secondary)' }}>
                 {repo.description}
               </p>
             )}
@@ -124,7 +115,6 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [retryCount, setRetryCount] = useState(0)
 
-  // Debounce query changes
   useEffect(() => {
     if (!query.trim()) {
       setDebouncedQuery('')
@@ -136,8 +126,6 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
     return () => clearTimeout(timer)
   }, [query])
 
-  // Memoize the search promise so it's stable between renders of RepoList
-  // retryCount is added to dependencies to force promise regeneration on retry
   const resultsPromise = useMemo(() => {
     if (!debouncedQuery.trim()) {
       return getMyRepos(octokit)
@@ -150,21 +138,15 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
   }
 
   return (
-    <div
-      className="w-full max-w-md overflow-hidden rounded-lg border"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
-      }}
-    >
+    <div className="card w-full max-w-md overflow-hidden">
       <div className="border-b px-3 py-2" style={{ borderColor: 'var(--color-border)' }}>
         <input
           type="text"
           placeholder="Search repositories..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full bg-transparent text-sm outline-none"
-          style={{ color: 'var(--color-text-primary)' }}
+          className="w-full bg-transparent text-body outline-none"
+          style={{ color: 'var(--color-text-primary)', minHeight: '44px' }}
         />
       </div>
 
@@ -177,19 +159,12 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
             const isRateLimit = msg.toLowerCase().includes('rate limit')
             return (
               <li className="px-3 py-4 text-center">
-                <p className="mb-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                <p className="mb-2 text-body" style={{ color: 'var(--color-text-secondary)' }}>
                   {isRateLimit
                     ? 'API rate limit exceeded. Please try again later.'
                     : 'Failed to load repositories.'}
                 </p>
-                <button
-                  onClick={reset}
-                  className="rounded px-3 py-1 text-xs font-medium"
-                  style={{
-                    backgroundColor: 'var(--color-accent)',
-                    color: 'white',
-                  }}
-                >
+                <button onClick={reset} className="btn-primary max-w-[120px] mx-auto text-label">
                   Retry
                 </button>
               </li>
@@ -198,7 +173,7 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
         >
           <Suspense
             fallback={
-              <li className="px-3 py-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              <li className="px-3 py-4 text-center text-body" style={{ color: 'var(--color-text-secondary)' }}>
                 Loading repositories...
               </li>
             }

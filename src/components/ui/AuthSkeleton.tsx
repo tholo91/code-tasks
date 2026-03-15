@@ -10,7 +10,7 @@ export function AuthSkeleton() {
         style={{ color: 'var(--color-accent)' }}
       />
       <p
-        className="text-sm"
+        className="text-body"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         Loading...
