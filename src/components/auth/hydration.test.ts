@@ -92,7 +92,7 @@ describe('hydration', () => {
     expect(state.isAuthenticated).toBe(true)
   })
 
-  it('clears auth when no passphrase in sessionStorage', async () => {
+  it('sets needsPassphrase when no passphrase in sessionStorage', async () => {
     useSyncStore.setState({
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
@@ -102,7 +102,9 @@ describe('hydration', () => {
     await getHydrationPromise()
 
     const state = useSyncStore.getState()
-    expect(state.isAuthenticated).toBe(false)
+    expect(state.isAuthenticated).toBe(true)
+    expect(state.needsPassphrase).toBe(true)
+    expect(state.encryptedToken).toBe('dGVzdA==')
   })
 
   it('trusts local state when offline (AC 7)', async () => {

@@ -44,6 +44,10 @@ export function getOctokit(token: string): Octokit {
   return octokitInstance
 }
 
+export function getExistingOctokit(): Octokit | null {
+  return octokitInstance
+}
+
 export function clearOctokitInstance() {
   octokitInstance = null
 }

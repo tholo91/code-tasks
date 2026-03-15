@@ -25,7 +25,7 @@ async function performHydration(): Promise<void> {
   const { encryptedToken, isAuthenticated } = useSyncStore.getState()
 
   if (!isAuthenticated || !encryptedToken) {
-    useSyncStore.getState().clearAuth()
+    // Truly not authenticated — nothing to recover
     return
   }
 
@@ -36,7 +36,9 @@ async function performHydration(): Promise<void> {
 
   const passphrase = sessionStorage.getItem(PASSPHRASE_KEY)
   if (!passphrase) {
-    useSyncStore.getState().clearAuth()
+    // Passphrase lost (tab was closed) but encrypted token still exists.
+    // Don't destroy credentials — let the user re-enter their passphrase.
+    useSyncStore.getState().setNeedsPassphrase(true)
     return
   }
 
