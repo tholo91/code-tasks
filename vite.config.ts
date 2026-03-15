@@ -15,8 +15,8 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        name: 'code-tasks',
-        short_name: 'code-tasks',
+        name: 'Gitty',
+        short_name: 'Gitty',
         description: 'Lightweight GitHub issue capture tool for developers on the go',
         theme_color: '#0d1117',
         background_color: '#0d1117',
@@ -24,6 +24,11 @@ export default defineConfig({
         start_url: '/code-tasks/',
         scope: '/code-tasks/',
         icons: [
+          {
+            src: 'pwa-64x64.png',
+            sizes: '64x64',
+            type: 'image/png',
+          },
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
@@ -35,15 +40,16 @@ export default defineConfig({
             type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'maskable-icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'maskable',
           },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globIgnores: ['gitty.png'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.github\.com\/.*/i,

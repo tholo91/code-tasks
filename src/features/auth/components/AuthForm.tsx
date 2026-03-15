@@ -99,6 +99,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             type="button"
             onClick={() => setHelpOpen((prev) => !prev)}
             aria-expanded={helpOpen}
+            aria-controls="token-help"
             className="mt-2 flex min-h-[44px] items-center text-xs underline"
             style={{ color: 'var(--color-accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
           >
@@ -107,12 +108,10 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
 
           {/* Accordion content */}
           <div
+            id="token-help"
             aria-hidden={!helpOpen}
-            style={{
-              maxHeight: helpOpen ? '500px' : '0',
-              overflow: 'hidden',
-              transition: 'max-height 0.2s ease',
-            }}
+            className="overflow-hidden transition-[max-height] duration-200 ease-in-out motion-reduce:transition-none"
+            style={{ maxHeight: helpOpen ? '600px' : '0' }}
           >
             <div
               className="mt-2 rounded-md border p-3 text-xs"

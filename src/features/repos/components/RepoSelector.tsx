@@ -12,6 +12,7 @@ interface ErrorBoundaryProps {
   children: ReactNode
   fallback: (error: Error, reset: () => void) => ReactNode
   onReset?: () => void
+  resetKey?: unknown
 }
 
 interface ErrorBoundaryState {
@@ -20,12 +21,22 @@ interface ErrorBoundaryState {
 
 class RepoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null }
+  private resetting = false
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { error }
   }
 
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.resetting = false
+      this.setState({ error: null })
+    }
+  }
+
   reset = () => {
+    if (this.resetting) return
+    this.resetting = true
     this.setState({ error: null })
     this.props.onReset?.()
   }
@@ -160,8 +171,10 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
       <ul className="max-h-64 overflow-y-auto" role="listbox">
         <RepoErrorBoundary
           onReset={handleRetry}
+          resetKey={octokit}
           fallback={(error, reset) => {
-            const isRateLimit = error.message.toLowerCase().includes('rate limit')
+            const msg = error instanceof Error ? error.message : String(error)
+            const isRateLimit = msg.toLowerCase().includes('rate limit')
             return (
               <li className="px-3 py-4 text-center">
                 <p className="mb-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
