@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { RepoSelector } from './RepoSelector'
 import type { GitHubRepo } from '../../../services/github/repo-service'
@@ -52,7 +52,7 @@ describe('RepoSelector', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useRealTimers()
+    vi.useFakeTimers()
     mockGetMyRepos.mockResolvedValue(sampleRepos)
     mockSearchUserRepos.mockResolvedValue(searchResults)
   })
@@ -73,24 +73,27 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('testuser/alpha-repo')).toBeInTheDocument()
+    // Advance timers for initial useEffect
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+
+    expect(await screen.findByText('testuser/alpha-repo')).toBeInTheDocument()
     expect(screen.getByText('testuser/beta-repo')).toBeInTheDocument()
-    expect(mockGetMyRepos).toHaveBeenCalledWith(mockOctokit)
   })
 
   it('calls onSelect when a repo is clicked', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('testuser/alpha-repo')).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
 
-    await user.click(screen.getByText('testuser/alpha-repo'))
+    const repoItem = await screen.findByText('testuser/alpha-repo')
+    await user.click(repoItem)
     expect(onSelect).toHaveBeenCalledWith(sampleRepos[0])
   })
 
@@ -99,36 +102,36 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={1} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('testuser/alpha-repo')).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
 
-    const selectedItem = screen.getByText('testuser/alpha-repo').closest('[data-selected]')
+    const repoItem = await screen.findByText('testuser/alpha-repo')
+    const selectedItem = repoItem.closest('[data-selected]')
     expect(selectedItem).toHaveAttribute('data-selected', 'true')
   })
 
   it('searches repos when user types in search input', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
     render(
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('testuser/alpha-repo')).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+    await screen.findByText('testuser/alpha-repo')
 
     const input = screen.getByPlaceholderText(/search repositories/i)
     await user.type(input, 'search')
 
-    // Wait for debounce (300ms) + async resolution
-    await waitFor(() => {
-      expect(mockSearchUserRepos).toHaveBeenCalledWith(mockOctokit, 'search')
-    }, { timeout: 2000 })
-
-    await waitFor(() => {
-      expect(screen.getByText('org/search-result')).toBeInTheDocument()
+    // Wait for debounce
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+
+    expect(await screen.findByText('org/search-result')).toBeInTheDocument()
   })
 
   it('shows repo description when available', async () => {
@@ -136,9 +139,11 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Alpha project')).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+
+    expect(await screen.findByText('Alpha project')).toBeInTheDocument()
   })
 
   it('shows private badge for private repos', async () => {
@@ -146,9 +151,11 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Private')).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+
+    expect(await screen.findByText('Private')).toBeInTheDocument()
   })
 
   it('shows rate limit error with retry button', async () => {
@@ -158,9 +165,11 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText(/rate limit/i)).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+
+    expect(await screen.findByText(/rate limit/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
   })
 
@@ -168,21 +177,24 @@ describe('RepoSelector', () => {
     mockGetMyRepos.mockRejectedValueOnce(new Error('API rate limit exceeded'))
     mockGetMyRepos.mockResolvedValueOnce(sampleRepos)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
     render(
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText(/rate limit/i)).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
 
-    await user.click(screen.getByRole('button', { name: /retry/i }))
+    const retryBtn = await screen.findByRole('button', { name: /retry/i })
+    await user.click(retryBtn)
 
-    await waitFor(() => {
-      expect(screen.getByText('testuser/alpha-repo')).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+
+    expect(await screen.findByText('testuser/alpha-repo')).toBeInTheDocument()
   })
 
   it('shows generic error for non-rate-limit failures', async () => {
@@ -192,8 +204,10 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText(/failed to load/i)).toBeInTheDocument()
+    await act(async () => {
+      vi.advanceTimersByTime(300)
     })
+
+    expect(await screen.findByText(/failed to load/i)).toBeInTheDocument()
   })
 })

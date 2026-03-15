@@ -1,4 +1,4 @@
-import { useActionState } from 'react'
+import { useState, useActionState } from 'react'
 import { validateToken } from '../../../services/github/auth-service'
 import { useSyncStore } from '../../../stores/useSyncStore'
 
@@ -15,6 +15,7 @@ const initialState: FormState = { error: null, pending: false }
 
 export function AuthForm({ onSuccess }: AuthFormProps) {
   const setAuth = useSyncStore((s) => s.setAuth)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [state, formAction, isPending] = useActionState(
     async (_prev: FormState, formData: FormData): Promise<FormState> => {
@@ -92,6 +93,65 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
               color: 'var(--color-text-primary)',
             }}
           />
+
+          {/* Accordion toggle */}
+          <button
+            type="button"
+            onClick={() => setHelpOpen((prev) => !prev)}
+            aria-expanded={helpOpen}
+            className="mt-2 flex min-h-[44px] items-center text-xs underline"
+            style={{ color: 'var(--color-accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            How do I get a token? →
+          </button>
+
+          {/* Accordion content */}
+          <div
+            aria-hidden={!helpOpen}
+            style={{
+              maxHeight: helpOpen ? '500px' : '0',
+              overflow: 'hidden',
+              transition: 'max-height 0.2s ease',
+            }}
+          >
+            <div
+              className="mt-2 rounded-md border p-3 text-xs"
+              style={{
+                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-canvas)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              {/* Privacy / trust paragraph */}
+              <p className="mb-3">
+                Your token connects Gitty directly to GitHub from your device.
+                It's encrypted with your passphrase (AES-256 GCM) and stored
+                locally only. It's never sent to any server — because there are none.
+              </p>
+
+              {/* Step-by-step instructions */}
+              <ol className="mb-3 list-decimal pl-4 space-y-1">
+                <li>Click the button below → you'll land on GitHub's "New fine-grained token" page</li>
+                <li>Under "Repository access" → select "Only select repositories" → pick your repo</li>
+                <li>Under "Repository permissions" → find "Contents" → set it to "Read and Write"</li>
+                <li>Click "Generate token" → copy it → paste it above</li>
+              </ol>
+
+              {/* Deep-link CTA */}
+              <a
+                href="https://github.com/settings/personal-access-tokens/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block rounded-md px-3 py-1 text-xs font-medium"
+                style={{
+                  backgroundColor: 'var(--color-accent)',
+                  color: '#ffffff',
+                }}
+              >
+                Open GitHub Token Page →
+              </a>
+            </div>
+          </div>
         </div>
 
         <div className="mb-6">
@@ -134,6 +194,11 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             {state.error}
           </div>
         )}
+
+        {/* Always-visible trust line */}
+        <p className="mb-3 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          🔒 Your token never leaves this device.
+        </p>
 
         <button
           type="submit"

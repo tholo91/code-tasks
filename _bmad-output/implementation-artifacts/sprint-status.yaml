@@ -47,3 +47,7 @@ development_status:
   5-2-feature-voting: "ready-for-dev"
   5-3-donation-prompt: "ready-for-dev"
   5-4-github-sponsor-setup: "ready-for-dev"
+
+  # Epic 6: UX Polish & Onboarding
+  epic-6: "in-progress"
+  6-1-auth-onboarding-ux-improvements: "done"

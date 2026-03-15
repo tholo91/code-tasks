@@ -1,4 +1,4 @@
-import { useState, use, useMemo, Suspense } from 'react'
+import { useState, use, useMemo, useEffect, Suspense, Component, type ReactNode } from 'react'
 import type { Octokit } from 'octokit'
 import { getMyRepos, searchUserRepos, type GitHubRepo } from '../../../services/github/repo-service'
 
@@ -6,6 +6,36 @@ interface RepoSelectorProps {
   octokit: Octokit
   onSelect: (repo: GitHubRepo) => void
   selectedRepoId: number | null
+}
+
+interface ErrorBoundaryProps {
+  children: ReactNode
+  fallback: (error: Error, reset: () => void) => ReactNode
+  onReset?: () => void
+}
+
+interface ErrorBoundaryState {
+  error: Error | null
+}
+
+class RepoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { error: null }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error }
+  }
+
+  reset = () => {
+    this.setState({ error: null })
+    this.props.onReset?.()
+  }
+
+  render() {
+    if (this.state.error) {
+      return this.props.fallback(this.state.error, this.reset)
+    }
+    return this.props.children
+  }
 }
 
 /**
@@ -81,9 +111,14 @@ function RepoList({
 export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelectorProps) {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
-  // Simple debounce logic
-  useMemo(() => {
+  // Debounce query changes
+  useEffect(() => {
+    if (!query.trim()) {
+      setDebouncedQuery('')
+      return
+    }
     const timer = setTimeout(() => {
       setDebouncedQuery(query)
     }, 300)
@@ -91,12 +126,17 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
   }, [query])
 
   // Memoize the search promise so it's stable between renders of RepoList
+  // retryCount is added to dependencies to force promise regeneration on retry
   const resultsPromise = useMemo(() => {
     if (!debouncedQuery.trim()) {
       return getMyRepos(octokit)
     }
     return searchUserRepos(octokit, debouncedQuery)
-  }, [octokit, debouncedQuery])
+  }, [octokit, debouncedQuery, retryCount])
+
+  const handleRetry = () => {
+    setRetryCount((c) => c + 1)
+  }
 
   return (
     <div
@@ -118,19 +158,45 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
       </div>
 
       <ul className="max-h-64 overflow-y-auto" role="listbox">
-        <Suspense
-          fallback={
-            <li className="px-3 py-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              Loading repositories...
-            </li>
-          }
+        <RepoErrorBoundary
+          onReset={handleRetry}
+          fallback={(error, reset) => {
+            const isRateLimit = error.message.toLowerCase().includes('rate limit')
+            return (
+              <li className="px-3 py-4 text-center">
+                <p className="mb-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  {isRateLimit
+                    ? 'API rate limit exceeded. Please try again later.'
+                    : 'Failed to load repositories.'}
+                </p>
+                <button
+                  onClick={reset}
+                  className="rounded px-3 py-1 text-xs font-medium"
+                  style={{
+                    backgroundColor: 'var(--color-accent)',
+                    color: 'white',
+                  }}
+                >
+                  Retry
+                </button>
+              </li>
+            )
+          }}
         >
-          <RepoList
-            resultsPromise={resultsPromise}
-            onSelect={onSelect}
-            selectedRepoId={selectedRepoId}
-          />
-        </Suspense>
+          <Suspense
+            fallback={
+              <li className="px-3 py-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                Loading repositories...
+              </li>
+            }
+          >
+            <RepoList
+              resultsPromise={resultsPromise}
+              onSelect={onSelect}
+              selectedRepoId={selectedRepoId}
+            />
+          </Suspense>
+        </RepoErrorBoundary>
       </ul>
     </div>
   )

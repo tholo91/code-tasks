@@ -1,36 +1,48 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { validateToken, getAuthenticatedUser } from './auth-service'
+import { validateToken, getAuthenticatedUser, clearOctokitInstance } from './auth-service'
 
 // Mock the Octokit module
-vi.mock('octokit', () => {
-  return {
-    Octokit: vi.fn().mockImplementation((opts: { auth: string }) => {
-      const token = opts.auth
-      return {
-        rest: {
-          users: {
-            getAuthenticated: vi.fn().mockImplementation(async () => {
-              if (token === 'valid-token') {
-                return {
-                  data: {
-                    login: 'testuser',
-                    avatar_url: 'https://avatars.githubusercontent.com/u/123',
-                    name: 'Test User',
-                  },
-                }
+const { MockOctokit } = vi.hoisted(() => {
+  const mock = vi.fn().mockImplementation((opts: { auth: string }) => {
+    const token = opts.auth
+    return {
+      log: {
+        warn: vi.fn(),
+        info: vi.fn(),
+      },
+      rest: {
+        users: {
+          getAuthenticated: vi.fn().mockImplementation(async () => {
+            if (token === 'valid-token') {
+              return {
+                data: {
+                  login: 'testuser',
+                  avatar_url: 'https://avatars.githubusercontent.com/u/123',
+                  name: 'Test User',
+                },
               }
-              throw new Error('Bad credentials')
-            }),
-          },
+            }
+            throw new Error('Bad credentials')
+          }),
         },
-      }
-    }),
-  }
+      },
+    }
+  })
+  
+  // @ts-expect-error - mock doesn't match Octokit type exactly
+  mock.plugin = vi.fn().mockReturnValue(mock)
+  
+  return { MockOctokit: mock }
 })
+
+vi.mock('octokit', () => ({
+  Octokit: MockOctokit,
+}))
 
 describe('auth-service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearOctokitInstance()
   })
 
   describe('validateToken', () => {
