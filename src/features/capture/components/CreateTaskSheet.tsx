@@ -15,6 +15,7 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
   const titleRef = useRef<HTMLInputElement>(null)
+  const notesRef = useRef<HTMLTextAreaElement>(null)
   const submitRef = useRef<HTMLButtonElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const addTask = useSyncStore((s) => s.addTask)
@@ -109,8 +110,8 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
       >
         {/* Handle bar */}
         <div
-          className="mx-auto mb-4 h-1 w-10 rounded-full"
-          style={{ backgroundColor: 'var(--color-border)' }}
+          className="mx-auto mb-5 mt-1 h-1.5 w-12 rounded-full"
+          style={{ backgroundColor: 'rgba(139, 148, 158, 0.4)' }}
         />
 
         {/* Form */}
@@ -130,6 +131,12 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+                  e.preventDefault()
+                  notesRef.current?.focus()
+                }
+              }}
               placeholder="What's on your mind?"
               className="input-field w-full"
               data-testid="create-task-title"
@@ -146,6 +153,7 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
               Notes
             </label>
             <textarea
+              ref={notesRef}
               id="create-task-notes"
               value={notes}
               onChange={handleNotesChange}

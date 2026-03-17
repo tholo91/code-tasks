@@ -41,22 +41,6 @@ describe('TaskCard', () => {
     expect(screen.queryByTestId('task-body-test-uuid-1')).not.toBeInTheDocument()
   })
 
-  it('shows "Pending" status badge for pending tasks', () => {
-    render(<TaskCard task={createTask({ syncStatus: 'pending' })} />)
-    const statusPill = screen.getByTestId('sync-status-test-uuid-1')
-    expect(statusPill).toHaveTextContent('Pending')
-  })
-
-  it('shows "Synced" status badge for synced tasks', () => {
-    render(
-      <TaskCard
-        task={createTask({ syncStatus: 'synced', githubIssueNumber: 42 })}
-      />,
-    )
-    const statusPill = screen.getByTestId('sync-status-test-uuid-1')
-    expect(statusPill).toHaveTextContent('Synced')
-  })
-
   it('shows sync status dot indicator', () => {
     render(<TaskCard task={createTask({ syncStatus: 'pending' })} />)
     const dot = screen.getByTestId('sync-icon-test-uuid-1')

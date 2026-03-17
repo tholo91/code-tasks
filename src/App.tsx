@@ -19,7 +19,7 @@ import { SyncConflictBanner } from './features/sync/components/SyncConflictBanne
 import { BranchProtectionBanner } from './features/sync/components/BranchProtectionBanner'
 import { SyncImportBanner } from './features/sync/components/SyncImportBanner'
 import { useAutoSync } from './features/sync/hooks/useAutoSync'
-import { QuickCaptureBar } from './features/capture/components/QuickCaptureBar'
+import { SettingsSheet } from './components/layout/SettingsSheet'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import type { PriorityFilter, Task } from './types/task'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
@@ -160,7 +160,7 @@ function RepoPickerSheet({ onClose, onRepoSelected }: { onClose: () => void; onR
         style={{ backgroundColor: 'var(--color-surface)' }}
       >
         {/* Handle */}
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full" style={{ backgroundColor: 'var(--color-border)' }} />
+        <div className="mx-auto mb-5 mt-1 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(139, 148, 158, 0.4)' }} />
 
         <OctokitErrorBoundary onLogout={clearAuth}>
           <Suspense
@@ -208,6 +208,7 @@ function AppContent() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [newestTaskId, setNewestTaskId] = useState<string | null>(null)
   const [showCreateSheet, setShowCreateSheet] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showCompleted, setShowCompleted] = useState(true)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
   const [dragOrderedTasks, setDragOrderedTasks] = useState<Task[]>([])
@@ -381,6 +382,15 @@ function AppContent() {
     const selectedLower = selectedRepo.fullName.toLowerCase()
     return tasks.filter((t) => t.repoFullName.toLowerCase() === selectedLower)
   }, [tasks, selectedRepo])
+
+  const hasImportantTasks = useMemo(() => repoTasks.some((t) => t.isImportant), [repoTasks])
+
+  // Reset priority filter when no important tasks exist
+  useEffect(() => {
+    if (!hasImportantTasks && priorityFilter !== 'all') {
+      setPriorityFilter('all')
+    }
+  }, [hasImportantTasks, priorityFilter])
 
   const fuse = useMemo(() => createTaskFuse(repoTasks), [repoTasks])
 
@@ -556,7 +566,7 @@ function AppContent() {
             />
           )}
 
-          <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} />
+          <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} onOpenSettings={() => setShowSettings(true)} />
 
           <main className="flex w-full flex-1 flex-col items-center">
 
@@ -566,10 +576,6 @@ function AppContent() {
                 onDismiss={() => setBannerDismissed(true)}
                 onSwitchRepo={() => setShowRepoPicker(true)}
               />
-            </div>
-
-            <div className="mt-3 w-full">
-              <QuickCaptureBar isOnline={isOnline} />
             </div>
 
             {/* Search bar */}
@@ -583,8 +589,8 @@ function AppContent() {
               </div>
             )}
 
-            {/* Priority filter pills */}
-            {repoTasks.length > 0 && (
+            {/* Priority filter pills — only show when important tasks exist */}
+            {repoTasks.length > 0 && hasImportantTasks && (
               <div className="mt-2 w-full max-w-[640px] px-4">
                 <PriorityFilterPills
                   currentFilter={priorityFilter}
@@ -732,14 +738,6 @@ function AppContent() {
               </motion.div>
             )}
 
-            <button
-              onClick={() => setIsRoadmapOpen(true)}
-              className="mt-8 mb-12 text-label font-medium opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1.5"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              <span>Was kommt als Nächstes?</span>
-              <span className="text-caption px-1 py-0.5 rounded border border-[rgba(255,255,255,0.2)]">Roadmap</span>
-            </button>
           </main>
 
           <CreateTaskFAB onClick={() => setShowCreateSheet(true)} />
@@ -819,6 +817,16 @@ function AppContent() {
               >
                 {toastMessage}
               </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Settings sheet */}
+          <AnimatePresence>
+            {showSettings && (
+              <SettingsSheet
+                onClose={() => setShowSettings(false)}
+                onOpenRoadmap={() => setIsRoadmapOpen(true)}
+              />
             )}
           </AnimatePresence>
 

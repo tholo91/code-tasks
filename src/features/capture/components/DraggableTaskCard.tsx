@@ -101,16 +101,6 @@ export function DraggableTaskCard({
     }
   }
 
-  const handleDragHandlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    e.stopPropagation()
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current)
-      longPressTimerRef.current = null
-    }
-    pointerStartPos.current = { x: e.clientX, y: e.clientY }
-    startDrag(e.nativeEvent as PointerEvent)
-  }
-
   return (
     <Reorder.Item
       value={task}
@@ -135,30 +125,11 @@ export function DraggableTaskCard({
       }}
       data-testid={`reorder-item-${task.id}`}
     >
-      <div className="relative">
-        <TaskCard
-          task={task}
-          onComplete={onComplete}
-          isNewest={isNewest}
-          className="pr-12"
-        />
-        <button
-          type="button"
-          onPointerDown={handleDragHandlePointerDown}
-          onClick={(e) => e.stopPropagation()}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2"
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.04)',
-            border: '1px solid var(--color-border)',
-          }}
-          aria-label="Reorder task"
-          data-testid={`drag-handle-${task.id}`}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-            <path d="M6 3.5a1.5 1.5 0 1 1-3.001 0A1.5 1.5 0 0 1 6 3.5Zm7 0a1.5 1.5 0 1 1-3.001 0A1.5 1.5 0 0 1 13 3.5ZM6 8a1.5 1.5 0 1 1-3.001 0A1.5 1.5 0 0 1 6 8Zm7 0a1.5 1.5 0 1 1-3.001 0A1.5 1.5 0 0 1 13 8ZM6 12.5a1.5 1.5 0 1 1-3.001 0A1.5 1.5 0 0 1 6 12.5Zm7 0a1.5 1.5 0 1 1-3.001 0A1.5 1.5 0 0 1 13 12.5Z" />
-          </svg>
-        </button>
-      </div>
+      <TaskCard
+        task={task}
+        onComplete={onComplete}
+        isNewest={isNewest}
+      />
     </Reorder.Item>
   )
 }

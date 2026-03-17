@@ -173,8 +173,8 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
       >
         {/* Handle bar */}
         <div
-          className="mx-auto mb-4 h-1 w-10 rounded-full"
-          style={{ backgroundColor: 'var(--color-border)' }}
+          className="mx-auto mb-5 mt-1 h-1.5 w-12 rounded-full"
+          style={{ backgroundColor: 'rgba(139, 148, 158, 0.4)' }}
         />
 
         {/* Content with max height + scroll */}
@@ -283,6 +283,19 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
 
           {/* Metadata section */}
           <div className="flex flex-col gap-2 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            {/* Sync status */}
+            <div className="flex items-center justify-between">
+              <span className="text-label uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
+                Sync Status
+              </span>
+              <span
+                className={`badge ${task.syncStatus === 'pending' ? 'badge-amber' : 'badge-green'}`}
+                data-testid="task-detail-sync-status"
+              >
+                {task.syncStatus === 'pending' ? 'Pending' : 'Synced'}
+              </span>
+            </div>
+
             {/* Created */}
             <div className="flex items-center justify-between">
               <span className="text-label uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>

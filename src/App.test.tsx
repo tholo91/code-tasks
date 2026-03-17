@@ -86,8 +86,8 @@ vi.mock('./features/sync/components/SyncImportBanner', () => ({
 vi.mock('./features/community/components/RoadmapView', () => ({
   RoadmapView: () => null,
 }))
-vi.mock('./features/capture/components/QuickCaptureBar', () => ({
-  QuickCaptureBar: () => null,
+vi.mock('./components/layout/SettingsSheet', () => ({
+  SettingsSheet: () => null,
 }))
 vi.mock('./features/capture/components/CreateTaskSheet', () => ({
   CreateTaskSheet: () => null,

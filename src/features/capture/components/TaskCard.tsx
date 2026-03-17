@@ -102,13 +102,6 @@ export function TaskCard({ task, onTap, onComplete, isNewest = false, className,
           {task.title}
         </p>
 
-        {/* Status badge */}
-        <span
-          className={`badge flex-shrink-0 ${isPending ? 'badge-amber' : 'badge-green'}`}
-          data-testid={`sync-status-${task.id}`}
-        >
-          {isPending ? 'Pending' : 'Synced'}
-        </span>
       </div>
 
       {/* Body preview (1-line truncated) */}

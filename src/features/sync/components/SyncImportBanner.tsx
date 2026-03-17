@@ -23,8 +23,8 @@ export function SyncImportBanner({ repoFullName, remoteCount, isImporting, onImp
         <div
           className="mx-auto flex w-full max-w-[640px] flex-col gap-2 rounded-lg border px-4 py-3"
           style={{
-            backgroundColor: 'rgba(56, 139, 253, 0.12)',
-            borderColor: 'rgba(56, 139, 253, 0.35)',
+            backgroundColor: '#162030',
+            borderColor: 'rgba(56, 139, 253, 0.6)',
           }}
         >
           <div className="flex flex-col gap-1">
