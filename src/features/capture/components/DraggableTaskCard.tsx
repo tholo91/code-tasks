@@ -42,22 +42,7 @@ export function DraggableTaskCard({
     isDraggingRef.current = true
     triggerSelectionHaptic()
     onDragStart?.()
-    let eventForDrag: PointerEvent = nativeEvent
-    if (typeof PointerEvent === 'function') {
-      try {
-        eventForDrag = new PointerEvent('pointerdown', {
-          clientX: pointerStartPos.current.x,
-          clientY: pointerStartPos.current.y,
-          pointerId: nativeEvent.pointerId,
-          pointerType: nativeEvent.pointerType,
-          isPrimary: nativeEvent.isPrimary,
-          buttons: nativeEvent.buttons,
-        })
-      } catch {
-        eventForDrag = nativeEvent
-      }
-    }
-    controls.start(eventForDrag)
+    controls.start(nativeEvent)
   }
 
   const handlePointerDown = (e: React.PointerEvent) => {

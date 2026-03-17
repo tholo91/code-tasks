@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
 import { TRANSITION_SPRING } from '../../../config/motion'
+import { BottomSheet } from '../../../components/ui/BottomSheet'
+import { TaskCheckbox } from '../../../components/ui/TaskCheckbox'
 import type { Task } from '../../../types/task'
 
 interface TaskDetailSheetProps {
@@ -13,8 +15,6 @@ interface TaskDetailSheetProps {
   onDelete?: (taskId: string) => void
 }
 
-const SHEET_SPRING = { type: 'spring' as const, stiffness: 400, damping: 35 }
-
 export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onMoveToRepo, onDelete }: TaskDetailSheetProps) {
   const [title, setTitle] = useState(task.title)
   const [body, setBody] = useState(task.body)
@@ -22,9 +22,6 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
   const titleRef = useRef<HTMLInputElement>(null)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestValuesRef = useRef({ title: task.title, body: task.body, isImportant: task.isImportant })
-  const prefersReducedMotion = useReducedMotion()
-
-  const sheetTransition = prefersReducedMotion ? { duration: 0.15 } : SHEET_SPRING
 
   const debouncedSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -139,83 +136,23 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={prefersReducedMotion ? { duration: 0.15 } : undefined}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-end"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose()
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Task details"
-      data-testid="task-detail-sheet"
+    <BottomSheet
+      onClose={handleClose}
+      backdropBlur
+      ariaLabel="Task details"
+      testId="task-detail-sheet"
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" />
-
-      {/* Sheet */}
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={sheetTransition}
-        drag="y"
-        dragConstraints={{ top: 0 }}
-        dragElastic={0.2}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > 100 || info.velocity.y > 300) handleClose()
-        }}
-        className="relative z-10 w-full max-w-lg rounded-t-2xl p-6 pb-8"
-        style={{ backgroundColor: 'var(--color-surface)' }}
-      >
-        {/* Handle bar */}
-        <div
-          className="mx-auto mb-5 mt-1 h-1.5 w-12 rounded-full"
-          style={{ backgroundColor: 'rgba(139, 148, 158, 0.4)' }}
-        />
-
         {/* Content with max height + scroll */}
         <div className="max-h-[85vh] overflow-y-auto flex flex-col gap-4">
           {/* Title row with checkbox */}
           <div className="flex items-center gap-3">
             {/* Completion checkbox */}
-            <motion.button
-              onClick={handleToggleComplete}
-              className="flex-shrink-0 flex items-center justify-center"
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                border: `2px solid ${task.isCompleted ? 'var(--color-success)' : 'var(--color-border)'}`,
-                backgroundColor: task.isCompleted ? 'var(--color-success)' : 'transparent',
-              }}
-              animate={{
-                backgroundColor: task.isCompleted ? 'var(--color-success)' : 'transparent',
-                borderColor: task.isCompleted ? 'var(--color-success)' : 'var(--color-border)',
-              }}
-              transition={TRANSITION_SPRING}
-              whileTap={{ scale: 0.85 }}
-              role="checkbox"
-              aria-checked={task.isCompleted}
-              aria-label={task.isCompleted ? 'Mark task as incomplete' : 'Mark task as complete'}
-              data-testid="task-detail-checkbox"
-            >
-              {task.isCompleted && (
-                <motion.svg
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={TRANSITION_SPRING}
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                >
-                  <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
-                </motion.svg>
-              )}
-            </motion.button>
+            <TaskCheckbox
+              isCompleted={task.isCompleted}
+              onChange={handleToggleComplete}
+              size="md"
+              testId="task-detail-checkbox"
+            />
 
             {/* Title input */}
             <input
@@ -355,12 +292,14 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
           {onDelete && (
             <button
               onClick={() => {
-                onClose()
-                // Small delay to let sheet dismiss before triggering delete flow
-                setTimeout(() => onDelete(task.id), 150)
+                if (window.confirm('Delete this task?')) {
+                  onClose()
+                  // Small delay to let sheet dismiss before triggering delete flow
+                  setTimeout(() => onDelete(task.id), 150)
+                }
               }}
               className="btn-ghost w-full text-body font-medium mt-2 py-3"
-              style={{ color: '#f85149' }}
+              style={{ color: 'var(--color-danger)' }}
               aria-label="Delete task"
               data-testid="detail-delete-button"
             >
@@ -368,8 +307,7 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
             </button>
           )}
         </div>
-      </motion.div>
-    </motion.div>
+    </BottomSheet>
   )
 }
 

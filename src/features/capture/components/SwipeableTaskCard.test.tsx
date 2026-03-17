@@ -1,3 +1,5 @@
+// LEGACY: SwipeableTaskCard is no longer used in the main list (removed in Story 8.3).
+// Delete is now only available from TaskDetailSheet. Kept for historical coverage.
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 

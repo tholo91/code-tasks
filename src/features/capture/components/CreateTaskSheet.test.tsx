@@ -142,7 +142,8 @@ describe('CreateTaskSheet', () => {
 
     // Callback should be called with new task id
     expect(onTaskCreated).toHaveBeenCalledWith(tasks[0].id)
-    expect(onClose).toHaveBeenCalled()
+    // Sheet stays open after submit — onClose is NOT called
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('triggers haptic feedback on submit', async () => {
@@ -193,8 +194,57 @@ describe('CreateTaskSheet', () => {
     expect(useSyncStore.getState().isImportant).toBe(false)
   })
 
-  it('renders PriorityPill toggle', () => {
+  it('renders inline priority flag icon', () => {
     render(<CreateTaskSheet {...defaultProps} />)
-    expect(screen.getByTestId('priority-pill')).toBeInTheDocument()
+    expect(screen.getByTestId('create-task-priority-flag')).toBeInTheDocument()
+  })
+
+  // --- Task 11 tests ---
+
+  it('title field renders as a textarea element', () => {
+    render(<CreateTaskSheet {...defaultProps} />)
+    const titleField = screen.getByTestId('create-task-title')
+    expect(titleField.tagName.toLowerCase()).toBe('textarea')
+  })
+
+  it('Enter in title field moves focus to notes field', async () => {
+    render(<CreateTaskSheet {...defaultProps} />)
+    const titleField = screen.getByTestId('create-task-title')
+    const notesField = screen.getByTestId('create-task-notes')
+    titleField.focus()
+    fireEvent.keyDown(titleField, { key: 'Enter' })
+    expect(document.activeElement).toBe(notesField)
+  })
+
+  it('sheet stays open after submit (onClose not called)', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(<CreateTaskSheet {...defaultProps} onClose={onClose} />)
+    await user.type(screen.getByTestId('create-task-title'), 'Task one')
+    await user.click(screen.getByTestId('create-task-submit'))
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('title field is empty after submit', async () => {
+    const user = userEvent.setup()
+    render(<CreateTaskSheet {...defaultProps} />)
+    await user.type(screen.getByTestId('create-task-title'), 'Task one')
+    await user.click(screen.getByTestId('create-task-submit'))
+    expect(screen.getByTestId('create-task-title')).toHaveValue('')
+  })
+
+  it('renders no <label> elements in the form', () => {
+    render(<CreateTaskSheet {...defaultProps} />)
+    const dialog = screen.getByTestId('create-task-sheet')
+    expect(dialog.querySelectorAll('label').length).toBe(0)
+  })
+
+  it('flag icon toggles importance on click', async () => {
+    const user = userEvent.setup()
+    render(<CreateTaskSheet {...defaultProps} />)
+    const flagBtn = screen.getByTestId('create-task-priority-flag')
+    expect(flagBtn).toHaveAttribute('aria-pressed', 'false')
+    await user.click(flagBtn)
+    expect(flagBtn).toHaveAttribute('aria-pressed', 'true')
   })
 })

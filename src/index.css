@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
   /* GitHub Dark Dimmed palette */
@@ -15,6 +16,12 @@
   --color-danger: #f85149;
   --color-info: #388bfd;
 
+  /* Derived / semantic colors */
+  --color-on-accent: #ffffff;
+  --color-accent-subtle: rgba(88, 166, 255, 0.1);
+  --color-surface-hover: rgba(255, 255, 255, 0.04);
+  --color-danger-subtle: rgba(248, 81, 73, 0.1);
+
   /* Typography scale */
   --text-caption: 0.6875rem;
   --text-label: 0.75rem;
@@ -22,13 +29,39 @@
   --text-title: 1.25rem;
   --text-hero: 1.5rem;
 
+  /* Font families */
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+
   /* Animation */
   --duration-fast: 150ms;
   --duration-normal: 300ms;
   --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
 
+  /* Spacing scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border radius scale */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+  --radius-sheet: 20px;
+
+  /* Shadow scale */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-sheet: 0 -4px 24px rgba(0, 0, 0, 0.4);
+
+  /* Touch targets */
+  --touch-target: 44px;
+
   /* Typography rendering */
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-ui);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -40,10 +73,24 @@ body {
   background-color: var(--color-canvas);
   color: var(--color-text-primary);
   min-height: 100vh;
+  position: relative;
+}
+
+/* Subtle canvas grain texture — adds depth to flat dark background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
 }
 
 code, pre, kbd {
-  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* ── Typography utilities ── */
@@ -67,6 +114,9 @@ code, pre, kbd {
   font-size: var(--text-hero);
   line-height: 1.3;
 }
+@utility font-mono {
+  font-family: var(--font-mono);
+}
 
 /* ── Shared component classes ── */
 .btn-primary {
@@ -74,15 +124,15 @@ code, pre, kbd {
   align-items: center;
   justify-content: center;
   width: 100%;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   font-size: var(--text-body);
   line-height: 1.5;
   font-weight: 500;
   transition: opacity 150ms ease;
   background-color: var(--color-accent);
-  color: #ffffff;
-  min-height: 44px;
+  color: var(--color-on-accent);
+  min-height: var(--touch-target);
   border: none;
   cursor: pointer;
 }
@@ -103,15 +153,16 @@ code, pre, kbd {
 
 .input-field {
   width: 100%;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  padding: 0.5rem 0.75rem;
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
   font-size: var(--text-body);
   line-height: 1.5;
   outline: none;
   background-color: var(--color-canvas);
   color: var(--color-text-primary);
-  min-height: 44px;
+  min-height: var(--touch-target);
   transition: border-color var(--duration-fast) ease;
 }
 .input-field:focus {
@@ -122,7 +173,7 @@ code, pre, kbd {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   padding: 0.125rem 0.5rem;
   font-size: var(--text-caption);
   line-height: 1.4;
@@ -153,7 +204,8 @@ code, pre, kbd {
 }
 
 .card {
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }

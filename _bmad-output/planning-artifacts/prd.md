@@ -52,8 +52,10 @@ classification:
 - **Identity:** GitHub PAT with auto-recovery — set once, never re-enter. No passphrase gate.
 - **Routing:** Intelligent "Last Opened Repo" default with per-repo task scoping.
 - **Task Management:** FAB (+) → Bottom Sheet creation, animated checkboxes, Things-style detail view, drag & drop reorder, task deletion. Full CRUD for a todo app.
+- **Sorting & Filtering:** Sort by manual order, created date, last edited, or priority. Filter by important/normal. Preferences persisted per repo.
 - **Storage:** IndexedDB local persistence with explicit "Push to GitHub" sync.
-- **Markdown:** AI-Ready headers, `- [ ]` / `- [x]` checkbox formatting, priority and timestamp metadata.
+- **Markdown:** AI-Ready headers, `- [ ]` / `- [x]` checkbox formatting, priority and timestamp metadata. Per-repo customizable AI agent instructions.
+- **Settings:** Repository-specific AI instruction editor, About Gitty screen, sync result feedback.
 
 ### Phase 2: Growth (Mobile Presence & Discovery)
 - **Store Readiness:** Native iOS and Android wrappers via Capacitor/similar.

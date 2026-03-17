@@ -9,19 +9,24 @@ import { RepoSelector } from './features/repos/components/RepoSelector'
 import { CreateTaskFAB } from './features/capture/components/CreateTaskFAB'
 import { CreateTaskSheet } from './features/capture/components/CreateTaskSheet'
 import { TaskDetailSheet } from './features/capture/components/TaskDetailSheet'
-import { SwipeableTaskCard } from './features/capture/components/SwipeableTaskCard'
+import { DraggableTaskCard } from './features/capture/components/DraggableTaskCard'
+import { TaskCard } from './features/capture/components/TaskCard'
 import { UndoToast } from './features/capture/components/UndoToast'
 import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
 import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
+import { SortModeSelector } from './features/capture/components/SortModeSelector'
 import { RoadmapView } from './features/community/components/RoadmapView'
 import { SyncFAB } from './features/sync/components/SyncFAB'
 import { SyncConflictBanner } from './features/sync/components/SyncConflictBanner'
 import { BranchProtectionBanner } from './features/sync/components/BranchProtectionBanner'
 import { SyncImportBanner } from './features/sync/components/SyncImportBanner'
 import { useAutoSync } from './features/sync/hooks/useAutoSync'
+import { useRemoteChangeDetection } from './hooks/useRemoteChangeDetection'
 import { SettingsSheet } from './components/layout/SettingsSheet'
+import { TRANSITION_SHEET } from './config/motion'
+import { SheetHandle } from './components/ui/SheetHandle'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
-import type { PriorityFilter, Task } from './types/task'
+import type { PriorityFilter, SortMode, Task } from './types/task'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
 import { triggerSelectionHaptic } from './services/native/haptic-service'
@@ -110,7 +115,7 @@ function OfflineNotification({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -40, opacity: 0 }}
           transition={TRANSITION_NORMAL}
-          className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center px-4 py-2"
+          className="z-50 flex items-center justify-center px-4 py-2 w-full"
           style={{
             backgroundColor: 'rgba(210, 153, 34, 0.95)',
             color: '#1c2128',
@@ -155,12 +160,11 @@ function RepoPickerSheet({ onClose, onRepoSelected }: { onClose: () => void; onR
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        transition={TRANSITION_SHEET}
         className="relative z-10 w-full max-w-lg rounded-t-2xl p-6 pb-8"
         style={{ backgroundColor: 'var(--color-surface)' }}
       >
-        {/* Handle */}
-        <div className="mx-auto mb-5 mt-1 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(139, 148, 158, 0.4)' }} />
+        <SheetHandle />
 
         <OctokitErrorBoundary onLogout={clearAuth}>
           <Suspense
@@ -194,8 +198,14 @@ function AppContent() {
   const loadTasksFromIDB = useSyncStore((s) => s.loadTasksFromIDB)
   const replaceTasksForRepo = useSyncStore((s) => s.replaceTasksForRepo)
   const setRepoSyncMeta = useSyncStore((s) => s.setRepoSyncMeta)
+  const repoSortModes = useSyncStore((s) => s.repoSortModes)
+  const setRepoSortMode = useSyncStore((s) => s.setRepoSortMode)
 
   const syncErrorType = useSyncStore((s) => s.syncErrorType)
+
+  const currentSortMode: SortMode = selectedRepo
+    ? (repoSortModes[selectedRepo.fullName.toLowerCase()] ?? 'manual')
+    : 'manual'
 
   const { isOnline, showOfflineNotification, dismissOfflineNotification } = useNetworkStatus()
   const [bannerDismissed, setBannerDismissed] = useState(false)
@@ -209,7 +219,8 @@ function AppContent() {
   const [newestTaskId, setNewestTaskId] = useState<string | null>(null)
   const [showCreateSheet, setShowCreateSheet] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [showCompleted, setShowCompleted] = useState(true)
+  const [showCompleted, setShowCompleted] = useState(false)
+  const [wasAutoExpanded, setWasAutoExpanded] = useState(false)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
   const [dragOrderedTasks, setDragOrderedTasks] = useState<Task[]>([])
   const dragStartOrderRef = useRef<string[] | null>(null)
@@ -219,15 +230,13 @@ function AppContent() {
     repoFullName: string
     tasks: Task[]
     sha: string | null
+    source?: 'repo-switch' | 'remote-update'
   } | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   const importAttemptedRef = useRef<Set<string>>(new Set())
 
   // Track tasks that have been toggled but are waiting for the 500ms transition delay
   const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(new Set())
-
-  // Swipe action tray — only one open at a time
-  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
 
   // Soft-delete pipeline: task stays in store but hidden from UI during undo window
   const [pendingDelete, setPendingDelete] = useState<{
@@ -248,6 +257,16 @@ function AppContent() {
   }, [loadTasksFromIDB])
 
   useAutoSync()
+
+  useRemoteChangeDetection((data) => {
+    if (!selectedRepo) return
+    setImportPrompt({
+      repoFullName: selectedRepo.fullName,
+      tasks: data.tasks,
+      sha: data.sha,
+      source: 'remote-update',
+    })
+  })
 
   // Attempt remote import when switching repos and local is empty.
   useEffect(() => {
@@ -336,13 +355,6 @@ function AppContent() {
     setPendingDelete(null)
   }, [pendingDelete])
 
-  // Handle "Move to..." from swipe tray
-  const handleSwipeMove = useCallback((taskId: string) => {
-    setOpenSwipeId(null)
-    setMoveTaskId(taskId)
-    setShowRepoPicker(true)
-  }, [])
-
   // Determine if we should show the "Move to..." action (AC 5)
   // Show only if the user has more than one repository in their sync metadata
   const repoSyncMeta = useSyncStore((s) => s.repoSyncMeta)
@@ -387,10 +399,10 @@ function AppContent() {
 
   // Reset priority filter when no important tasks exist
   useEffect(() => {
-    if (!hasImportantTasks && priorityFilter !== 'all') {
+    if (!hasImportantTasks) {
       setPriorityFilter('all')
     }
-  }, [hasImportantTasks, priorityFilter])
+  }, [hasImportantTasks])
 
   const fuse = useMemo(() => createTaskFuse(repoTasks), [repoTasks])
 
@@ -414,8 +426,8 @@ function AppContent() {
   // AC 1: Tasks move to completed section after a brief delay
   // We keep tasks in their "original" section if they are in pendingToggleIds
   const { active: activeTasks, completed: completedTasks } = useMemo(
-    () => sortTasksForDisplay(visibleTasks, { pendingToggleIds }),
-    [visibleTasks, pendingToggleIds],
+    () => sortTasksForDisplay(visibleTasks, { pendingToggleIds, sortMode: currentSortMode }),
+    [visibleTasks, pendingToggleIds, currentSortMode],
   )
 
   // Sync local drag order from store when not actively dragging
@@ -424,6 +436,19 @@ function AppContent() {
       setDragOrderedTasks(activeTasks)
     }
   }, [activeTasks, draggingTaskId])
+
+  // Auto-expand completed section when search matches completed tasks; collapse when search clears
+  useEffect(() => {
+    if (searchQuery.length > 0 && completedTasks.length > 0) {
+      if (!showCompleted) {
+        setShowCompleted(true)
+        setWasAutoExpanded(true)
+      }
+    } else if (searchQuery.length === 0 && wasAutoExpanded) {
+      setShowCompleted(false)
+      setWasAutoExpanded(false)
+    }
+  }, [searchQuery, completedTasks, wasAutoExpanded, showCompleted])
 
   const handleReorder = (reorderedTasks: Task[]) => {
     setDragOrderedTasks(reorderedTasks)
@@ -550,6 +575,7 @@ function AppContent() {
               repoFullName={importPrompt.repoFullName}
               remoteCount={importPrompt.tasks.length}
               isImporting={isImporting}
+              variant={importPrompt.source === 'remote-update' ? 'remote-update' : 'initial-import'}
               onDismiss={() => setImportPrompt(null)}
               onImport={() => {
                 if (isImporting) return
@@ -589,13 +615,30 @@ function AppContent() {
               </div>
             )}
 
-            {/* Priority filter pills — only show when important tasks exist */}
-            {repoTasks.length > 0 && hasImportantTasks && (
+            {/* Filter/sort toolbar — show when tasks exist */}
+            {repoTasks.length > 0 && (
               <div className="mt-2 w-full max-w-[640px] px-4">
-                <PriorityFilterPills
-                  currentFilter={priorityFilter}
-                  onChange={setPriorityFilter}
-                />
+                <div className="flex items-center gap-2 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  {hasImportantTasks && (
+                    <PriorityFilterPills
+                      currentFilter={priorityFilter}
+                      onChange={setPriorityFilter}
+                    />
+                  )}
+                  <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+                    {currentSortMode !== 'manual' && (
+                      <span className="text-label" style={{ color: 'var(--color-text-secondary)', opacity: 0.6 }}>
+                        Manual reorder disabled
+                      </span>
+                    )}
+                    <SortModeSelector
+                      currentMode={currentSortMode}
+                      onChange={(mode) => {
+                        if (selectedRepo) setRepoSortMode(selectedRepo.fullName, mode)
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -604,36 +647,50 @@ function AppContent() {
               <div className="mt-2 w-full max-w-[640px] px-4">
                 {/* Active tasks */}
                 {activeTasks.length > 0 ? (
-                  <Reorder.Group
-                    axis="y"
-                    values={dragOrderedTasks}
-                    onReorder={handleReorder}
-                    className="flex flex-col gap-2"
-                    data-testid="task-list"
-                    aria-label="Reorder tasks"
-                  >
-                    <AnimatePresence mode="popLayout" initial={false}>
-                      {dragOrderedTasks.map((task) => (
-                        <SwipeableTaskCard
-                          key={task.id}
-                          task={task}
-                          onDelete={handleDeleteInitiated}
-                          onMove={handleSwipeMove}
-                          isSwipeOpen={openSwipeId === task.id}
-                          onSwipeOpen={setOpenSwipeId}
-                          onSwipeClose={() => setOpenSwipeId(null)}
-                          showMoveAction={showMoveAction}
-                          onTap={(taskId) => setSelectedTaskId(taskId)}
-                          onComplete={handleToggleComplete}
-                          isNewest={newestTaskId === task.id}
-                          isDimmed={draggingTaskId !== null && draggingTaskId !== task.id}
-                          onDragStart={() => handleDragStart(task.id)}
-                          onDragEnd={handleDragEnd}
-                          isDraggable={true}
-                        />
-                      ))}
-                    </AnimatePresence>
-                  </Reorder.Group>
+                  currentSortMode === 'manual' ? (
+                    <Reorder.Group
+                      axis="y"
+                      values={dragOrderedTasks}
+                      onReorder={handleReorder}
+                      className="flex flex-col gap-2"
+                      data-testid="task-list"
+                      aria-label="Reorder tasks"
+                    >
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {dragOrderedTasks.map((task) => (
+                          <DraggableTaskCard
+                            key={task.id}
+                            task={task}
+                            onTap={(taskId) => setSelectedTaskId(taskId)}
+                            onComplete={handleToggleComplete}
+                            isNewest={newestTaskId === task.id}
+                            isDimmed={draggingTaskId !== null && draggingTaskId !== task.id}
+                            onDragStart={() => handleDragStart(task.id)}
+                            onDragEnd={handleDragEnd}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </Reorder.Group>
+                  ) : (
+                    <ul
+                      className="flex flex-col gap-2 list-none p-0 m-0"
+                      data-testid="task-list"
+                      aria-label="Task list"
+                    >
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {activeTasks.map((task) => (
+                          <motion.li key={task.id} layout>
+                            <TaskCard
+                              task={task}
+                              onTap={(taskId) => setSelectedTaskId(taskId)}
+                              onComplete={handleToggleComplete}
+                              isNewest={newestTaskId === task.id}
+                            />
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  )
                 ) : displayedTasks.length === 0 ? (
                   <p
                     className="py-4 text-center text-body"
@@ -652,7 +709,10 @@ function AppContent() {
                 {completedTasks.length > 0 && (
                   <div className="mt-4">
                     <button
-                      onClick={() => setShowCompleted(!showCompleted)}
+                      onClick={() => {
+                        setShowCompleted(!showCompleted)
+                        setWasAutoExpanded(false)
+                      }}
                       className="flex items-center gap-2 py-2 w-full"
                       aria-expanded={showCompleted}
                       aria-controls="completed-task-list"
@@ -685,20 +745,14 @@ function AppContent() {
                           exit={{ opacity: 0 }}
                         >
                           {completedTasks.map((task) => (
-                            <SwipeableTaskCard
-                              key={task.id}
-                              task={task}
-                              onDelete={handleDeleteInitiated}
-                              onMove={handleSwipeMove}
-                              isSwipeOpen={openSwipeId === task.id}
-                              onSwipeOpen={setOpenSwipeId}
-                              onSwipeClose={() => setOpenSwipeId(null)}
-                              showMoveAction={showMoveAction}
-                              onTap={(taskId) => setSelectedTaskId(taskId)}
-                              onComplete={handleToggleComplete}
-                              isNewest={newestTaskId === task.id}
-                              isDraggable={false}
-                            />
+                            <motion.div key={task.id} layout>
+                              <TaskCard
+                                task={task}
+                                onTap={(taskId) => setSelectedTaskId(taskId)}
+                                onComplete={handleToggleComplete}
+                                isNewest={newestTaskId === task.id}
+                              />
+                            </motion.div>
                           ))}
                         </motion.div>
                       )}

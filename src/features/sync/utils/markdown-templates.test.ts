@@ -75,6 +75,16 @@ describe('markdown-templates', () => {
       const header = getAIReadyHeader('testuser')
       expect(header.endsWith(MANAGED_START + '\n')).toBe(true)
     })
+
+    it('includes updated mark-tasks instruction with [Processed by] tag format', () => {
+      const header = getAIReadyHeader('testuser')
+      expect(header).toContain('[Processed by: YourAgentName]')
+    })
+
+    it('includes note that content below managed-end is not overwritten', () => {
+      const header = getAIReadyHeader('testuser')
+      expect(header).toContain('You may add notes or context below the `managed-end` marker — they will not be overwritten')
+    })
   })
 
   describe('hasAIReadyHeader', () => {
@@ -509,6 +519,40 @@ ${MANAGED_END}
       const tasks = parseTasksFromMarkdown(content)
       expect(tasks).toHaveLength(1)
       expect(tasks[0].title).toBe('Proper task')
+    })
+
+    it('extracts processedBy from [Processed by: Claude] tag', () => {
+      const content = `- [x] **Fix login** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Processed by: Claude]`
+      const tasks = parseTasksFromMarkdown(content)
+      expect(tasks).toHaveLength(1)
+      expect(tasks[0].processedBy).toBe('Claude')
+    })
+
+    it('returns null for processedBy when tag is absent', () => {
+      const content = `- [ ] **Fix login** ([Created: 2026-03-14]) (Priority: ⚪ Normal)`
+      const tasks = parseTasksFromMarkdown(content)
+      expect(tasks[0].processedBy).toBeNull()
+    })
+  })
+
+  describe('formatTaskAsMarkdown — processedBy', () => {
+    it('outputs [Processed by: Claude] when processedBy is set', () => {
+      const task = createTask({ processedBy: 'Claude' })
+      const result = formatTaskAsMarkdown(task)
+      expect(result).toContain('[Processed by: Claude]')
+    })
+
+    it('omits [Processed by] tag when processedBy is null', () => {
+      const task = createTask({ processedBy: null })
+      const result = formatTaskAsMarkdown(task)
+      expect(result).not.toContain('[Processed by:')
+    })
+
+    it('round-trip: format then parse preserves processedBy', () => {
+      const task = createTask({ processedBy: 'Gemini' })
+      const markdown = formatTaskAsMarkdown(task)
+      const parsed = parseTasksFromMarkdown(markdown)
+      expect(parsed[0].processedBy).toBe('Gemini')
     })
   })
 })

@@ -44,8 +44,7 @@ export function TaskSearchBar({ value, onChange, taskCount }: TaskSearchBarProps
           placeholder="Search tasks..."
           aria-label="Search tasks"
           data-testid="task-search-input"
-          className="input-field"
-          style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
+          className="input-field pl-9 pr-9"
         />
 
         {/* Clear button */}

@@ -5,7 +5,7 @@ import { TokenVault } from '../services/storage/token-vault'
 import { clearOctokitInstance } from '../services/github/auth-service'
 import { generateUUID } from '../utils/uuid'
 import type { GitHubUser } from '../services/github/auth-service'
-import type { Task } from '../types/task'
+import type { Task, SortMode } from '../types/task'
 import type { SyncErrorType } from '../services/github/sync-service'
 
 export interface SelectedRepo {
@@ -52,6 +52,7 @@ interface SyncState {
   syncErrorType: SyncErrorType | null
   authError: string | null
   hasPendingDeletions: boolean
+  repoSortModes: Record<string, SortMode>
 
   setAuth: (token: string, user: GitHubUser) => Promise<void>
   clearAuth: (error?: string) => void
@@ -71,6 +72,7 @@ interface SyncState {
   setRepoSyncMeta: (repoFullName: string, updates: Partial<RepoSyncMeta>) => void
   clearRepoConflict: (repoFullName: string) => void
   replaceTasksForRepo: (repoFullName: string, importedTasks: Task[]) => void
+  setRepoSortMode: (repoFullName: string, mode: SortMode) => void
 }
 
 /**
@@ -157,6 +159,7 @@ export const useSyncStore = create<SyncState>()(
       syncErrorType: null,
       authError: null,
       hasPendingDeletions: false,
+      repoSortModes: {},
 
       setAuth: async (token: string, user: GitHubUser) => {
         try {
@@ -604,6 +607,13 @@ export const useSyncStore = create<SyncState>()(
           return { tasks: [...remainingTasks, ...importedTasks] }
         })
       },
+
+      setRepoSortMode: (repoFullName: string, mode: SortMode) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => ({
+          repoSortModes: { ...state.repoSortModes, [key]: mode },
+        }))
+      },
     }),
     {
       name: 'code-tasks:store',
@@ -616,6 +626,7 @@ export const useSyncStore = create<SyncState>()(
         tasks: state.tasks,
         lastSyncedAt: state.lastSyncedAt,
         repoSyncMeta: state.repoSyncMeta,
+        repoSortModes: state.repoSortModes,
       }),
       skipHydration: true,
     },

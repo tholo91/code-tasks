@@ -5,10 +5,12 @@ workflowType: 'architecture'
 project_name: 'code-tasks'
 user_name: 'Thomas'
 date: '2026-03-10'
-lastEdited: '2026-03-16'
+lastEdited: '2026-03-17'
 editHistory:
   - date: '2026-03-16'
     changes: 'Course Correction: Updated data model (per-repo tasks, completion, ordering), auth (device-derived key, no passphrase), component architecture (FAB + Bottom Sheet, TaskDetailSheet, drag & drop), replaced Pulse references with current task management paradigm.'
+  - date: '2026-03-17'
+    changes: 'Epic 8 additions: SortMode type, repoSortModes + repoInstructions in store, updated getAIReadyHeader signature, new components (SortModeSelector, RepoSettingsSheet, SyncResultToast, AboutGittyView), iOS visualViewport keyboard fix pattern.'
 ---
 
 ...
@@ -230,6 +232,7 @@ interface Task {
   title: string                 // First line of captured text
   body: string                  // Description/notes, may be empty
   createdAt: string             // ISO 8601
+  updatedAt: string | null      // ISO 8601 when last edited, null if never edited
   isImportant: boolean          // Priority flag
   isCompleted: boolean          // Completion state
   completedAt: string | null    // ISO 8601 when completed, null if active
@@ -237,6 +240,23 @@ interface Task {
   syncStatus: 'pending' | 'synced'
   githubIssueNumber: number | null
 }
+
+// Epic 8 additions
+type SortMode = 'manual' | 'created-desc' | 'updated-desc' | 'priority-first'
+```
+
+**Epic 8 Store Additions (useSyncStore):**
+```typescript
+repoSortModes: Record<string, SortMode>    // UI pref — persisted, keyed by normalizeRepoKey(fullName)
+repoInstructions: Record<string, string>   // Custom AI header text per repo — persisted
+
+setRepoSortMode(repoFullName, mode)        // Sets sort preference for a repo
+setRepoInstruction(repoFullName, text)     // Sets custom AI instruction for a repo
+```
+
+**Epic 8 Updated API:**
+- `getAIReadyHeader(username, customInstruction?)` — optional custom instruction replaces default instructions block
+- `sortTasksForDisplay(tasks, { sortMode?, pendingToggleIds? })` — extended with sort mode support
 ```
 
 **Per-Repo Task Scoping:**
@@ -279,7 +299,7 @@ Tasks are stored flat in `useSyncStore.tasks[]` but always filtered by `selected
 - **State Management:** **`zustand` (v5+)** with `persist` middleware. Single store (`useSyncStore`) tracks auth, repo selection, tasks, sync status, and UI state. `skipHydration: true` with manual hydration via `AuthGuard` component.
 - **Animation Engine:** **Framer Motion (v12+)**. Spring-based physics for all interactions: bottom sheet slides, checkbox fills, list layout transitions, drag & drop reorder. `useReducedMotion()` fallback to instant transitions.
 - **Component Architecture:**
-  - **Bottom Sheet System:** Shared pattern for all modal interactions — `CreateTaskSheet`, `TaskDetailSheet`, `RepoPickerSheet`. Spring animation `{ stiffness: 400, damping: 35 }`, swipe-down-to-dismiss, click-outside-dismiss.
+  - **Bottom Sheet System:** Shared pattern for all modal interactions — `CreateTaskSheet`, `TaskDetailSheet`, `RepoPickerSheet`, `RepoSettingsSheet`. Spring animation `{ stiffness: 400, damping: 35 }`, swipe-down-to-dismiss, click-outside-dismiss.
   - **CreateTaskFAB (+):** Primary task creation entry point. Fixed position bottom-right. Opens `CreateTaskSheet`.
   - **SyncFAB:** "Push to GitHub" trigger. Shows pending count badge. Positioned above CreateTaskFAB.
   - **TaskCard:** Compact list item with animated checkbox, sync status dot, priority badge, body preview. Tapping opens `TaskDetailSheet`.

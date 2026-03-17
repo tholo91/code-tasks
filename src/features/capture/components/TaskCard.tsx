@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import type { CSSProperties } from 'react'
 import { TRANSITION_SPRING } from '../../../config/motion'
-import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
+import { TaskCheckbox } from '../../../components/ui/TaskCheckbox'
 import type { Task } from '../../../types/task'
 
 interface TaskCardProps {
@@ -31,6 +31,11 @@ export function TaskCard({ task, onTap, onComplete, isNewest = false, className,
       style={{
         backgroundColor: 'var(--color-surface)',
         border: `1px solid ${isNewest ? 'var(--color-success)' : 'var(--color-border)'}`,
+        // isNewest (green flash) takes priority; priority indicator suppressed during new-card flash
+        borderLeft: task.isImportant && !isNewest ? '3px solid var(--color-danger)' : undefined,
+        boxShadow: task.isImportant && !isNewest
+          ? '-2px 0 10px var(--color-danger-subtle), var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04)'
+          : 'var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04)',
         transition: 'border-color 0.5s ease',
         ...style,
       }}
@@ -40,45 +45,12 @@ export function TaskCard({ task, onTap, onComplete, isNewest = false, className,
       <div className="flex items-center gap-2">
         {/* Completion checkbox */}
         <div className="flex-shrink-0 p-[11px] -m-[11px]">
-          <motion.button
-            onClick={(e) => {
-              e.stopPropagation()
-              onComplete?.(task.id)
-              triggerSelectionHaptic()
-            }}
-            className="flex items-center justify-center"
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: '50%',
-              border: `2px solid ${task.isCompleted ? 'var(--color-success)' : 'var(--color-border)'}`,
-              backgroundColor: task.isCompleted ? 'var(--color-success)' : 'transparent',
-            }}
-            animate={{
-              scale: 1,
-              backgroundColor: task.isCompleted ? 'var(--color-success)' : 'transparent',
-              borderColor: task.isCompleted ? 'var(--color-success)' : 'var(--color-border)',
-            }}
-            transition={TRANSITION_SPRING}
-            whileTap={{ scale: 0.85 }}
-            role="checkbox"
-            aria-checked={task.isCompleted}
-            aria-label={task.isCompleted ? 'Mark task as incomplete' : 'Mark task as complete'}
-            data-testid={`task-checkbox-${task.id}`}
-          >
-            {task.isCompleted && (
-              <motion.svg
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={TRANSITION_SPRING}
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-              >
-                <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </motion.svg>
-            )}
-          </motion.button>
+          <TaskCheckbox
+            isCompleted={task.isCompleted}
+            onChange={() => onComplete?.(task.id)}
+            size="sm"
+            testId={`task-checkbox-${task.id}`}
+          />
         </div>
 
         {/* Sync status dot */}
@@ -116,6 +88,17 @@ export function TaskCard({ task, onTap, onComplete, isNewest = false, className,
           data-testid={`task-body-${task.id}`}
         >
           {task.body}
+        </p>
+      )}
+
+      {/* Processed by label */}
+      {task.processedBy && (
+        <p
+          className="text-caption mt-1 truncate pl-[46px]"
+          style={{ color: 'var(--color-text-secondary)', opacity: 0.6 }}
+          data-testid={`task-processed-by-${task.id}`}
+        >
+          Processed by {task.processedBy}
         </p>
       )}
     </motion.div>

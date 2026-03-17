@@ -15,12 +15,16 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
 
   return (
     <header
-      className="flex w-full max-w-[640px] items-center justify-between px-4 py-3"
+      className="flex w-full max-w-[640px] items-center justify-between px-4 py-3 sticky top-0 z-[40]"
+      style={{
+        backgroundColor: 'var(--color-canvas)',
+        boxShadow: '0 1px 0 var(--color-border)',
+      }}
       data-testid="app-header"
     >
-      {/* Brand */}
+      {/* Brand — monospace font reinforces developer identity */}
       <span
-        className="text-label font-semibold"
+        className="font-mono text-label font-semibold tracking-tight"
         style={{ color: 'var(--color-accent)' }}
       >
         code-tasks

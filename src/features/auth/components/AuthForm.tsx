@@ -98,10 +98,20 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             onClick={() => setHelpOpen((prev) => !prev)}
             aria-expanded={helpOpen}
             aria-controls="token-help"
-            className="mt-2 flex min-h-[44px] items-center text-label underline"
-            style={{ color: 'var(--color-accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            className="mt-2 flex min-h-[44px] w-full items-center justify-between rounded-md px-2 text-label"
+            style={{ color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            How do I get a token?
+            <span>How do I get a token?</span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="transition-transform duration-200 motion-reduce:transition-none"
+              style={{ transform: helpOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            >
+              <path fillRule="evenodd" d="M4.22 5.72a.75.75 0 0 1 1.06 0L8 8.44l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 6.78a.75.75 0 0 1 0-1.06Z" />
+            </svg>
           </button>
 
           {/* Accordion content */}
@@ -115,30 +125,25 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
               className="card mt-2 p-3 text-label"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              <p className="mb-3">
-                Your token connects Gitty directly to GitHub from your device.
-                It's stored locally on this device only and encrypted at rest.
-                It's never sent to any server — because there are none.
-              </p>
-
               <ol className="mb-3 list-decimal pl-4 space-y-1">
-                <li>Click the button below — you'll land on GitHub's "New fine-grained token" page</li>
-                <li>Under "Repository access" — select "Only select repositories" — pick your repo</li>
-                <li>Under "Repository permissions" — find "Contents" — set it to "Read and Write"</li>
-                <li>Click "Generate token" — copy it — paste it above</li>
+                <li>Tap "Open GitHub" below</li>
+                <li>Repository access → Only select repositories → pick yours</li>
+                <li>Permissions → Contents → Read and Write</li>
+                <li>Generate token, copy it</li>
+                <li>Paste it in the field above</li>
               </ol>
 
               <a
                 href="https://github.com/settings/personal-access-tokens/new"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block rounded-md px-3 py-1 text-label font-medium"
+                className="block w-full rounded-md px-3 py-2 text-center text-label font-medium"
                 style={{
                   backgroundColor: 'var(--color-accent)',
                   color: '#ffffff',
                 }}
               >
-                Open GitHub Token Page
+                Open GitHub
               </a>
             </div>
           </div>

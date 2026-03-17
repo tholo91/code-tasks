@@ -89,7 +89,7 @@ export function SwipeableTaskCard({
         <button
           onClick={() => onDelete(task.id)}
           className="flex flex-1 flex-col items-center justify-center gap-1"
-          style={{ backgroundColor: '#f85149' }}
+          style={{ backgroundColor: 'var(--color-danger)' }}
           aria-label="Delete task"
           data-testid={`swipe-delete-${task.id}`}
         >

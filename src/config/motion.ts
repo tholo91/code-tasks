@@ -16,6 +16,12 @@ export const TRANSITION_SPRING: Transition = {
   damping: 30,
 }
 
+export const TRANSITION_SHEET: Transition = {
+  type: 'spring',
+  stiffness: 400,
+  damping: 35,
+}
+
 export const pageVariants: Variants = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0, transition: TRANSITION_NORMAL },

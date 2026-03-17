@@ -27,8 +27,8 @@ export function getAIReadyHeader(username: string): string {
 >
 > - Tasks use Markdown checkboxes (\`- [ ]\` / \`- [x]\`)
 > - Priority: 🔴 Important or ⚪ Normal
-> - Mark tasks as done (\`- [x]\`) after processing
-> - Add your own notes BELOW the managed-end marker
+> - Mark tasks as done (\`- [x]\`) after processing, add \`[Processed by: YourAgentName]\` to the task line, and optionally append notes to the task body
+> - You may add notes or context below the \`managed-end\` marker — they will not be overwritten
 
 ---
 
@@ -95,6 +95,10 @@ export function formatTaskAsMarkdown(task: Task): string {
     line += ` [Completed: ${completedDate}]`
   }
 
+  if (task.processedBy) {
+    line += ` [Processed by: ${task.processedBy}]`
+  }
+
   if (task.body) {
     line += `\n  ${task.body}`
   }
@@ -116,6 +120,7 @@ export interface ParsedMarkdownTask {
   completedAt: string | null
   isCompleted: boolean
   isImportant: boolean
+  processedBy: string | null
 }
 
 function normalizeDate(dateValue: string | null | undefined): string | null {
@@ -130,7 +135,7 @@ function normalizeDate(dateValue: string | null | undefined): string | null {
   return parsed.toISOString()
 }
 
-function extractBracketValue(source: string, label: 'Created' | 'Updated' | 'Completed'): string | null {
+function extractBracketValue(source: string, label: 'Created' | 'Updated' | 'Completed' | 'Processed by'): string | null {
   const match = source.match(new RegExp(`\\[${label}:\\s*([^\\]]+)\\]`))
   return match ? match[1].trim() : null
 }
@@ -164,6 +169,7 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
     const createdAt = normalizeDate(extractBracketValue(meta, 'Created'))
     const updatedAt = normalizeDate(extractBracketValue(meta, 'Updated'))
     const completedAt = normalizeDate(extractBracketValue(meta, 'Completed'))
+    const processedBy = extractBracketValue(meta, 'Processed by')
 
     const bodyLines: string[] = []
     let cursor = i + 1
@@ -183,6 +189,7 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
       completedAt,
       isCompleted,
       isImportant,
+      processedBy,
     })
   }
 

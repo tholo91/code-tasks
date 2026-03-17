@@ -1,10 +1,12 @@
 ---
 stepsCompleted: [1, 2, 3]
 inputDocuments: ["_bmad-output/planning-artifacts/prd.md", "_bmad-output/planning-artifacts/architecture.md", "_bmad-output/planning-artifacts/ux-design-specification.md"]
-lastEdited: '2026-03-15'
+lastEdited: '2026-03-17'
 editHistory:
   - date: '2026-03-15'
     changes: 'Course Correction: Added Epic 7 (The Real App), added FR10-FR12, updated FR1/FR3/FR4, paused Epic 5, absorbed Epic 6. Reordered epic list by current priority.'
+  - date: '2026-03-17'
+    changes: 'Added Epic 8 (The Polish) — 9 stories derived from field-testing feedback in captured-ideas-tholo91.md. Covers list UX, completed section default, swipe-delete removal, creation flow polish, sorting & filtering, sync feedback, per-repo AI instructions, About Gitty, and AI header update.'
 ---
 
 # code-tasks - Epic Breakdown
@@ -13,7 +15,7 @@ editHistory:
 
 This document provides the complete epic and story breakdown for code-tasks, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
 
-**Current Priority (as of 2026-03-15):** Epic 7 is the active focus. Epics 1–4 are done (backend). Epic 5 is paused. Epic 6 is absorbed into Epic 7.
+**Current Priority (as of 2026-03-17):** Epic 8 is the active focus. Epics 1–4, 6, 7 are done. Epic 5 is paused. All 9 Epic 8 story files are ready-for-dev.
 
 ## Requirements Inventory
 
@@ -69,6 +71,9 @@ FR9 (AI-Ready Formatting): Epic 4 - The Bridge
 FR10 (Task Management — Complete/Edit/Delete): Epic 7 - The Real App
 FR11 (Drag & Drop Reorder): Epic 7 - The Real App
 FR12 (Per-Repo Task Lists): Epic 7 - The Real App
+FR13 (Sort Modes — created/edited/priority): Epic 8 - The Polish
+FR14 (Per-Repo AI Instructions — editable in settings): Epic 8 - The Polish
+FR15 (Sync Result Feedback — post-push toast): Epic 8 - The Polish
 
 ### CR Coverage Map (Community Requirements)
 
@@ -79,7 +84,11 @@ CR4 (GitHub Sponsor Setup): Epic 5 - The Village
 
 ## Epic List (Priority Order)
 
-### Epic 7: The Real App (Task Management UX Overhaul) ← CURRENT FOCUS
+### Epic 8: The Polish (Field-Testing UX Hardening) ← NEXT FOCUS
+Transform Gitty from "functional" to "delightful". 9 stories derived from real field-testing feedback by tholo91. Closes the gap to Things-quality UX: sticky context header, visual priority, completed section behavior, creation flow polish, sort/filter power, and settings features.
+**FRs covered:** FR4 (creation polish), FR10 (task management UX), FR12 (per-repo settings)
+
+### Epic 7: The Real App (Task Management UX Overhaul) — DONE
 Transform Gitty from a capture experiment into a real, native-feeling todo app. Each GitHub repository is treated as a project with its own task list backed by a single `captured-ideas-{username}.md` file. Quick Capture via FAB is prioritized. Users can create, complete, edit, delete, and reorder tasks. The app opens instantly without passphrase gates. Sync to GitHub is explicit and clear.
 **FRs covered:** FR1 (updated), FR3 (updated), FR4 (updated), FR10, FR11, FR12
 
@@ -100,7 +109,7 @@ Sync engine and AI-Ready headers. Core sync logic retained, UX polish in Epic 7.
 **FRs covered:** FR8, FR9
 
 ### Epic 5: The Village (Community & Sustainability) — PAUSED
-Paused until core UX (Epic 7) is complete. Community features should only ship once the app feels right.
+Paused until core UX (Epic 7 + 8) is complete. Community features should only ship once the app feels right.
 **CRs covered:** CR1, CR2, CR3, CR4
 
 ## Epic 7: The Real App (Task Management UX Overhaul)
@@ -653,3 +662,245 @@ So that visitors on GitHub can easily find ways to support the project.
 **Then** a "Sponsor" button is visible linking to the configured funding platforms
 **And** the README contains a tasteful support badge/section
 **And** FUNDING.yml is present with at least one platform configured
+
+---
+
+## Epic 8: The Polish (Field-Testing UX Hardening) — CURRENT FOCUS
+
+Real field-testing feedback from tholo91 (captured in `captured-ideas-tholo91.md`). Transforms Gitty from "functional" to "delightful" — closing the gap to Things-quality UX. 9 stories, all `ready-for-dev` as of 2026-03-17.
+
+**Source:** Party Mode discussion (PM John, UX Sally, Architect Winston, QA Quinn) + SM planning.
+**Story files:** `_bmad-output/implementation-artifacts/8-*.md`
+**Full planning doc:** `_bmad-output/planning-artifacts/epic-8-planning.md`
+
+### Story 8.1: List View UX — Sticky Repo Header + Priority Visual Indicators
+
+As a User,
+I want to always see which repository I'm in and visually identify important tasks at a glance,
+So that I never lose context while scrolling and can prioritize immediately without reading labels.
+
+**Acceptance Criteria:**
+
+**Given** I scroll down through a long task list
+**When** tasks scroll past the top
+**Then** the repository name remains visible in a sticky header at the top of the screen
+
+**Given** I have tasks marked as Important
+**When** I view the task list
+**Then** important tasks have a distinct visual treatment (colored left-border accent) that makes them stand out without needing to read a label
+
+**Technical Notes:**
+- `AppHeader`: add `sticky top-0 z-[40]` + opaque background
+- `TaskCard`: add 3px left border (`var(--color-danger)`) when `isImportant === true`
+- Files: `AppHeader.tsx`, `TaskCard.tsx`, `App.tsx`
+
+**Priority:** P0
+
+---
+
+### Story 8.2: Completed Tasks — Default Collapsed
+
+As a User,
+I want the "Completed" section to be collapsed by default when I open the app,
+So that my active task list is clean and focused.
+
+**Acceptance Criteria:**
+
+**Given** I open the app
+**When** the task list renders
+**Then** the "Completed (N)" section is collapsed by default
+
+**Given** I search for a term matching a completed task
+**When** the filter runs
+**Then** the completed section auto-expands to show the match
+
+**Given** I clear the search
+**When** the query is empty
+**Then** the completed section returns to collapsed
+
+**Technical Notes:**
+- `App.tsx` line 213: `useState(true)` → `useState(false)` (core fix)
+- Add `useEffect` watching `searchQuery` + `completedTasks.length` to auto-expand/collapse
+- Files: `App.tsx`
+
+**Priority:** P0
+
+---
+
+### Story 8.3: Remove Swipe-to-Delete from List View
+
+As a User,
+I want task deletion to only be available in the task detail view,
+So that I never accidentally delete a task by mis-swiping.
+
+**Acceptance Criteria:**
+
+**Given** I swipe left on a task in the list
+**When** the gesture completes
+**Then** nothing happens — no delete tray reveals
+
+**Given** I open a task's detail view
+**When** I tap "Delete Task" and confirm
+**Then** the task is removed with the existing undo pipeline
+
+**Technical Notes:**
+- Replace `SwipeableTaskCard` with `DraggableTaskCard` (active) and `TaskCard` (completed) in `App.tsx`
+- Remove `openSwipeId` state and `handleSwipeMove` from `App.tsx`
+- Keep `SwipeableTaskCard.tsx` file (tests still reference it)
+- `TaskDetailSheet` delete button already exists — just ensure it's wired correctly
+- Files: `App.tsx`, `TaskDetailSheet.tsx`
+
+**Priority:** P0
+
+---
+
+### Story 8.4: Task Creation Flow Polish
+
+As a User,
+I want the task creation sheet to feel perfectly native on mobile,
+So that the keyboard, input focus, and scroll behavior are frictionless.
+
+**Acceptance Criteria:**
+
+**Given** I tap the FAB (+) on iOS
+**When** the CreateTaskSheet opens
+**Then** the sheet is visible above the keyboard (not behind it)
+
+**Given** I type a long task title
+**When** the text exceeds one line
+**Then** the title input auto-expands to show the full text
+
+**Technical Notes:**
+- iOS `visualViewport.resize` listener to anchor sheet above keyboard
+- Convert title `<input>` to `<textarea rows={1}>` with auto-height (same as notes field pattern)
+- Increase auto-focus delay from 50ms to 150ms for iOS keyboard timing
+- Files: `CreateTaskSheet.tsx`
+
+**Priority:** P0
+
+---
+
+### Story 8.5: Sorting & Filtering
+
+As a User,
+I want to sort my tasks by created date, last edited date, or priority — with my preference remembered per repo,
+So that I can quickly find what I was just working on or focus on what matters most.
+
+**Acceptance Criteria:**
+
+**Given** I tap the sort control
+**When** the options appear
+**Then** I can choose: Manual (drag order), Newest First, Recently Edited, Priority First
+
+**Given** I select a sort mode for Repo A and switch to Repo B and back
+**When** I return to Repo A
+**Then** Repo A's sort preference is remembered
+
+**Given** a non-Manual sort is active
+**When** I view the list
+**Then** drag & drop is disabled
+
+**Technical Notes:**
+- Add `SortMode = 'manual' | 'created-desc' | 'updated-desc' | 'priority-first'` to `types/task.ts`
+- Add `repoSortModes: Record<string, SortMode>` + `setRepoSortMode` to store + `partialize`
+- Extend `sortTasksForDisplay` in `task-sorting.ts` with `sortMode` param
+- New `SortModeSelector.tsx` component in `features/capture/components/`
+- Gate `Reorder.Group` on `sortMode === 'manual'`
+- Files: `task.ts`, `useSyncStore.ts`, `task-sorting.ts`, `App.tsx`, new `SortModeSelector.tsx`
+
+**Priority:** P1
+
+---
+
+### Story 8.6: Sync Result Feedback
+
+As a User,
+I want a brief toast after syncing to GitHub instead of a persistent pending counter,
+So that I get satisfying confirmation without cluttered UI chrome.
+
+**Acceptance Criteria:**
+
+**Given** sync completes successfully
+**When** `syncEngineStatus` transitions to `'success'`
+**Then** a toast appears for ~2.5s showing what was synced, then auto-dismisses
+
+**Given** I view the header with no pending changes
+**When** no sync is active
+**Then** the "X pending" counter is not shown (removed)
+
+**Technical Notes:**
+- Remove pending badge from `SyncHeaderStatus.tsx`
+- Add `syncResultMessage` state to `App.tsx` with transition-watching `useEffect`
+- New `SyncResultToast.tsx` in `features/sync/components/`
+- Files: `SyncHeaderStatus.tsx`, `App.tsx`, new `SyncResultToast.tsx`
+
+**Priority:** P1
+
+---
+
+### Story 8.7: Per-Repo AI Instructions in Settings
+
+As a User,
+I want to customize the AI agent instruction header per repository,
+So that I can tell the AI what to do with my tasks in that specific repo's context.
+
+**Acceptance Criteria:**
+
+**Given** I open Settings and tap "Repository Settings"
+**When** the sub-sheet opens
+**Then** I see an editable textarea with the current AI instruction for this repo
+
+**Given** I save a custom instruction
+**When** the next sync runs
+**Then** the custom text replaces the default instructions in `captured-ideas-{username}.md`
+
+**Technical Notes:**
+- Add `repoInstructions: Record<string, string>` + `setRepoInstruction` to store + `partialize`
+- Update `getAIReadyHeader(username, customInstruction?)` in `markdown-templates.ts`
+- Thread custom instruction through `sync-service.ts`
+- New `RepoSettingsSheet.tsx` in `components/layout/`
+- Files: `useSyncStore.ts`, `markdown-templates.ts`, `sync-service.ts`, `SettingsSheet.tsx`, new `RepoSettingsSheet.tsx`
+
+**Priority:** P2
+
+---
+
+### Story 8.8: About Gitty in Settings
+
+As a User,
+I want to find a "Story of Gitty" page in settings,
+So that I can read the backstory and easily star the repository.
+
+**Acceptance Criteria:**
+
+**Given** I open Settings and tap "About Gitty"
+**When** the view opens
+**Then** I see: app name, tagline, "Story of Gitty" paragraph, "⭐ Star on GitHub" link, version
+
+**Technical Notes:**
+- Add "About Gitty" row to `SettingsSheet.tsx`
+- New `AboutGittyView.tsx` in `features/community/components/`
+- Files: `SettingsSheet.tsx`, new `AboutGittyView.tsx`
+
+**Priority:** P2
+
+---
+
+### Story 8.9: AI Agent Header Update
+
+As an AI Agent,
+I want clear instructions that I can check off completed tasks and attribute my work,
+So that I know exactly what I'm allowed to do with the task list.
+
+**Acceptance Criteria:**
+
+**Given** an AI agent reads a `captured-ideas-{username}.md` file
+**When** it reads the instruction header
+**Then** it clearly understands it can mark tasks done AND should append "Checked by [Agent Name]" to the description
+
+**Technical Notes:**
+- Update bullet in `getAIReadyHeader()`: "Mark tasks as done (`- [x]`) after processing and append 'Checked by [Agent Name]' to the task description"
+- Update `markdown-templates.test.ts` header assertions
+- Files: `markdown-templates.ts`, `markdown-templates.test.ts`
+
+**Priority:** P2 (do first — smallest warmup story)

@@ -24,7 +24,7 @@ export function CreateTaskFAB({ onClick }: CreateTaskFABProps) {
         width: 56,
         height: 56,
         backgroundColor: 'var(--color-accent)',
-        color: '#ffffff',
+        color: 'var(--color-on-accent)',
         border: 'none',
         cursor: 'pointer',
       }}

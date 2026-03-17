@@ -29,7 +29,7 @@
   Maybe in the settings section of each repository, one should be able to modify the instruction for the ai agent, this can be super useful for a personal use case
 
 - [ ] **UUIDs** ([Created: 2026-03-17]) (Priority: ⚪ Normal)
-  Should we create random uuids for each tasks, to track when they might be edited or renamed? Why or why not?
+  Should we create random uuids for each tasks, to track when they might be edited or renamed? Why or why not? Also, shoudl we incorporate times and not just date stamps? 
 
 - [ ] **Roadmap** ([Created: 2026-03-17]) (Priority: ⚪ Normal)
   Speech to tasks, a Transcript will be created and one can automatically convert it to tasks (while keeping the Transcript as a 2026-MM-DD-transcript.md)

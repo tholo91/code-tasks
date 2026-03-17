@@ -118,33 +118,6 @@ vi.mock('./features/capture/components/DraggableTaskCard', () => ({
   ),
 }))
 
-// Mock SwipeableTaskCard
-vi.mock('./features/capture/components/SwipeableTaskCard', () => ({
-  SwipeableTaskCard: ({ task, onTap, onComplete, onDelete, onMove, isNewest, isDraggable }: any) => (
-    <div data-testid={`swipeable-card-${task.id}`}>
-      <div
-        data-testid={`task-card-${task.id}`}
-        onClick={() => onTap?.(task.id)}
-      >
-        <button
-          data-testid={`task-checkbox-${task.id}`}
-          role="checkbox"
-          onClick={(e: any) => { e.stopPropagation(); onComplete?.(task.id) }}
-        />
-        <span data-testid={`task-title-${task.id}`}>{task.title}</span>
-      </div>
-      <button
-        data-testid={`swipe-delete-${task.id}`}
-        onClick={() => onDelete?.(task.id)}
-      >Delete</button>
-      <button
-        data-testid={`swipe-move-${task.id}`}
-        onClick={() => onMove?.(task.id)}
-      >Move</button>
-    </div>
-  ),
-}))
-
 // Mock UndoToast
 vi.mock('./features/capture/components/UndoToast', () => ({
   UndoToast: ({ message, onUndo, onExpire }: any) => (
@@ -185,6 +158,12 @@ vi.mock('./features/capture/components/PriorityFilterPills', () => ({
   ),
 }))
 
+vi.mock('./features/capture/components/SortModeSelector', () => ({
+  SortModeSelector: ({ currentMode }: any) => (
+    <div data-testid="sort-mode-selector">{currentMode}</div>
+  ),
+}))
+
 const mockTasks = [
   { id: '1', title: 'Buy milk', body: 'Get whole milk', isImportant: false, isCompleted: false, completedAt: null, updatedAt: null, order: 0, syncStatus: 'synced', createdAt: '2026-03-14T10:00:00Z', repoFullName: 'testuser/repo', username: 'testuser', githubIssueNumber: null },
   { id: '2', title: 'Fix bug', body: 'High priority', isImportant: true, isCompleted: false, completedAt: null, updatedAt: null, order: 1, syncStatus: 'synced', createdAt: '2026-03-14T11:00:00Z', repoFullName: 'testuser/repo', username: 'testuser', githubIssueNumber: null },
@@ -206,6 +185,7 @@ const stableFns = {
   setRepoSyncMeta: vi.fn(),
   clearRepoConflict: vi.fn(),
   replaceTasksForRepo: vi.fn(),
+  setRepoSortMode: vi.fn(),
   toggleImportant: vi.fn(),
   toggleComplete: vi.fn(),
   reorderTasks: vi.fn(),
@@ -227,6 +207,7 @@ function mockStoreWith(overrides: Record<string, unknown>) {
       syncError: null,
       syncErrorType: null,
       repoSyncMeta: {},
+      repoSortModes: {},
       hasPendingDeletions: false,
       ...overrides,
     } as never),
@@ -350,7 +331,7 @@ describe('App', () => {
     expect(header).toHaveTextContent('Completed (2)')
   })
 
-  it('section header toggle collapses completed list', async () => {
+  it('section header toggle expands then collapses completed list', async () => {
     const user = userEvent.setup()
     mockStoreWith({
       isAuthenticated: true,
@@ -364,11 +345,93 @@ describe('App', () => {
       render(<App />)
     })
 
-    expect(screen.getByText('Fix bug')).toBeInTheDocument()
-    await user.click(screen.getByTestId('completed-section-header'))
-
     const header = screen.getByTestId('completed-section-header')
+    // Default: collapsed
     expect(header.getAttribute('aria-expanded')).toBe('false')
+
+    // Click to expand
+    await user.click(header)
+    expect(header.getAttribute('aria-expanded')).toBe('true')
+
+    // Click to collapse again
+    await user.click(header)
+    expect(header.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('completed section is collapsed by default — header visible but tasks hidden', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasksWithCompleted,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    // Header is visible
+    expect(screen.getByTestId('completed-section-header')).toBeInTheDocument()
+    // Collapsed tasks (Fix bug, Done task) are not rendered
+    expect(screen.queryByTestId('task-card-2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('task-card-3')).not.toBeInTheDocument()
+  })
+
+  it('search auto-expands completed section when search matches a completed task', async () => {
+    const user = userEvent.setup()
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasksWithCompleted,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    // Initially collapsed
+    expect(screen.getByTestId('completed-section-header').getAttribute('aria-expanded')).toBe('false')
+
+    // Search for a completed task
+    const searchInput = screen.getByTestId('task-search-input')
+    await act(async () => {
+      await user.type(searchInput, 'Fix bug')
+    })
+
+    // Completed section auto-expands
+    expect(screen.getByTestId('completed-section-header').getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('clearing search collapses the completed section', async () => {
+    const user = userEvent.setup()
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasksWithCompleted,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    const searchInput = screen.getByTestId('task-search-input')
+
+    // Type a query to expand
+    await act(async () => {
+      await user.type(searchInput, 'Fix bug')
+    })
+    expect(screen.getByTestId('completed-section-header').getAttribute('aria-expanded')).toBe('true')
+
+    // Clear the search
+    await act(async () => {
+      await user.clear(searchInput)
+    })
+    expect(screen.getByTestId('completed-section-header').getAttribute('aria-expanded')).toBe('false')
   })
 
   it('active tasks do NOT appear in completed section', async () => {

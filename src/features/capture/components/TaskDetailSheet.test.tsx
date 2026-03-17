@@ -34,6 +34,7 @@ describe('TaskDetailSheet', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    window.confirm = vi.fn().mockReturnValue(true)
   })
 
   it('renders with task title, notes, and priority', () => {
@@ -190,5 +191,33 @@ describe('TaskDetailSheet', () => {
     render(<TaskDetailSheet task={createTask({ repoFullName: 'testuser/my-project' })} {...defaultProps} />)
 
     expect(screen.getByText('testuser/my-project')).toBeInTheDocument()
+  })
+
+  it('renders delete button when onDelete prop is provided', () => {
+    const onDelete = vi.fn()
+    render(<TaskDetailSheet task={createTask()} {...defaultProps} onDelete={onDelete} />)
+
+    expect(screen.getByTestId('detail-delete-button')).toBeInTheDocument()
+  })
+
+  it('does not render delete button when onDelete prop is absent', () => {
+    render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
+
+    expect(screen.queryByTestId('detail-delete-button')).not.toBeInTheDocument()
+  })
+
+  it('clicking delete button calls onClose immediately and onDelete after 150ms', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const onDelete = vi.fn()
+    render(<TaskDetailSheet task={createTask()} {...defaultProps} onDelete={onDelete} />)
+
+    await user.click(screen.getByTestId('detail-delete-button'))
+
+    expect(defaultProps.onClose).toHaveBeenCalled()
+    expect(onDelete).not.toHaveBeenCalled()
+
+    act(() => { vi.advanceTimersByTime(150) })
+
+    expect(onDelete).toHaveBeenCalledWith('detail-test-1')
   })
 })

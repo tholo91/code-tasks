@@ -98,4 +98,32 @@ describe('TaskCard', () => {
     expect(onComplete).toHaveBeenCalled()
     expect(onTap).not.toHaveBeenCalled()
   })
+
+  it('applies danger left-border when task.isImportant is true', () => {
+    render(<TaskCard task={createTask({ isImportant: true })} />)
+    const card = screen.getByTestId('task-card-test-uuid-1')
+    expect(card.style.borderLeft).toBe('3px solid var(--color-danger)')
+  })
+
+  it('does NOT apply danger left-border when task.isImportant is false', () => {
+    render(<TaskCard task={createTask({ isImportant: false })} />)
+    const card = screen.getByTestId('task-card-test-uuid-1')
+    expect(card.style.borderLeft).not.toContain('var(--color-danger)')
+  })
+
+  it('suppresses danger left-border when task.isImportant is true but isNewest is true', () => {
+    render(<TaskCard task={createTask({ isImportant: true })} isNewest={true} />)
+    const card = screen.getByTestId('task-card-test-uuid-1')
+    expect(card.style.borderLeft).not.toBe('3px solid var(--color-danger)')
+  })
+
+  it('renders "Processed by Claude" label when task.processedBy is set', () => {
+    render(<TaskCard task={createTask({ processedBy: 'Claude' })} />)
+    expect(screen.getByTestId('task-processed-by-test-uuid-1')).toHaveTextContent('Processed by Claude')
+  })
+
+  it('does NOT render processedBy label when processedBy is null', () => {
+    render(<TaskCard task={createTask({ processedBy: null })} />)
+    expect(screen.queryByTestId('task-processed-by-test-uuid-1')).not.toBeInTheDocument()
+  })
 })

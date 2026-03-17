@@ -5,11 +5,14 @@ interface SyncImportBannerProps {
   repoFullName: string
   remoteCount: number
   isImporting: boolean
+  variant?: 'initial-import' | 'remote-update'
   onImport: () => void
   onDismiss: () => void
 }
 
-export function SyncImportBanner({ repoFullName, remoteCount, isImporting, onImport, onDismiss }: SyncImportBannerProps) {
+export function SyncImportBanner({ repoFullName, remoteCount, isImporting, variant = 'initial-import', onImport, onDismiss }: SyncImportBannerProps) {
+  const isRemoteUpdate = variant === 'remote-update'
+
   return (
     <AnimatePresence>
       <motion.div
@@ -29,14 +32,18 @@ export function SyncImportBanner({ repoFullName, remoteCount, isImporting, onImp
         >
           <div className="flex flex-col gap-1">
             <span className="text-label font-semibold uppercase tracking-wider" style={{ color: 'var(--color-info)' }}>
-              Import Available
+              {isRemoteUpdate ? 'Updates on main' : 'Import Available'}
             </span>
             <span className="text-body" style={{ color: 'var(--color-text-primary)' }}>
-              {remoteCount} task{remoteCount === 1 ? '' : 's'} found in {repoFullName}.
+              {isRemoteUpdate
+                ? 'Want the latest status?'
+                : `${remoteCount} task${remoteCount === 1 ? '' : 's'} found in ${repoFullName}.`}
             </span>
-            <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-              Importing will overwrite your local list for this repo.
-            </span>
+            {!isRemoteUpdate && (
+              <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                Importing will overwrite your local list for this repo.
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-end gap-2">
             <button onClick={onDismiss} className="btn-ghost">
@@ -48,7 +55,7 @@ export function SyncImportBanner({ repoFullName, remoteCount, isImporting, onImp
               className="btn-primary"
               style={{ width: 'auto', minHeight: 36, paddingInline: 16 }}
             >
-              {isImporting ? 'Importing…' : 'Import'}
+              {isImporting ? 'Importing…' : isRemoteUpdate ? 'Update' : 'Import'}
             </button>
           </div>
         </div>

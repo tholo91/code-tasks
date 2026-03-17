@@ -1,6 +1,6 @@
 # code-tasks - Sprint Status Report
 # Updated: 2026-03-17
-# Course Correction applied: Epic 7 added, Epic 5 paused, Epic 6 absorbed
+# Sprint 3: Epic 8 (The Polish) — 10 story files, in progress
 
 status_definitions:
   backlog: "Story identified in epics but story file not yet created"
@@ -11,16 +11,33 @@ status_definitions:
   paused: "Story or epic paused pending other work"
 
 sprint_info:
-  current_sprint: "Sprint 2: The Real App"
-  start_date: "2026-03-15"
-  focus: "Epic 7 — Complete UX overhaul for task management"
-  course_correction: "sprint-change-proposal-2026-03-15.md"
+  current_sprint: "Sprint 3: The Polish"
+  start_date: "2026-03-17"
+  focus: "Epic 8 — Field-testing UX hardening: Things-quality polish, sort/filter, settings"
+  previous_sprint: "Sprint 2: The Real App (2026-03-15, Epic 7 — all 9 stories done)"
 
 development_status:
   # ═══════════════════════════════════════════════════════
-  # Epic 7: The Real App (CURRENT FOCUS — P0)
+  # Epic 8: The Polish (CURRENT FOCUS — Sprint 3)
   # ═══════════════════════════════════════════════════════
-  epic-7: "in-progress"
+  epic-8: "in-progress"
+  8-9-ai-agent-header-update: "done"
+  8-2-completed-tasks-default-collapsed: "done"
+
+  8-3-remove-swipe-to-delete: "done"
+  8-1-list-view-ux-sticky-header-priority-visual: "done"
+  8-4-task-creation-flow-polish: "done"
+  8-5-sorting-and-filtering: "done"
+
+  8-6-sync-result-feedback: "ready-for-dev"
+  8-7-per-repo-ai-instructions: "ready-for-dev"
+  8-8-about-gitty-settings: "ready-for-dev"
+  8-10-list-view-card-redesign: "ready-for-dev"
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 7: The Real App (DONE)
+  # ═══════════════════════════════════════════════════════
+  epic-7: "done"
   7-1-remove-passphrase-gate: "done"
   7-2-per-repo-task-lists: "done"
   7-3-fab-bottom-sheet-creation: "done"

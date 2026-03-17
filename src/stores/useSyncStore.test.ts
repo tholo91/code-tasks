@@ -649,4 +649,31 @@ describe('useSyncStore', () => {
       expect(useSyncStore.persist.rehydrate).toBeDefined()
     })
   })
+
+  describe('setRepoSortMode', () => {
+    it('stores sort mode for a repo under its normalized key', () => {
+      useSyncStore.getState().setRepoSortMode('Owner/Repo', 'created-desc')
+      const modes = useSyncStore.getState().repoSortModes
+      expect(modes['owner/repo']).toBe('created-desc')
+    })
+
+    it('setting mode for repo A does not affect repo B', () => {
+      useSyncStore.getState().setRepoSortMode('user/repo-a', 'priority-first')
+      useSyncStore.getState().setRepoSortMode('user/repo-b', 'updated-desc')
+      const modes = useSyncStore.getState().repoSortModes
+      expect(modes['user/repo-a']).toBe('priority-first')
+      expect(modes['user/repo-b']).toBe('updated-desc')
+    })
+
+    it('default (no key set) returns undefined — callers treat as manual', () => {
+      const modes = useSyncStore.getState().repoSortModes
+      expect(modes['nonexistent/repo']).toBeUndefined()
+    })
+
+    it('mode can be updated for the same repo', () => {
+      useSyncStore.getState().setRepoSortMode('user/repo', 'created-desc')
+      useSyncStore.getState().setRepoSortMode('user/repo', 'manual')
+      expect(useSyncStore.getState().repoSortModes['user/repo']).toBe('manual')
+    })
+  })
 })

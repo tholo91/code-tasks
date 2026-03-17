@@ -7,6 +7,8 @@ export type SyncStatus = 'pending' | 'synced'
 
 export type PriorityFilter = 'all' | 'important' | 'not-important'
 
+export type SortMode = 'manual' | 'created-desc' | 'updated-desc' | 'priority-first'
+
 export interface Task {
   /** UUID v4 — unique per task, scoped by username */
   id: string
@@ -28,6 +30,8 @@ export interface Task {
   completedAt: string | null
   /** ISO 8601 timestamp when task was last edited, null if never edited */
   updatedAt: string | null
+  /** Agent name from [Processed by: AgentName] markdown tag, null if not set */
+  processedBy?: string | null
   /** Sort position for drag & drop reorder (lower = higher in list) */
   order: number
   /** Sync status: 'pending' = local only, 'synced' = pushed to GitHub */

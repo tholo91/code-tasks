@@ -460,6 +460,7 @@ export async function fetchRemoteTasksForRepo(
         isImportant: parsedTask.isImportant,
         isCompleted: parsedTask.isCompleted,
         completedAt,
+        processedBy: parsedTask.processedBy ?? null,
         order: index,
         syncStatus: 'synced' as const,
         githubIssueNumber: null,
