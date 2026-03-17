@@ -1,10 +1,8 @@
-import { useSyncStore, base64ToArrayBuffer } from '../../stores/useSyncStore'
-import { decryptData } from '../../services/storage/crypto-utils'
+import { useSyncStore } from '../../stores/useSyncStore'
 import { validateToken } from '../../services/github/auth-service'
 import { validateRepoAccess } from '../../services/github/repo-service'
 import { getOctokit } from '../../services/github/auth-service'
-
-const PASSPHRASE_KEY = 'code-tasks:passphrase'
+import { TokenVault } from '../../services/storage/token-vault'
 
 let hydrationPromise: Promise<void> | null = null
 
@@ -22,33 +20,51 @@ export function resetHydration() {
 async function performHydration(): Promise<void> {
   await useSyncStore.persist.rehydrate()
 
-  const { encryptedToken, isAuthenticated } = useSyncStore.getState()
+  const { token: persistedToken, isAuthenticated } = useSyncStore.getState()
 
-  if (!isAuthenticated || !encryptedToken) {
-    // Truly not authenticated — nothing to recover
+  // Attempt to load encrypted token from vault
+  let token = await TokenVault.loadToken()
+
+  // Legacy migration: persisted base64 token
+  if (!token && persistedToken) {
+    let migratedToken = persistedToken
+    try {
+      const decoded = atob(persistedToken)
+      if (decoded.startsWith('ghp_') || decoded.startsWith('github_pat_')) {
+        migratedToken = decoded
+      }
+    } catch {
+      // token may already be plaintext
+    }
+    try {
+      await TokenVault.storeToken(migratedToken)
+    } catch {
+      useSyncStore.getState().clearAuth('Token vault error — please reconnect')
+      return
+    }
+    token = migratedToken
+    useSyncStore.setState({ token: migratedToken, isAuthenticated: true })
+  }
+
+  if (!token) {
+    if (isAuthenticated) {
+      useSyncStore.getState().clearAuth('Token missing — please reconnect')
+    }
     return
   }
+
+  useSyncStore.setState({ token, isAuthenticated: true })
 
   // Offline: trust local state (AC 7)
   if (!navigator.onLine) {
     return
   }
 
-  const passphrase = sessionStorage.getItem(PASSPHRASE_KEY)
-  if (!passphrase) {
-    // Passphrase lost (tab was closed) but encrypted token still exists.
-    // Don't destroy credentials — let the user re-enter their passphrase.
-    useSyncStore.getState().setNeedsPassphrase(true)
-    return
-  }
-
   try {
-    const buffer = base64ToArrayBuffer(encryptedToken)
-    const token = await decryptData(buffer, passphrase)
     const result = await validateToken(token)
 
     if (!result.valid) {
-      useSyncStore.getState().clearAuth()
+      useSyncStore.getState().clearAuth('Token expired — please reconnect')
       return
     }
 
@@ -63,6 +79,6 @@ async function performHydration(): Promise<void> {
       }
     }
   } catch {
-    useSyncStore.getState().clearAuth()
+    useSyncStore.getState().clearAuth('Connection failed — please check GitHub access')
   }
 }

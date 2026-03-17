@@ -67,18 +67,24 @@ import {
   getFileContent,
   commitTasks,
   getScopedFileName,
+  classifySyncError,
 } from './sync-service'
 import { useSyncStore } from '../../stores/useSyncStore'
-import { HEADER_SIGNATURE } from '../../features/sync/utils/markdown-templates'
+import { HEADER_SIGNATURE, MANAGED_START, MANAGED_END } from '../../features/sync/utils/markdown-templates'
 
 function createTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 'test-id-1',
     username: 'testuser',
+    repoFullName: 'testuser/my-repo',
     title: 'Fix the login bug',
     body: 'Users are seeing an error on the login page',
     createdAt: '2026-03-14T10:00:00.000Z',
     isImportant: false,
+    isCompleted: false,
+    completedAt: null,
+    updatedAt: null,
+    order: 0,
     syncStatus: 'pending',
     githubIssueNumber: null,
     ...overrides,
@@ -111,7 +117,6 @@ describe('sync-service', () => {
     useSyncStore.setState({
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
-      encryptedToken: 'encrypted',
       selectedRepo: {
         id: 1,
         fullName: 'testuser/my-repo',
@@ -120,6 +125,7 @@ describe('sync-service', () => {
       tasks: [],
       isSyncing: false,
       lastSyncedAt: null,
+      repoSyncMeta: {},
       syncEngineStatus: 'idle',
       syncError: null,
     })
@@ -199,7 +205,7 @@ describe('sync-service', () => {
           owner: 'testuser',
           repo: 'my-repo',
           path: 'captured-ideas-testuser.md',
-          message: 'sync: add 1 captured idea from code-tasks',
+          message: 'sync: update 1 task via code-tasks',
         }),
       )
 
@@ -313,6 +319,8 @@ describe('sync-service', () => {
       const content = decodeURIComponent(escape(atob(call.content)))
       expect(content).toContain(HEADER_SIGNATURE)
       expect(content).toContain('# Captured Ideas — testuser')
+      expect(content).toContain(MANAGED_START)
+      expect(content).toContain(MANAGED_END)
       expect(content).toContain('**Fix the login bug**')
     })
 
@@ -339,7 +347,8 @@ describe('sync-service', () => {
         mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
       const content = decodeURIComponent(escape(atob(call.content)))
       expect(content).toContain(HEADER_SIGNATURE)
-      expect(content).toContain('Old manual task')
+      expect(content).toContain(MANAGED_START)
+      expect(content).toContain(MANAGED_END)
       expect(content).toContain('**Fix the login bug**')
     })
 
@@ -392,7 +401,7 @@ describe('sync-service', () => {
       const call =
         mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
       expect(call.message).toBe(
-        'sync: add 2 captured ideas from code-tasks',
+        'sync: update 2 tasks via code-tasks',
       )
     })
   })
@@ -433,6 +442,43 @@ describe('sync-service', () => {
       expect(state.tasks[0].syncStatus).toBe('synced')
     })
 
+    it('passes all repo tasks to commitTasks but only marks pending as synced', async () => {
+      const syncedTask = createTask({
+        id: 'synced-1',
+        title: 'Already synced',
+        syncStatus: 'synced',
+        createdAt: '2026-03-13T10:00:00.000Z',
+      })
+      const pendingTask = createTask({
+        id: 'pending-1',
+        title: 'New pending task',
+        syncStatus: 'pending',
+        createdAt: '2026-03-14T10:00:00.000Z',
+      })
+      useSyncStore.setState({ tasks: [syncedTask, pendingTask] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const result = await syncPendingTasks()
+
+      expect(result.syncedCount).toBe(1)
+
+      // Verify the file content includes BOTH tasks (all repo tasks)
+      const call = mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      const content = decodeURIComponent(escape(atob(call.content)))
+      expect(content).toContain('**Already synced**')
+      expect(content).toContain('**New pending task**')
+
+      // Only the pending task should have been marked as synced
+      const state = useSyncStore.getState()
+      expect(state.tasks.find((t: Task) => t.id === 'synced-1')?.syncStatus).toBe('synced')
+      expect(state.tasks.find((t: Task) => t.id === 'pending-1')?.syncStatus).toBe('synced')
+
+      // Commit message should reference 1 (pending count, not total)
+      expect(call.message).toBe('sync: update 1 task via code-tasks')
+    })
+
     it('only syncs tasks belonging to the current user', async () => {
       const myTask = createTask({ id: '1', username: 'testuser' })
       const otherTask = createTask({ id: '2', username: 'otheruser' })
@@ -445,6 +491,26 @@ describe('sync-service', () => {
 
       expect(result.syncedCount).toBe(1)
       // Only testuser's task should be synced
+      const state = useSyncStore.getState()
+      expect(state.tasks.find((t) => t.id === '1')?.syncStatus).toBe('synced')
+      expect(state.tasks.find((t) => t.id === '2')?.syncStatus).toBe('pending')
+    })
+
+    it('only syncs tasks belonging to the currently selected repository', async () => {
+      const myRepoTask = createTask({ id: '1', repoFullName: 'testuser/my-repo' })
+      const otherRepoTask = createTask({ id: '2', repoFullName: 'testuser/other-repo' })
+      useSyncStore.setState({ 
+        tasks: [myRepoTask, otherRepoTask],
+        selectedRepo: { id: 1, fullName: 'testuser/my-repo', owner: 'testuser' }
+      })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const result = await syncPendingTasks()
+
+      expect(result.syncedCount).toBe(1)
+      // Only task for my-repo should be synced
       const state = useSyncStore.getState()
       expect(state.tasks.find((t) => t.id === '1')?.syncStatus).toBe('synced')
       expect(state.tasks.find((t) => t.id === '2')?.syncStatus).toBe('pending')
@@ -471,6 +537,121 @@ describe('sync-service', () => {
 
       expect(result.syncedCount).toBe(0)
       expect(result.error).toBe('No repo or user selected')
+    })
+
+    it('returns errorType branch-protection for 403 with protection message', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockRejectedValue({
+        status: 403,
+        message: 'push declined due to repository rule violations',
+      })
+
+      const result = await syncPendingTasks({ maxRetries: 0 })
+
+      expect(result.errorType).toBe('branch-protection')
+      expect(result.syncedCount).toBe(0)
+    })
+
+    it('returns errorType branch-protection for 422 with protected branch message', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockRejectedValue({
+        status: 422,
+        message: 'protected branch hook declined',
+      })
+
+      const result = await syncPendingTasks({ maxRetries: 0 })
+
+      expect(result.errorType).toBe('branch-protection')
+    })
+
+    it('returns errorType auth for 401 error', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockRejectedValue({
+        status: 401,
+        message: 'Bad credentials',
+      })
+
+      const result = await syncPendingTasks({ maxRetries: 0 })
+
+      expect(result.errorType).toBe('auth')
+    })
+
+    it('returns errorType unknown for generic errors', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockRejectedValue({
+        status: 400,
+        message: 'Something went wrong',
+      })
+
+      const result = await syncPendingTasks({ maxRetries: 0 })
+
+      expect(result.errorType).toBe('unknown')
+    })
+  })
+
+  describe('classifySyncError', () => {
+    it('returns branch-protection for 403 with protection message', () => {
+      const result = classifySyncError({
+        status: 403,
+        message: 'push declined due to repository rule violations',
+      })
+      expect(result.errorType).toBe('branch-protection')
+    })
+
+    it('returns branch-protection for 422 with protected branch message', () => {
+      const result = classifySyncError({
+        status: 422,
+        message: 'protected branch hook declined',
+      })
+      expect(result.errorType).toBe('branch-protection')
+    })
+
+    it('returns branch-protection for 422 with pull request message', () => {
+      const result = classifySyncError({
+        status: 422,
+        message: 'Changes must be made through a pull request',
+      })
+      expect(result.errorType).toBe('branch-protection')
+    })
+
+    it('returns auth for 401 error', () => {
+      const result = classifySyncError({ status: 401, message: 'Bad credentials' })
+      expect(result.errorType).toBe('auth')
+    })
+
+    it('returns auth for 403 with token message', () => {
+      const result = classifySyncError({
+        status: 403,
+        message: 'Resource not accessible by personal access token',
+      })
+      expect(result.errorType).toBe('auth')
+    })
+
+    it('returns network for errors without status', () => {
+      const result = classifySyncError(new TypeError('Failed to fetch'))
+      expect(result.errorType).toBe('network')
+    })
+
+    it('returns unknown for null/undefined', () => {
+      expect(classifySyncError(null).errorType).toBe('unknown')
+      expect(classifySyncError(undefined).errorType).toBe('unknown')
+    })
+
+    it('returns unknown for generic errors with status', () => {
+      const result = classifySyncError({ status: 400, message: 'Bad request' })
+      expect(result.errorType).toBe('unknown')
     })
   })
 })

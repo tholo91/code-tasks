@@ -1,5 +1,6 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-03-15
+# Updated: 2026-03-17
+# Course Correction applied: Epic 7 added, Epic 5 paused, Epic 6 absorbed
 
 status_definitions:
   backlog: "Story identified in epics but story file not yet created"
@@ -7,12 +8,33 @@ status_definitions:
   in-progress: "Developer is currently working on tests and code"
   review: "Implementation complete, pending peer/AI review"
   done: "Story complete and merged"
+  paused: "Story or epic paused pending other work"
 
 sprint_info:
-  current_sprint: "Sprint 1: Foundations"
-  start_date: "2026-03-11"
+  current_sprint: "Sprint 2: The Real App"
+  start_date: "2026-03-15"
+  focus: "Epic 7 — Complete UX overhaul for task management"
+  course_correction: "sprint-change-proposal-2026-03-15.md"
 
 development_status:
+  # ═══════════════════════════════════════════════════════
+  # Epic 7: The Real App (CURRENT FOCUS — P0)
+  # ═══════════════════════════════════════════════════════
+  epic-7: "in-progress"
+  7-1-remove-passphrase-gate: "done"
+  7-2-per-repo-task-lists: "done"
+  7-3-fab-bottom-sheet-creation: "done"
+  7-4-task-checkboxes-completion: "done"
+  7-5-task-detail-view: "done"
+  7-6-drag-and-drop-reorder: "done"
+  7-7-task-deletion: "done"
+  7-8-branch-protection-detection: "done"
+  7-9-sync-ux-polish: "done"
+
+  # ═══════════════════════════════════════════════════════
+  # Completed Epics (backend retained, frontend replaced by Epic 7)
+  # ═══════════════════════════════════════════════════════
+
   # Epic 1: The Secure Vault
   epic-1: "done"
   1-1-project-initialization-pwa-core: "done"
@@ -25,7 +47,7 @@ development_status:
   2-1-repository-discovery-selection: "done"
   2-2-persistent-last-used-repo: "done"
 
-  # Epic 3: The Pulse
+  # Epic 3: The Pulse (frontend capture flow replaced by Epic 7)
   epic-3: "done"
   3-1-the-pulse-ui-capture: "done"
   3-2-launch-gesture-feedback: "done"
@@ -34,20 +56,24 @@ development_status:
   3-5-fuzzy-task-search: "done"
   3-6-priority-filter: "done"
 
-  # Epic 4: The Bridge
+  # Epic 4: The Bridge (sync UX refined in Story 7.9)
   epic-4: "done"
   4-1-background-sync-engine: "done"
   4-2-ai-ready-header-injection: "done"
   4-3-conflict-free-user-scoping: "done"
   4-4-manual-sync-trigger: "done"
 
-  # Epic 5: The Village (Community & Sustainability)
-  epic-5: "in-progress"
-  5-1-roadmap-teaser-data-model: "done"
-  5-2-feature-voting: "ready-for-dev"
-  5-3-donation-prompt: "ready-for-dev"
-  5-4-github-sponsor-setup: "ready-for-dev"
+  # ═══════════════════════════════════════════════════════
+  # Paused Epics (resume after Epic 7)
+  # ═══════════════════════════════════════════════════════
 
-  # Epic 6: UX Polish & Onboarding
-  epic-6: "in-progress"
+  # Epic 5: The Village (PAUSED — resume after Epic 7)
+  epic-5: "paused"
+  5-1-roadmap-teaser-data-model: "done"
+  5-2-feature-voting: "paused"
+  5-3-donation-prompt: "paused"
+  5-4-github-sponsor-setup: "paused"
+
+  # Epic 6: UX Polish (ABSORBED into Epic 7)
+  epic-6: "done"
   6-1-auth-onboarding-ux-improvements: "done"

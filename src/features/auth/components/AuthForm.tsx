@@ -16,18 +16,20 @@ const initialState: FormState = { error: null, pending: false }
 
 export function AuthForm({ onSuccess }: AuthFormProps) {
   const setAuth = useSyncStore((s) => s.setAuth)
+  const authError = useSyncStore((s) => s.authError)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [migrated] = useState(() => {
+    const flag = localStorage.getItem('code-tasks:migrated')
+    if (flag) localStorage.removeItem('code-tasks:migrated')
+    return !!flag
+  })
 
   const [state, formAction, isPending] = useActionState(
     async (_prev: FormState, formData: FormData): Promise<FormState> => {
       const token = (formData.get('token') as string)?.trim() ?? ''
-      const passphrase = (formData.get('passphrase') as string)?.trim() ?? ''
 
       if (!token) {
         return { error: 'Token cannot be empty', pending: false }
-      }
-      if (!passphrase) {
-        return { error: 'App passphrase cannot be empty', pending: false }
       }
 
       try {
@@ -37,7 +39,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           return { error: result.error, pending: false }
         }
 
-        await setAuth(token, result.user, passphrase)
+        await setAuth(token, result.user)
         onSuccess()
         return { error: null, pending: false }
       } catch (err) {
@@ -56,8 +58,21 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           Authenticate
         </h2>
         <p className="mb-6 text-body" style={{ color: 'var(--color-text-secondary)' }}>
-          Enter your GitHub Personal Access Token and a master passphrase to encrypt it.
+          Enter your GitHub Personal Access Token to connect.
         </p>
+
+        {migrated && (
+          <div
+            className="mb-4 rounded-md border px-3 py-2 text-body"
+            style={{
+              borderColor: 'var(--color-accent)',
+              color: 'var(--color-accent)',
+              backgroundColor: 'rgba(88, 166, 255, 0.1)',
+            }}
+          >
+            We've simplified login — please re-enter your token once.
+          </div>
+        )}
 
         <div className="mb-4">
           <label
@@ -102,8 +117,8 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             >
               <p className="mb-3">
                 Your token connects Gitty directly to GitHub from your device.
-                It's encrypted with your passphrase (AES-256 GCM) and stored
-                locally only. It's never sent to any server — because there are none.
+                It's stored locally on this device only and encrypted at rest.
+                It's never sent to any server — because there are none.
               </p>
 
               <ol className="mb-3 list-decimal pl-4 space-y-1">
@@ -129,29 +144,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           </div>
         </div>
 
-        <div className="mb-6">
-          <label
-            htmlFor="passphrase-input"
-            className="mb-2 block text-body font-medium"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            App Passphrase (Encryption Key)
-          </label>
-          <input
-            id="passphrase-input"
-            name="passphrase"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Your master key"
-            disabled={isPending}
-            className="input-field"
-          />
-          <p className="mt-1 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            This is never stored. You'll need it to unlock your token on other sessions.
-          </p>
-        </div>
-
-        {state.error && (
+        {(state.error || authError) && (
           <div
             role="alert"
             className="mb-4 rounded-md border px-3 py-2 text-body"
@@ -161,12 +154,12 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
               backgroundColor: 'rgba(248, 81, 73, 0.1)',
             }}
           >
-            {state.error}
+            {state.error || authError}
           </div>
         )}
 
         <p className="mb-3 text-label" style={{ color: 'var(--color-text-secondary)' }}>
-          Your token never leaves this device.
+          Your token never leaves this device and is encrypted at rest.
         </p>
 
         <motion.button

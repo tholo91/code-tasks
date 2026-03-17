@@ -54,11 +54,10 @@ describe('PriorityPill', () => {
       selector({
         isImportant: false,
         toggleImportant: mockToggleImportant,
-        currentDraft: '',
-        setCurrentDraft: vi.fn(),
+
         isAuthenticated: true,
         user: null,
-        encryptedToken: null,
+        token: null,
         selectedRepo: null,
         setAuth: vi.fn(),
         clearAuth: vi.fn(),
@@ -89,11 +88,10 @@ describe('PriorityPill', () => {
       selector({
         isImportant: true,
         toggleImportant: mockToggleImportant,
-        currentDraft: '',
-        setCurrentDraft: vi.fn(),
+
         isAuthenticated: true,
         user: null,
-        encryptedToken: null,
+        token: null,
         selectedRepo: null,
         setAuth: vi.fn(),
         clearAuth: vi.fn(),
@@ -173,11 +171,10 @@ describe('PriorityPill', () => {
       selector({
         isImportant: true,
         toggleImportant: mockToggleImportant,
-        currentDraft: '',
-        setCurrentDraft: vi.fn(),
+
         isAuthenticated: true,
         user: null,
-        encryptedToken: null,
+        token: null,
         selectedRepo: null,
         setAuth: vi.fn(),
         clearAuth: vi.fn(),

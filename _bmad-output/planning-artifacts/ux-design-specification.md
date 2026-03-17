@@ -1,6 +1,10 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 inputDocuments: ["_bmad-output/planning-artifacts/prd.md", "_bmad-output/planning-artifacts/product-brief-code-tasks-2026-03-10.md", "_bmad-output/planning-artifacts/architecture.md", "docs/vision.md", "docs/research-impulses.md", "docs/the-gitty-chronicles.md", "docs/new-names.md"]
+lastEdited: '2026-03-16'
+editHistory:
+  - date: '2026-03-16'
+    changes: 'Course Correction: Updated defining experience from Pulse swipe-capture to FAB + Bottom Sheet task management. Updated component strategy, user journeys, implementation roadmap, and interaction patterns to reflect Epic 7 (The Real App) — a real todo app with full CRUD, checkboxes, detail view, drag & drop, and explicit sync.'
 ---
 
 # UX Design Specification code-tasks
@@ -26,32 +30,33 @@ inputDocuments: ["_bmad-output/planning-artifacts/prd.md", "_bmad-output/plannin
 
 ### Key Design Challenges
 
-- **Aesthetic Synthesis:** Blending the utilitarian "GitHub" aesthetic (Primer-inspired) with the fluid, intentional motion of "Things."
-- **Connectivity Trust:** Providing absolute confidence in offline persistence through subtle but clear state indicators.
-- **Minimalist Density:** Maintaining a clean "Pulse" focus while surfacing repository context and sync status.
+- **Aesthetic Synthesis:** Blending the utilitarian "GitHub" aesthetic (Primer-inspired) with the fluid, intentional motion of "Things 3" — the gold standard for todo app feel.
+- **Connectivity Trust:** Providing absolute confidence in offline persistence through subtle but clear sync status indicators on every task card.
+- **Markdown Transparency:** The app is a frontend for a markdown file, but users should never feel the limitation. Full task management (CRUD, reorder, complete, detail edit) must feel native despite persisting to a flat file.
 
 ### Design Opportunities
 
-- **Signature Capture Gesture:** Using spring physics and haptic-aligned animations to make "Saving" feel like a reward.
-- **Developer-Centric Details:** Leveraging monospaced typography for metadata and GitHub-style "pills" for status to create instant familiarity.
+- **Signature Interactions:** Spring-physics bottom sheets, animated checkboxes, drag & drop reordering — every micro-interaction reinforces the "premium tool" feeling.
+- **Developer-Centric Details:** GitHub-style status dots, "Pending"/"Synced" badges, monospaced metadata create instant familiarity for developers.
+- **The "Push" Moment:** Explicit "Push to GitHub" as a deliberate, satisfying sync action — not a hidden background process.
 
 ## Core User Experience
 
 ### Defining Experience
 
-The core experience of **code-tasks** is centered on the **"Zero-Friction Capture Loop."** It is designed to feel like a private, local scratchpad that has the ultimate durability of a GitHub repository. The interface disappears to let the user's thoughts flow directly into the "Pulse" input.
+The core experience of **code-tasks** is centered on the **"Real Todo App for Markdown."** It is designed to feel like a premium native task manager (think Things 3) — but every task, every checkbox, every priority flag is backed by a single `captured-ideas-{username}.md` file in a GitHub repo. The genius is that users never feel this limitation. They get full CRUD, drag & drop reordering, completion tracking, and a beautiful detail view — all persisted to a flat markdown file that AI agents can instantly consume.
 
 ### Platform Strategy
 
 - **PWA (Progressive Web App):** Optimized for high-fidelity mobile interactions (iOS/Android via browser) and a focused desktop "utility" window.
 - **Offline-First Resilience:** Uses IndexedDB for instant local writes, ensuring the app is functional and responsive even in "Airplane Mode" or subway tunnels.
-- **Input Parity:** Equal weight given to touch gestures (swipes for status/archive) and keyboard shortcuts (instant focus, hotkey-based capture).
+- **Touch-First, Keyboard-Ready:** Primary interactions via touch (FAB tap, bottom sheet, checkbox tap, drag & drop). Power users get `Cmd+Enter` for keyboard capture.
 
 ### Effortless Interactions
 
-- **The "Smart Route":** The app automatically opens to the last-used repository, eliminating the "Where do I put this?" cognitive load.
-- **The "Pulse" Focus:** On launch, the cursor is automatically in the input field. No tapping required to start typing.
-- **Silent Sync:** Local persistence happens on every keystroke; GitHub synchronization is handled as a background task with a non-intrusive status indicator.
+- **Instant Landing:** The app opens directly to the last-used repository's task list. No passphrase, no selection screen. Authenticated → task list in < 1.5s.
+- **One-Tap Capture:** FAB (+) → Bottom Sheet → type title → "Add Task". Three taps from idle to captured.
+- **Explicit Sync:** Local changes are persisted instantly to IDB. GitHub sync happens when the user deliberately taps "Push to GitHub" — they control when their markdown file updates.
 
 ### Critical Success Moments
 
@@ -120,9 +125,9 @@ The primary goal is to provide the **"Relief of the Vault."** Users should feel 
 
 ### Design Inspiration Strategy
 
-- **Adopt:** GitHub's color palette (Dark Mode) and typography hierarchy for data density.
-- **Adapt:** Things' animation engine but "sharpen" the curves to feel faster and more utilitarian.
-- **Avoid:** Complex multi-step onboarding. Launch immediately into the "Pulse" if authenticated.
+- **Adopt:** GitHub's Dark Dimmed palette and status patterns (green=synced, amber=pending). Things 3's bottom sheet and checkbox interaction quality.
+- **Adapt:** Things' spring physics tuned sharper (stiffness: 400) for a more utilitarian, developer-tool feel.
+- **Avoid:** Complex onboarding. One-time PAT entry, then straight to task list forever. No passphrase gates, no tutorials.
 
 ## Design System Foundation
 
@@ -140,43 +145,46 @@ We will use GitHub's **Primer Design System** as the visual and structural found
 
 ### Implementation Approach
 
-- **Core Components:** Use Primer React/CSS for standard elements (inputs, buttons, repository lists).
-- **Motion Layer:** Integrate **Framer Motion or Spring.js** to override standard Primer transitions. We will add "Things-style" spring physics to card lifts, list shifts, and panel slides.
-- **Haptic Integration:** For mobile PWA usage, we will map Primer actions (e.g., clicking a "Sync" pill) to subtle haptic feedback patterns.
+- **Core Foundation:** CSS custom properties (`--color-canvas`, `--color-surface`, `--color-accent`, etc.) in `index.css` provide the GitHub Dark Dimmed palette. Utility classes (`.btn-primary`, `.text-body`, `.input-field`) for consistent styling. TailwindCSS 4 for layout.
+- **Motion Layer:** **Framer Motion (v12+)** for all animations. Spring physics: `{ stiffness: 400, damping: 35 }` for bottom sheets, `{ stiffness: 400, damping: 30 }` for micro-interactions. `useReducedMotion()` fallback.
+- **Haptic Integration:** `haptic-service.ts` maps task interactions to haptic patterns: `triggerSelectionHaptic()` on checkbox toggle, priority change, drag start.
 
 ### Customization Strategy
 
-- **The "Pulse" Input:** A completely custom, high-fidelity text area that extends Primer's base input with auto-expanding logic and a signature "launch" animation.
-- **Typography Mix:** Use **Inter** for UI labels and **SF Mono** for all technical metadata (timestamps, file paths, status fields) to reinforce the "Git-backed" identity.
-- **Custom Spacing:** Adopting a slightly more generous whitespace model (inspired by Things) than standard GitHub, to ensure the app feels "premium" and less "industrial."
+- **Bottom Sheet System:** The shared interaction pattern for task creation, task detail editing, and repo selection. Spring-animated slide-up, swipe-down-to-dismiss, click-outside-dismiss. Consistent handle bar and rounded top corners.
+- **Typography System:** Custom CSS utility classes: `.text-hero` (32px), `.text-title` (20px), `.text-body` (14px), `.text-label` (12px), `.text-caption` (11px). System font stack for all text.
+- **Custom Spacing:** Generous whitespace (12px card gaps, 16px padding) inspired by Things 3 to feel premium. Max content width `640px` for focused, mobile-first layout.
 
-## 2. Core User Experience
+## 2. Core User Experience (Updated)
 
 ### 2.1 Defining Experience
 
-The defining experience of **code-tasks** is the **"Pulse Launch."** It is the singular, high-velocity moment where a raw idea is transformed into a durable GitHub record. Unlike traditional task managers that require multiple taps for project, tags, and priority, the Pulse Launch assumes speed is the only metric that matters at the moment of capture.
+The defining experience of **code-tasks** is the **"Native Todo, Markdown Soul."** Users interact with a real, full-featured task manager — create via FAB, check off with animated checkboxes, edit in a Things-style detail view, drag to reorder, push to GitHub when ready. The innovative twist: every interaction maps to changes in a single `captured-ideas-{username}.md` file that AI agents can immediately consume and act on.
 
 ### 2.2 User Mental Model
 
-Users approach **code-tasks** as a **"Remote Extension of their Brain."** They view the GitHub repository as a permanent, immutable vault and the app as the fastest possible "Input Terminal" for that vault. They expect the reliability of a local `.txt` file with the collaborative and AI-ready benefits of a hosted GitHub repository.
+Users approach **code-tasks** as their **"Developer Task Inbox."** Each GitHub repository is a project. The task list is a living queue of ideas and TODOs. The user captures quickly, triages by priority and completion, and pushes to GitHub when ready for AI agents or collaborators to see. They expect the speed of Apple Reminders with the durability and transparency of a Git-tracked markdown file.
 
 ### 2.3 Success Criteria
 
-- **Interaction Latency:** The UI must respond to the "Capture" trigger in < 100ms.
-- **Zero-Touch Routing:** 90% of captures should occur without the user ever interacting with a repository selector.
-- **Visual Confirmation:** A clear "Success" state (e.g., the GitHub "Check" icon) that confirms the local IndexedDB write was successful.
+- **Capture Speed:** FAB tap to task created in < 3 taps, < 5 seconds.
+- **Zero-Touch Routing:** 90% of captures should occur without interacting with a repository selector (auto-selects last-used).
+- **Visual Confirmation:** New task appears at the top of the list with a brief green border highlight, confirming local persist.
+- **Completion Satisfaction:** Checkbox animation (spring fill + strikethrough) feels tactile and rewarding.
 
 ### 2.4 Novel UX Patterns
 
-- **The "Pulse" Text Area:** A hybrid input that behaves like a simple text box but intelligently separates the first line (Title) from subsequent lines (Description) using subtle visual weight shifts.
-- **"Launch" Gesture:** A vertical swipe-up on the Pulse area that "sends" the task into the list below, reinforcing the mental model of placing an object into a container.
+- **FAB + Bottom Sheet Creation:** The (+) button opens a spring-animated bottom sheet with Title (auto-focused), Notes, and Priority toggle. Swipe-down-to-dismiss for cancel. Fast, discoverable, familiar.
+- **Things-Style Detail View:** Tapping a task opens a slide-up panel for rich editing — title, notes, priority, repo reassignment. Auto-save with 500ms debounce.
+- **Active/Completed Split:** The task list is divided into active tasks (reorderable) and a collapsible "Completed (N)" section. Completed tasks show `- [x]` in the markdown.
+- **Drag & Drop Reorder:** Long-press to pick up, drag to reposition. Only active tasks are reorderable. Order persists across sessions.
 
 ### 2.5 Experience Mechanics
 
-1. **Initiation:** App launch automatically focuses the Pulse input. The keyboard is already up.
-2. **Interaction:** User types idea. Subtle "Important" toggle is accessible via a single tap next to the text.
-3. **Feedback:** As the user swipes up, the text area collapses and a "ghost" of the task follows the finger, landing in the list with a springy bounce.
-4. **Completion:** The Pulse input clears instantly, ready for the next spark. A small "Syncing" spinner appears on the task card, turning into a GitHub checkmark when the remote push is complete.
+1. **Initiation:** App opens instantly to last-used repo's task list. No passphrase. No loading gate.
+2. **Capture:** User taps (+) FAB → Bottom Sheet slides up with spring animation → types title → taps "Add Task" → sheet closes → task appears at top of list with green highlight.
+3. **Management:** Tap checkbox to complete (animated strikethrough, moves to Completed section). Tap card body to open detail view. Long-press to drag & reorder.
+4. **Sync:** When ready, tap "Push to GitHub" → all pending changes written to `captured-ideas-{username}.md` → tasks marked as synced with green status dot.
 
 ## Visual Design Foundation
 
@@ -195,15 +203,15 @@ The color palette is a direct evolution of the **GitHub Dark Dimmed** theme, opt
 - **Interface Font:** **Inter** (System-first approach). Used for task titles and primary navigation.
 - **Data Font:** **SF Mono** (Monospaced). Used for all Git-related metadata, including timestamps (`Created: 2026-03-10`), file paths, and status pills.
 - **Hierarchy:** 
-  - **H1 (Pulse):** 24px, Semi-bold.
+  - **H1 (Hero):** 24px, Semi-bold.
   - **Body (Tasks):** 16px, Regular.
   - **Meta (Technical):** 12px, Monospaced, Medium.
 
 ### Spacing & Layout Foundation
 
 - **8px Base Grid:** All margins, paddings, and component heights are multiples of 8px.
-- **The "Pulse" Sanctuary:** The top input area is reserved with 32px of vertical padding to ensure the cursor and text feel uncrowded.
-- **Card Spacing:** 12px gap between list items to allow for the "Shadow Lift" animation during drag-and-drop without overlapping neighbors.
+- **Content Container:** `max-w-[640px]` centered container for the task list, search bar, and filter pills. Provides focused, mobile-first layout on all screen sizes.
+- **Card Spacing:** 8px gap (`gap-2`) between task cards. 12px internal card padding. Adequate spacing for drag & drop lift animation.
 
 ### Accessibility Considerations
 
@@ -225,55 +233,56 @@ Six distinct visual directions were explored in the interactive showcase (`ux-de
 
 ### Chosen Direction
 
-**Hybrid: The "Primer-Pulse" Direction**
-This direction combines the extreme focus of the **Pulse Primary (1)** with the tactile satisfaction of the **Interactive Card (3)**, all rendered in the high-trust **GitHub Dark Dimmed** palette (5).
+**Evolved: The "Primer-Things" Direction**
+Originally the "Primer-Pulse" hybrid, this direction has evolved through the Epic 7 course correction. It now combines the **tactile satisfaction of Things 3** (bottom sheets, animated checkboxes, spring physics, drag & drop) with the **high-trust GitHub Dark Dimmed** palette (5) and **Interactive Card (3)** motion design.
 
 ### Design Rationale
 
-- **Velocity:** The Pulse Primary interaction ensures the < 5s capture goal is met.
-- **Trust:** Using the GitHub visual language creates an immediate "Safe Vault" feeling.
-- **Polish:** Things-inspired card animations differentiate the product from a standard "form-based" app, making it feel like a premium tool.
+- **Velocity:** FAB (+) → Bottom Sheet → instant capture ensures the < 5s goal. One-tap creation is more discoverable than the original swipe gesture.
+- **Trust:** GitHub visual language (status dots, sync badges, dark palette) creates an immediate "safe vault" feeling.
+- **Polish:** Things-inspired spring animations, satisfying checkbox fills, slide-up detail panels, and drag & drop reordering differentiate the product from standard form-based apps.
 
 ### Implementation Approach
 
-- **Visual Foundation:** GitHub Primer CSS/React components.
-- **Interactions:** Framer Motion for spring-based list transitions and "flick-to-save" gestures.
-- **Feedback:** Haptic triggers for successful local saves and non-intrusive status pills for background sync.
+- **Visual Foundation:** Custom CSS design system on GitHub Dark Dimmed tokens. TailwindCSS 4 for layout.
+- **Interactions:** Framer Motion for spring-based bottom sheets, layout transitions, checkbox animations, and drag & drop.
+- **Feedback:** Haptic triggers on capture, complete, and drag start. Non-intrusive status badges on every task card.
 
 ## User Journey Flows
 
-### 1. The High-Velocity Capture
+### 1. The Quick Capture
 
-This is the "North Star" journey. The goal is to minimize every millisecond between the user's thought and the vault's confirmation.
+The "North Star" journey. FAB tap to captured task in under 5 seconds.
 
 ```mermaid
 graph TD
     A[App Launch] --> B{Auth Valid?}
-    B -- Yes --> C[Auto-Focus Pulse Input]
-    B -- No --> D[GitHub OAuth Login]
-    D --> C
-    C --> E[User Types Idea]
-    E --> F[Launch Gesture: Swipe Up]
-    F --> G[Local IndexedDB Write]
-    G --> H[Haptic Feedback & Task Lands in List]
-    H --> I[Background Sync to GitHub]
-    I --> J[Success: GitHub Checkmark Appears]
+    B -- Yes --> C[Last-Used Repo Task List]
+    B -- No --> D[PAT Auth Form]
+    D --> E[Select Repository]
+    E --> C
+    C --> F[Tap + FAB]
+    F --> G[Bottom Sheet: Title + Notes + Priority]
+    G --> H[Tap Add Task]
+    H --> I[IDB Persist + Task Appears in List]
+    I --> J[Later: Push to GitHub]
 ```
 
-### 2. The Offline Ideation
+### 2. The Task Management Loop
 
-Ensuring that a lack of connectivity never results in a loss of momentum.
+The daily workflow: capture, triage, complete, sync.
 
 ```mermaid
 graph TD
-    A[User Opens App Offline] --> B[Pulse Input Active]
-    B --> C[User Captures Multiple Ideas]
-    C --> D[Cards land with 'Cloud-Off' Icon]
-    D --> E[Connection Restored]
-    E --> F[Automatic Background Sync]
-    F --> G[FAB 'Push' Button Highlights]
-    G --> H[User Taps FAB or Auto-Push Completes]
-    H --> I[All Ideas Committed to GitHub]
+    A[View Task List] --> B[Tap Checkbox to Complete]
+    B --> C[Task Moves to Completed Section]
+    A --> D[Tap Card to Open Detail View]
+    D --> E[Edit Title/Notes/Priority]
+    E --> F[Auto-Save to Local Store]
+    A --> G[Long-Press to Drag & Reorder]
+    G --> H[Release: New Order Persisted]
+    A --> I[Tap Push to GitHub]
+    I --> J[All Pending Changes → Markdown File]
 ```
 
 ### 3. The AI Agent Consumer
@@ -282,73 +291,108 @@ The moment where the developer sits down at their desk and sees their midnight w
 
 ```mermaid
 graph TD
-    A[Developer Pulls Repo] --> B[Opens captured-ideas.md]
+    A[Developer Pulls Repo] --> B[Opens captured-ideas-thomas.md]
     B --> C[Reads AI-Ready Header]
-    C --> D[Sees Scoped Tasks: captured-ideas-thomas.md]
-    D --> E[Agent Reads Metadata: Status, Priority]
-    E --> F[Agent Executes Task & Updates Markdown]
+    C --> D[Sees Active Tasks: - brackets and space brackets]
+    D --> E[Sees Completed Tasks: - brackets x brackets]
+    E --> F[Agent Reads Metadata: Priority, Timestamps]
+    F --> G[Agent Executes Task & Updates Markdown]
+```
+
+### 4. The Offline Ideation
+
+Ensuring that a lack of connectivity never results in a loss of ideas.
+
+```mermaid
+graph TD
+    A[User Opens App Offline] --> B[Task List Loads from IDB]
+    B --> C[User Creates/Edits/Completes Tasks]
+    C --> D[All Changes Persist to IDB Locally]
+    D --> E[Offline Banner Shows]
+    E --> F[Connection Restored]
+    F --> G[Push to GitHub Button Active]
+    G --> H[User Taps Push — All Changes Synced]
 ```
 
 ### Journey Patterns
 
-- **Auto-Focus First:** Every journey that involves input starts with an immediate focus on the text field.
-- **Background-First Sync:** User never waits for a network request to complete their core action.
-- **Visual Staging:** Using "Cloud-Off," "Syncing," and "GitHub Check" icons to communicate the three states of an idea's life.
+- **Instant Landing:** Authenticated users land on their task list with zero intermediate screens.
+- **Local-First Always:** Every action (create, edit, complete, reorder, delete) persists to IDB immediately. The UI never waits for a network request.
+- **Explicit Sync:** GitHub sync is a deliberate user action ("Push to GitHub"), not a hidden background process. The user controls when their markdown file updates.
+- **Visual Status Clarity:** Every task card shows its sync state via colored dot + badge (Pending/Synced).
 
 ### Flow Optimization Principles
 
-- **Eliminate the Middleman:** No "Save" button; the gesture *is* the save.
-- **Pre-emptive Routing:** Use the `last_used_repo` to skip the selection screen entirely during the capture loop.
-- **Non-Blocking Feedback:** UI remains interactive while background tasks (sync, AI initialization) occur.
+- **One-Tap Create:** FAB is always visible. One tap opens the creation sheet.
+- **Pre-emptive Routing:** Use `last_used_repo` to skip the selection screen on every subsequent launch.
+- **Non-Blocking Feedback:** UI remains interactive during sync. Task appears instantly in list; sync status updates asynchronously.
 
 ## Component Strategy
 
 ### Design System Components
 
-We will utilize **GitHub Primer React** for all standard UI elements to maintain the "GitHub-fluent" identity.
+The app uses a custom design system built on **GitHub Dark Dimmed** color tokens, defined as CSS custom properties in `src/index.css`. Utility classes provide consistent styling across all components.
 
-- **Foundations:** Primer design tokens for color, spacing, and typography.
-- **Navigation:** `ActionList` for the repository selector and `NavList` for any secondary settings.
-- **Feedback:** Standard `Label` components for "Important" and "Status" pills, ensuring they match the GitHub UI exactly.
+- **Foundations:** CSS custom properties for color (`--color-canvas`, `--color-surface`, `--color-accent`, `--color-success`, `--color-warning`, `--color-danger`, `--color-border`, `--color-text-primary`, `--color-text-secondary`), typography classes (`.text-hero`, `.text-title`, `.text-body`, `.text-label`, `.text-caption`), and interaction classes (`.btn-primary`, `.btn-ghost`, `.input-field`, `.badge`).
+- **Animation:** Framer Motion constants in `src/config/motion.ts` — `TRANSITION_SPRING`, `TRANSITION_FAST`, `TRANSITION_NORMAL`, shared `pageVariants`, `listContainerVariants`, `listItemVariants`.
 
-### Custom Components
+### Core Components
 
-#### 1. The Pulse Input
-**Purpose:** The primary capture terminal for new ideas.
-**Anatomy:** A large, borderless `TextArea` that auto-expands. Includes a "ghost" label and a subtle "Important" toggle.
-**Interaction Behavior:** Supports a vertical swipe-up gesture to trigger the "Launch" sequence. Keyboard users use `Cmd+Enter`.
+#### 1. CreateTaskFAB (+)
+**Purpose:** Primary entry point for task creation. Always visible on the main screen.
+**Location:** Fixed bottom-right, above SyncFAB.
+**Behavior:** Tap opens CreateTaskSheet. 44x44px minimum touch target. Accent blue background.
 
-#### 2. The Interactive Task Card
-**Purpose:** Represents a single task in the list with high tactile feedback.
-**States:** Default, Dragging (Lifts with shadow), Swiping (Reveals green 'Done' or amber 'Archive' backgrounds), and Syncing (Pulsing ghost state).
-**Interaction Behavior:** One-tap to open Detail Panel; swipe-left to archive; swipe-right to complete.
+#### 2. CreateTaskSheet (Bottom Sheet)
+**Purpose:** Structured task creation form — Title (required, auto-focused), Notes (optional), Priority toggle.
+**Animation:** Spring slide-up `{ stiffness: 400, damping: 35 }`. Swipe-down-to-dismiss. Click-outside-dismiss.
+**Submit:** "Add Task" button or `Cmd+Enter`. Creates task in current repo, closes sheet, highlights new task in list.
 
-#### 3. The Ghost-Writer FAB
-**Purpose:** To signal when local IndexedDB data is ahead of the GitHub remote.
-**Visuals:** A standard Primer-style FAB (`#58a6ff`) with a subtle "breathe" animation. Only visible when `sync_needed = true`.
+#### 3. TaskCard
+**Purpose:** Compact list item representing a single task. Shows animated checkbox, sync status dot, title (truncated), priority badge, and 1-line body preview.
+**States:** Active (default), Completed (strikethrough + muted), Newest (green border highlight for 1.5s), Dragging (lifted with shadow).
+**Interactions:** Tap checkbox → toggle complete. Tap card body → open TaskDetailSheet. Long-press → drag to reorder.
+
+#### 4. TaskDetailSheet (Bottom Sheet)
+**Purpose:** Rich editing panel for an existing task. Editable title, notes/description, priority toggle, created timestamp, repo assignment with "Move to..." action.
+**Auto-Save:** 500ms debounce after last keystroke. Flush pending save on sheet close. Resets `syncStatus: 'pending'`.
+**Animation:** Same spring system as CreateTaskSheet.
+
+#### 5. SyncFAB ("Push to GitHub")
+**Purpose:** Explicit sync trigger. Shows pending count badge when local changes exist.
+**Location:** Fixed bottom-right, below CreateTaskFAB.
+**States:** Idle (no pending), Active (pending count badge), Syncing (spinner), Success (checkmark flash), Error (red state).
+
+#### 6. Active/Completed Task List Split
+**Purpose:** Task list divided into active tasks (top, reorderable) and collapsible "Completed (N)" section (bottom).
+**Behavior:** Completing a task → animated strikethrough → task moves to Completed section. Collapsible header with chevron rotation.
+
+#### 7. RepoPickerSheet (Bottom Sheet)
+**Purpose:** Repository selection and switching. Same bottom sheet pattern. Triggered from header or "Move to..." in detail view.
 
 ### Component Implementation Strategy
 
-- **Motion Foundation:** All custom components will use **Framer Motion** for layout animations and spring physics.
-- **Token Alignment:** Custom components will strictly use Primer CSS variables (`--color-accent-fg`, etc.) to ensure theme switching (Light/Dark/Dimmed) is automatic.
-- **Haptic feedback:** Map "Capture," "Complete," and "Archive" to distinct haptic patterns (Light, Medium, Heavy taps).
+- **Motion Foundation:** All custom components use **Framer Motion** for layout animations, spring physics, and `AnimatePresence` for mount/unmount transitions.
+- **Token Alignment:** All components use CSS custom properties (`--color-*`) to ensure visual consistency. No hardcoded color values in components.
+- **Haptic Feedback:** `triggerSelectionHaptic()` on checkbox toggle, priority change, and drag start.
+- **Bottom Sheet Consistency:** All sheets share the same animation pattern, handle bar, backdrop, and dismiss behavior. Defined once, reused everywhere.
 
-### Implementation Roadmap
+### Implementation Roadmap (Epic 7 — Actual Sequence)
 
-**Phase 1 - The Core Loop:**
-- Pulse Input (Capture)
-- Task Card (Basic Display)
-- GitHub OAuth Integration
+**Done — Foundation:**
+- ~~PAT Auth with auto-recovery, no passphrase gate~~ (Story 7.1)
+- ~~Per-repo task scoping in Zustand store~~ (Story 7.2)
+- ~~CreateTaskFAB + CreateTaskSheet~~ (Story 7.3)
+- ~~TaskCard with animated checkbox, completion toggle, Active/Completed split~~ (Story 7.4, in review)
 
-**Phase 2 - The Management Layer:**
-- Swipe Actions (Done/Archive)
-- Drag-and-Drop (Reordering)
-- Ghost-Writer FAB (Syncing)
+**In Progress — Management:**
+- TaskDetailSheet with inline editing, auto-save, repo reassignment (Story 7.5)
+- Drag & drop reorder for active tasks (Story 7.6)
+- Task deletion with confirmation (Story 7.7)
 
-**Phase 3 - The Detail Layer:**
-- Slide-in Detail Panel
-- Markdown Description Editor
-- Checklist Sub-tasks
+**Upcoming — Polish:**
+- Branch protection detection and user guidance (Story 7.8)
+- Sync UX polish — per-repo push, change detection, clear CTA (Story 7.9)
 
 ## UX Consistency Patterns
 
@@ -367,18 +411,21 @@ We will utilize **GitHub Primer React** for all standard UI elements to maintain
 
 ### Form Patterns
 
-- **The Pulse Textarea:** Single-field entry. Automates metadata creation (Title vs. Description) without requiring the user to switch fields.
-- **Immediate Validation:** If a repository hasn't been selected, the Pulse input remains in a "Staged" state with a prompt to "Select Target Repo" before launch.
+- **Bottom Sheet Creation:** CreateTaskSheet has Title (auto-focused, required), Notes (optional textarea), and PriorityPill toggle. Submit via "Add Task" button or `Cmd+Enter`. Title cannot be empty.
+- **Inline Detail Editing:** TaskDetailSheet uses controlled inputs with 500ms debounce auto-save. No explicit "Save" button — changes persist on every pause. On sheet close, pending saves are flushed immediately.
+- **Immediate Validation:** If no repository is selected, the app shows the repo selection screen. The task creation FAB only appears when a repo is active.
 
 ### Navigation Patterns
 
-- **Repository Switcher:** A slide-over `ActionList` triggered by tapping the repository name in the header.
-- **Task Detail:** A right-to-left slide-in panel (Desktop) or bottom-to-top (Mobile). Dismissed by swiping in the opposite direction.
+- **Repository Switcher:** Bottom sheet (RepoPickerSheet) triggered by tapping the repo name in the AppHeader. Same spring animation as all other sheets.
+- **Task Detail:** Bottom-to-top slide-up panel (TaskDetailSheet). Dismissed by swipe-down, click-outside, or Escape key.
+- **View Routing:** `App.tsx` manages three view states: `auth` → `repo-select` → `main`. Transitions use `AnimatePresence` with `mode="wait"`.
 
 ### Empty & Loading States
 
-- **Initial Load:** GitHub-style skeleton loaders for the task list.
-- **Empty Vault:** A centered illustration of a GitHub octocat holding a notebook, with a prompt: "No technical sparks yet. Start typing above."
+- **Initial Load:** `AuthSkeleton` component during Suspense hydration.
+- **Empty Task List:** Centered icon + "No tasks yet" + "Tap (+) to capture your first idea" prompt.
+- **Search/Filter Empty:** Inline message: "No tasks match '{query}'" or "No important tasks".
 
 ## Responsive Design & Accessibility
 
@@ -386,9 +433,9 @@ We will utilize **GitHub Primer React** for all standard UI elements to maintain
 
 **code-tasks** is designed with a **Mobile-First, Desktop-Power** strategy. 
 
-- **Mobile:** Focus on one-handed capture. Uses large touch targets and gesture-based saving (Swipe up).
-- **Desktop:** Optimized for keyboard velocity. Uses `Cmd+Enter` for capture and surfaces repository branch/path information in a side margin when space permits.
-- **Tablet:** Maintains the mobile layout but expands the task cards to show more metadata (tags, full timestamps) inline.
+- **Mobile:** Focus on one-handed task management. FAB in thumb reach, bottom sheets for all creation/editing, 44x44px touch targets, haptic feedback, drag & drop reorder.
+- **Desktop:** Keyboard-optimized: `Cmd+Enter` for quick capture. Bottom sheets work as centered modals on wider viewports. Max content width `640px` for focused experience.
+- **Tablet:** Maintains the mobile layout but with more breathing room. Cards may show more metadata inline.
 
 ### Breakpoint Strategy
 
@@ -404,14 +451,14 @@ We will use standard logical breakpoints to ensure layout stability:
 - **Compliance Level:** WCAG 2.1 Level AA.
 - **Contrast:** High-contrast dark mode defaults using GitHub's color variables.
 - **Interactive Targets:** Minimum 44x44px touch area for all mobile interactive elements.
-- **Keyboard Navigation:** Logical tab order (Pulse -> List -> Sync FAB) with visible focus rings.
+- **Keyboard Navigation:** Logical tab order (FAB -> List -> Sync FAB) with visible focus rings. Escape key dismisses any open bottom sheet.
 - **Screen Readers:** ARIA labels for all Octicons (e.g., `aria-label="Synchronized with GitHub"`) and Live Regions for status updates.
 
 ### Testing Strategy
 
 - **Device Lab:** Verification on actual iOS (Safari) and Android (Chrome) devices to ensure PWA "Add to Home Screen" behavior is fluid.
 - **Automated Audit:** Continuous accessibility testing using `axe-core`.
-- **Keyboard-Only Pass:** Manual verification that the entire "Pulse-to-Vault" loop can be completed using only a keyboard.
+- **Keyboard-Only Pass:** Manual verification that the entire create-edit-complete-sync loop can be completed using only a keyboard.
 
 ### Implementation Guidelines
 

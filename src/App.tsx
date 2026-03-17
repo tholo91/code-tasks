@@ -1,25 +1,35 @@
-import { Suspense, use, useMemo, useState, useEffect, useCallback, Component, type ReactNode } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Suspense, use, useMemo, useState, useEffect, useRef, useCallback, Component, type ReactNode } from 'react'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { useSyncStore } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AppHeader } from './components/layout/AppHeader'
 import { AuthForm } from './features/auth/components/AuthForm'
 import { RepoSelector } from './features/repos/components/RepoSelector'
-import { PulseInput } from './features/capture/components/PulseInput'
-import { TaskCard } from './features/capture/components/TaskCard'
+import { CreateTaskFAB } from './features/capture/components/CreateTaskFAB'
+import { CreateTaskSheet } from './features/capture/components/CreateTaskSheet'
+import { TaskDetailSheet } from './features/capture/components/TaskDetailSheet'
+import { SwipeableTaskCard } from './features/capture/components/SwipeableTaskCard'
+import { UndoToast } from './features/capture/components/UndoToast'
 import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
 import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
 import { RoadmapView } from './features/community/components/RoadmapView'
 import { SyncFAB } from './features/sync/components/SyncFAB'
+import { SyncConflictBanner } from './features/sync/components/SyncConflictBanner'
+import { BranchProtectionBanner } from './features/sync/components/BranchProtectionBanner'
+import { SyncImportBanner } from './features/sync/components/SyncImportBanner'
 import { useAutoSync } from './features/sync/hooks/useAutoSync'
+import { QuickCaptureBar } from './features/capture/components/QuickCaptureBar'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
-import type { PriorityFilter } from './types/task'
+import type { PriorityFilter, Task } from './types/task'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
-import { pageVariants, listContainerVariants, listItemVariants, TRANSITION_NORMAL } from './config/motion'
+import { triggerSelectionHaptic } from './services/native/haptic-service'
+import { pageVariants, listContainerVariants, TRANSITION_NORMAL, TRANSITION_FAST } from './config/motion'
+import { sortTasksForDisplay } from './utils/task-sorting'
+import { fetchRemoteTasksForRepo } from './services/github/sync-service'
 
-function RepoSelectorContainer({ onSelect }: { onSelect?: () => void }) {
+function RepoSelectorContainer({ onSelect, onRepoSelected }: { onSelect?: () => void; onRepoSelected?: (repoFullName: string) => void }) {
   const setSelectedRepo = useSyncStore((s) => s.setSelectedRepo)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
   const octokit = use(useMemo(() => recoverOctokit(), []))
@@ -38,11 +48,15 @@ function RepoSelectorContainer({ onSelect }: { onSelect?: () => void }) {
         octokit={octokit}
         selectedRepoId={selectedRepo?.id ?? null}
         onSelect={(repo) => {
-          setSelectedRepo({
-            id: repo.id,
-            fullName: repo.fullName,
-            owner: repo.owner
-          })
+          if (onRepoSelected) {
+            onRepoSelected(repo.fullName)
+          } else {
+            setSelectedRepo({
+              id: repo.id,
+              fullName: repo.fullName,
+              owner: repo.owner
+            })
+          }
           onSelect?.()
         }}
       />
@@ -119,90 +133,8 @@ function OfflineNotification({
   )
 }
 
-function PassphraseUnlock() {
-  const unlockWithPassphrase = useSyncStore((s) => s.unlockWithPassphrase)
-  const clearAuth = useSyncStore((s) => s.clearAuth)
-  const user = useSyncStore((s) => s.user)
-  const [passphrase, setPassphrase] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, setIsPending] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!passphrase.trim()) return
-    setError(null)
-    setIsPending(true)
-    try {
-      const success = await unlockWithPassphrase(passphrase.trim())
-      if (!success) {
-        setError('Wrong passphrase or token expired. Try again or log in fresh.')
-      }
-    } catch {
-      setError('Unlock failed. Please try again.')
-    } finally {
-      setIsPending(false)
-    }
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="card w-full max-w-md p-6">
-        <h2 className="mb-2 text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          Welcome back{user?.name ? `, ${user.name}` : ''}
-        </h2>
-        <p className="mb-6 text-body" style={{ color: 'var(--color-text-secondary)' }}>
-          Enter your passphrase to unlock your encrypted token.
-        </p>
-
-        <div className="mb-6">
-          <input
-            type="password"
-            autoComplete="current-password"
-            placeholder="Your master passphrase"
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-            disabled={isPending}
-            className="input-field"
-          />
-        </div>
-
-        {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded-md border px-3 py-2 text-body"
-            style={{
-              borderColor: 'var(--color-danger)',
-              color: 'var(--color-danger)',
-              backgroundColor: 'rgba(248, 81, 73, 0.1)',
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <motion.button
-          type="submit"
-          disabled={isPending}
-          className="btn-primary"
-          whileTap={{ scale: 0.97 }}
-        >
-          {isPending ? 'Unlocking...' : 'Unlock'}
-        </motion.button>
-
-        <button
-          type="button"
-          onClick={clearAuth}
-          className="btn-ghost mt-3 w-full"
-        >
-          Log in with a different token instead
-        </button>
-      </form>
-    </div>
-  )
-}
-
 /** Bottom sheet overlay for repo picker */
-function RepoPickerSheet({ onClose }: { onClose: () => void }) {
+function RepoPickerSheet({ onClose, onRepoSelected }: { onClose: () => void; onRepoSelected?: (repoFullName: string) => void }) {
   const clearAuth = useSyncStore((s) => s.clearAuth)
 
   return (
@@ -238,7 +170,9 @@ function RepoPickerSheet({ onClose }: { onClose: () => void }) {
               </p>
             }
           >
-            <RepoSelectorContainer onSelect={onClose} />
+            <RepoSelectorContainer onSelect={() => {
+              onClose()
+            }} onRepoSelected={onRepoSelected} />
           </Suspense>
         </OctokitErrorBoundary>
       </motion.div>
@@ -248,33 +182,212 @@ function RepoPickerSheet({ onClose }: { onClose: () => void }) {
 
 function AppContent() {
   const isAuthenticated = useSyncStore((s) => s.isAuthenticated)
-  const needsPassphrase = useSyncStore((s) => s.needsPassphrase)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
+  const user = useSyncStore((s) => s.user)
   const clearAuth = useSyncStore((s) => s.clearAuth)
-  const addTask = useSyncStore((s) => s.addTask)
   const tasks = useSyncStore((s) => s.tasks)
+  const toggleComplete = useSyncStore((s) => s.toggleComplete)
+  const reorderTasks = useSyncStore((s) => s.reorderTasks)
+  const updateTask = useSyncStore((s) => s.updateTask)
+  const removeTask = useSyncStore((s) => s.removeTask)
+  const moveTaskToRepo = useSyncStore((s) => s.moveTaskToRepo)
   const loadTasksFromIDB = useSyncStore((s) => s.loadTasksFromIDB)
+  const replaceTasksForRepo = useSyncStore((s) => s.replaceTasksForRepo)
+  const setRepoSyncMeta = useSyncStore((s) => s.setRepoSyncMeta)
+
+  const syncErrorType = useSyncStore((s) => s.syncErrorType)
 
   const { isOnline, showOfflineNotification, dismissOfflineNotification } = useNetworkStatus()
+  const [bannerDismissed, setBannerDismissed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [moveTaskId, setMoveTaskId] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [newestTaskId, setNewestTaskId] = useState<string | null>(null)
+  const [showCreateSheet, setShowCreateSheet] = useState(false)
+  const [showCompleted, setShowCompleted] = useState(true)
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
+  const [dragOrderedTasks, setDragOrderedTasks] = useState<Task[]>([])
+  const dragStartOrderRef = useRef<string[] | null>(null)
+  const dragPointerYRef = useRef<number | null>(null)
+  const [idbLoaded, setIdbLoaded] = useState(false)
+  const [importPrompt, setImportPrompt] = useState<{
+    repoFullName: string
+    tasks: Task[]
+    sha: string | null
+  } | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
+  const importAttemptedRef = useRef<Set<string>>(new Set())
+
+  // Track tasks that have been toggled but are waiting for the 500ms transition delay
+  const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(new Set())
+
+  // Swipe action tray — only one open at a time
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
+
+  // Soft-delete pipeline: task stays in store but hidden from UI during undo window
+  const [pendingDelete, setPendingDelete] = useState<{
+    task: Task
+    timeoutId: ReturnType<typeof setTimeout>
+  } | null>(null)
 
   useEffect(() => {
+    let active = true
     loadTasksFromIDB()
+      .catch(() => {})
+      .finally(() => {
+        if (active) setIdbLoaded(true)
+      })
+    return () => {
+      active = false
+    }
   }, [loadTasksFromIDB])
 
   useAutoSync()
 
-  const fuse = useMemo(() => createTaskFuse(tasks), [tasks])
+  // Attempt remote import when switching repos and local is empty.
+  useEffect(() => {
+    if (!idbLoaded || !selectedRepo || !user || !isOnline) return
+
+    const repoKey = selectedRepo.fullName.toLowerCase()
+    if (importAttemptedRef.current.has(repoKey)) return
+    importAttemptedRef.current.add(repoKey)
+    setImportPrompt(null)
+
+    const localRepoTasks = useSyncStore
+      .getState()
+      .tasks.filter((t) => t.repoFullName.toLowerCase() === repoKey)
+
+    const shouldAutoImport = localRepoTasks.length === 0
+
+    fetchRemoteTasksForRepo(selectedRepo.fullName, user.login).then((result) => {
+      if (result.error || result.tasks.length === 0) return
+
+      if (shouldAutoImport) {
+        replaceTasksForRepo(selectedRepo.fullName, result.tasks)
+        setRepoSyncMeta(selectedRepo.fullName, {
+          lastSyncedSha: result.sha ?? null,
+          lastSyncAt: new Date().toISOString(),
+          conflict: null,
+        })
+      } else {
+        setImportPrompt({
+          repoFullName: selectedRepo.fullName,
+          tasks: result.tasks,
+          sha: result.sha ?? null,
+        })
+      }
+    })
+  }, [idbLoaded, isOnline, replaceTasksForRepo, selectedRepo, setRepoSyncMeta, user])
+
+  useEffect(() => {
+    setImportPrompt(null)
+    setIsImporting(false)
+    setBannerDismissed(false)
+  }, [selectedRepo?.fullName])
+
+  // Wrapped toggle with AC-compliant delay
+  const handleToggleComplete = (taskId: string) => {
+    // Add to pending set to freeze its section placement
+    setPendingToggleIds((prev) => new Set(prev).add(taskId))
+    
+    // Toggle in store immediately for state integrity
+    toggleComplete(taskId)
+
+    // Remove from pending set after 500ms to allow section move
+    setTimeout(() => {
+      setPendingToggleIds((prev) => {
+        const next = new Set(prev)
+        next.delete(taskId)
+        return next
+      })
+    }, 500)
+  }
+
+  // Soft-delete handlers
+  const handleDeleteInitiated = useCallback((taskId: string) => {
+    // If there's already a pending delete, finalize it immediately
+    if (pendingDelete) {
+      removeTask(pendingDelete.task.id)
+      clearTimeout(pendingDelete.timeoutId)
+    }
+
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    triggerSelectionHaptic()
+    setOpenSwipeId(null)
+
+    const timeoutId = setTimeout(() => {
+      removeTask(taskId)
+      setPendingDelete(null)
+    }, 5000)
+
+    setPendingDelete({ task, timeoutId })
+  }, [pendingDelete, tasks, removeTask])
+
+  const handleUndo = useCallback(() => {
+    if (!pendingDelete) return
+    clearTimeout(pendingDelete.timeoutId)
+    setPendingDelete(null)
+  }, [pendingDelete])
+
+  // Handle "Move to..." from swipe tray
+  const handleSwipeMove = useCallback((taskId: string) => {
+    setOpenSwipeId(null)
+    setMoveTaskId(taskId)
+    setShowRepoPicker(true)
+  }, [])
+
+  // Determine if we should show the "Move to..." action (AC 5)
+  // Show only if the user has more than one repository in their sync metadata
+  const repoSyncMeta = useSyncStore((s) => s.repoSyncMeta)
+  const showMoveAction = useMemo(() => Object.keys(repoSyncMeta).length > 1, [repoSyncMeta])
+
+  // Derive selected task for detail sheet
+  const selectedTask = useMemo(() => {
+    if (!selectedTaskId) return null
+    return tasks.find(t => t.id === selectedTaskId) ?? null
+  }, [tasks, selectedTaskId])
+
+  // Handle "Move to..." — close detail sheet, open repo picker in move mode
+  const handleMoveToRepo = (taskId: string) => {
+    setMoveTaskId(taskId)
+    setSelectedTaskId(null)
+    setShowRepoPicker(true)
+  }
+
+  // Handle repo selection — either for normal repo switch or task move
+  const handleRepoPickerClose = () => {
+    setShowRepoPicker(false)
+    setMoveTaskId(null)
+  }
+
+  const handleRepoSelectedForMove = (repoFullName: string) => {
+    if (moveTaskId) {
+      moveTaskToRepo(moveTaskId, repoFullName)
+      setToastMessage(`Task moved to ${repoFullName}`)
+      setTimeout(() => setToastMessage(null), 2500)
+      setMoveTaskId(null)
+    }
+  }
+
+  // Filter tasks by selected repo — each repo has its own task list
+  const repoTasks = useMemo(() => {
+    if (!selectedRepo) return []
+    const selectedLower = selectedRepo.fullName.toLowerCase()
+    return tasks.filter((t) => t.repoFullName.toLowerCase() === selectedLower)
+  }, [tasks, selectedRepo])
+
+  const fuse = useMemo(() => createTaskFuse(repoTasks), [repoTasks])
 
   const searchFilteredTasks = useMemo(() => {
-    if (searchQuery.length < 1) return tasks
+    if (searchQuery.length < 1) return repoTasks
     return searchTasks(fuse, searchQuery)
-  }, [fuse, searchQuery, tasks])
+  }, [fuse, searchQuery, repoTasks])
 
   const displayedTasks = useMemo(() => {
     if (priorityFilter === 'all') return searchFilteredTasks
@@ -282,18 +395,92 @@ function AppContent() {
     return searchFilteredTasks.filter((t) => !t.isImportant)
   }, [searchFilteredTasks, priorityFilter])
 
-  const handleLaunch = useCallback((title: string, body: string) => {
-    const newTask = addTask(title, body)
-    if (newTask?.id) {
-      setNewestTaskId(newTask.id)
-      setTimeout(() => setNewestTaskId(null), 1500)
+  // Filter out soft-deleted task (pending undo) from display
+  const visibleTasks = useMemo(() => {
+    if (!pendingDelete) return displayedTasks
+    return displayedTasks.filter(t => t.id !== pendingDelete.task.id)
+  }, [displayedTasks, pendingDelete])
+
+  // AC 1: Tasks move to completed section after a brief delay
+  // We keep tasks in their "original" section if they are in pendingToggleIds
+  const { active: activeTasks, completed: completedTasks } = useMemo(
+    () => sortTasksForDisplay(visibleTasks, { pendingToggleIds }),
+    [visibleTasks, pendingToggleIds],
+  )
+
+  // Sync local drag order from store when not actively dragging
+  useEffect(() => {
+    if (!draggingTaskId) {
+      setDragOrderedTasks(activeTasks)
     }
-  }, [addTask])
+  }, [activeTasks, draggingTaskId])
+
+  const handleReorder = (reorderedTasks: Task[]) => {
+    setDragOrderedTasks(reorderedTasks)
+  }
+
+  const handleDragStart = (taskId: string) => {
+    setDraggingTaskId(taskId)
+    dragStartOrderRef.current = dragOrderedTasks.map(t => t.id)
+  }
+
+  const handleDragEnd = () => {
+    setDraggingTaskId(null)
+    const startOrder = dragStartOrderRef.current
+    dragStartOrderRef.current = null
+    if (!selectedRepo) return
+    const orderedIds = dragOrderedTasks.map(t => t.id)
+    if (
+      startOrder &&
+      startOrder.length === orderedIds.length &&
+      startOrder.every((id, idx) => id === orderedIds[idx])
+    ) {
+      return
+    }
+    reorderTasks(selectedRepo.fullName, orderedIds)
+  }
+
+  // Auto-scroll while dragging near the viewport edges
+  useEffect(() => {
+    if (!draggingTaskId) return
+
+    const handlePointerMove = (event: PointerEvent) => {
+      dragPointerYRef.current = event.clientY
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+
+    let rafId = 0
+    const tick = () => {
+      const y = dragPointerYRef.current
+      if (typeof y === 'number') {
+        const threshold = 80
+        const viewportHeight = window.innerHeight
+        let delta = 0
+        if (y < threshold) {
+          delta = -Math.min(16, Math.max(6, (threshold - y) / 4))
+        } else if (y > viewportHeight - threshold) {
+          delta = Math.min(16, Math.max(6, (y - (viewportHeight - threshold)) / 4))
+        }
+        if (delta !== 0) {
+          window.scrollBy({ top: delta, behavior: 'auto' })
+        }
+      }
+      rafId = requestAnimationFrame(tick)
+    }
+
+    rafId = requestAnimationFrame(tick)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      cancelAnimationFrame(rafId)
+      dragPointerYRef.current = null
+    }
+  }, [draggingTaskId])
 
   // Determine which view to show
   const getViewKey = () => {
     if (!isAuthenticated) return 'auth'
-    if (needsPassphrase) return 'passphrase'
     if (!selectedRepo) return 'repo-select'
     return 'main'
   }
@@ -305,12 +492,6 @@ function AppContent() {
       {viewKey === 'auth' && (
         <motion.div key="auth" variants={pageVariants} initial="initial" animate="animate" exit="exit">
           <AuthForm onSuccess={() => {}} />
-        </motion.div>
-      )}
-
-      {viewKey === 'passphrase' && (
-        <motion.div key="passphrase" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-          <PassphraseUnlock />
         </motion.div>
       )}
 
@@ -327,7 +508,7 @@ function AppContent() {
             <h1 className="text-hero font-semibold" style={{ color: 'var(--color-accent)' }}>
               code-tasks
             </h1>
-            <button onClick={clearAuth} className="btn-ghost mt-2">
+            <button onClick={() => clearAuth()} className="btn-ghost mt-2">
               Logout
             </button>
           </header>
@@ -353,24 +534,57 @@ function AppContent() {
             onDismiss={dismissOfflineNotification}
           />
 
+          <SyncConflictBanner />
+          {importPrompt && (
+            <SyncImportBanner
+              repoFullName={importPrompt.repoFullName}
+              remoteCount={importPrompt.tasks.length}
+              isImporting={isImporting}
+              onDismiss={() => setImportPrompt(null)}
+              onImport={() => {
+                if (isImporting) return
+                setIsImporting(true)
+                replaceTasksForRepo(importPrompt.repoFullName, importPrompt.tasks)
+                setRepoSyncMeta(importPrompt.repoFullName, {
+                  lastSyncedSha: importPrompt.sha ?? null,
+                  lastSyncAt: new Date().toISOString(),
+                  conflict: null,
+                })
+                setImportPrompt(null)
+                setIsImporting(false)
+              }}
+            />
+          )}
+
           <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} />
 
           <main className="flex w-full flex-1 flex-col items-center">
-            <PulseInput onLaunch={handleLaunch} />
+
+            <div className="w-full max-w-[640px] px-4">
+              <BranchProtectionBanner
+                visible={syncErrorType === 'branch-protection' && !bannerDismissed}
+                onDismiss={() => setBannerDismissed(true)}
+                onSwitchRepo={() => setShowRepoPicker(true)}
+              />
+            </div>
+
+            <div className="mt-3 w-full">
+              <QuickCaptureBar isOnline={isOnline} />
+            </div>
 
             {/* Search bar */}
-            {tasks.length > 0 && (
+            {repoTasks.length > 0 && (
               <div className="mt-4 w-full max-w-[640px] px-4">
                 <TaskSearchBar
                   value={searchQuery}
                   onChange={setSearchQuery}
-                  taskCount={tasks.length}
+                  taskCount={repoTasks.length}
                 />
               </div>
             )}
 
             {/* Priority filter pills */}
-            {tasks.length > 0 && (
+            {repoTasks.length > 0 && (
               <div className="mt-2 w-full max-w-[640px] px-4">
                 <PriorityFilterPills
                   currentFilter={priorityFilter}
@@ -380,26 +594,41 @@ function AppContent() {
             )}
 
             {/* Task list */}
-            {tasks.length > 0 ? (
-              <motion.div
-                className="mt-2 flex w-full max-w-[640px] flex-col gap-2 px-4"
-                variants={listContainerVariants}
-                initial="initial"
-                animate="animate"
-                data-testid="task-list"
-              >
-                {displayedTasks.length > 0 ? (
-                  displayedTasks.map((task) => (
-                    <motion.div key={task.id} variants={listItemVariants}>
-                      <TaskCard
-                        task={task}
-                        isExpanded={expandedTaskId === task.id}
-                        onToggle={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
-                        isNewest={newestTaskId === task.id}
-                      />
-                    </motion.div>
-                  ))
-                ) : (
+            {repoTasks.length > 0 ? (
+              <div className="mt-2 w-full max-w-[640px] px-4">
+                {/* Active tasks */}
+                {activeTasks.length > 0 ? (
+                  <Reorder.Group
+                    axis="y"
+                    values={dragOrderedTasks}
+                    onReorder={handleReorder}
+                    className="flex flex-col gap-2"
+                    data-testid="task-list"
+                    aria-label="Reorder tasks"
+                  >
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {dragOrderedTasks.map((task) => (
+                        <SwipeableTaskCard
+                          key={task.id}
+                          task={task}
+                          onDelete={handleDeleteInitiated}
+                          onMove={handleSwipeMove}
+                          isSwipeOpen={openSwipeId === task.id}
+                          onSwipeOpen={setOpenSwipeId}
+                          onSwipeClose={() => setOpenSwipeId(null)}
+                          showMoveAction={showMoveAction}
+                          onTap={(taskId) => setSelectedTaskId(taskId)}
+                          onComplete={handleToggleComplete}
+                          isNewest={newestTaskId === task.id}
+                          isDimmed={draggingTaskId !== null && draggingTaskId !== task.id}
+                          onDragStart={() => handleDragStart(task.id)}
+                          onDragEnd={handleDragEnd}
+                          isDraggable={true}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </Reorder.Group>
+                ) : displayedTasks.length === 0 ? (
                   <p
                     className="py-4 text-center text-body"
                     style={{ color: 'var(--color-text-secondary)' }}
@@ -411,8 +640,66 @@ function AppContent() {
                         ? 'No important tasks'
                         : 'No non-important tasks'}
                   </p>
+                ) : null}
+
+                {/* Completed section */}
+                {completedTasks.length > 0 && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => setShowCompleted(!showCompleted)}
+                      className="flex items-center gap-2 py-2 w-full"
+                      aria-expanded={showCompleted}
+                      aria-controls="completed-task-list"
+                      data-testid="completed-section-header"
+                    >
+                      <motion.svg
+                        animate={{ rotate: showCompleted ? 90 : 0 }}
+                        transition={TRANSITION_FAST}
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                      >
+                        <path d="M4 2L8 6L4 10" stroke="var(--color-text-secondary)" strokeWidth="1.5" fill="none" />
+                      </motion.svg>
+                      <span
+                        className="text-label uppercase tracking-wider"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Completed ({completedTasks.length})
+                      </span>
+                    </button>
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {showCompleted && (
+                        <motion.div
+                          id="completed-task-list"
+                          className="flex flex-col gap-2"
+                          variants={listContainerVariants}
+                          initial="initial"
+                          animate="animate"
+                          exit={{ opacity: 0 }}
+                        >
+                          {completedTasks.map((task) => (
+                            <SwipeableTaskCard
+                              key={task.id}
+                              task={task}
+                              onDelete={handleDeleteInitiated}
+                              onMove={handleSwipeMove}
+                              isSwipeOpen={openSwipeId === task.id}
+                              onSwipeOpen={setOpenSwipeId}
+                              onSwipeClose={() => setOpenSwipeId(null)}
+                              showMoveAction={showMoveAction}
+                              onTap={(taskId) => setSelectedTaskId(taskId)}
+                              onComplete={handleToggleComplete}
+                              isNewest={newestTaskId === task.id}
+                              isDraggable={false}
+                            />
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 )}
-              </motion.div>
+              </div>
             ) : (
               /* Empty state */
               <motion.div
@@ -440,7 +727,7 @@ function AppContent() {
                   No tasks yet
                 </p>
                 <p className="text-label" style={{ color: 'var(--color-text-secondary)', opacity: 0.7 }}>
-                  Type above and swipe up to launch your first task
+                  Tap (+) to capture your first idea
                 </p>
               </motion.div>
             )}
@@ -455,12 +742,83 @@ function AppContent() {
             </button>
           </main>
 
+          <CreateTaskFAB onClick={() => setShowCreateSheet(true)} />
           <SyncFAB />
+
+          {/* Create task bottom sheet */}
+          <AnimatePresence>
+            {showCreateSheet && (
+              <CreateTaskSheet
+                onClose={() => setShowCreateSheet(false)}
+                onTaskCreated={(taskId) => {
+                  setNewestTaskId(taskId)
+                  setTimeout(() => setNewestTaskId(null), 1500)
+                }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Task detail bottom sheet */}
+          <AnimatePresence>
+            {selectedTask && (
+              <TaskDetailSheet
+                task={selectedTask}
+                onClose={() => setSelectedTaskId(null)}
+                onUpdate={updateTask}
+                onToggleComplete={(taskId) => {
+                  handleToggleComplete(taskId)
+                }}
+                onMoveToRepo={handleMoveToRepo}
+                onDelete={handleDeleteInitiated}
+              />
+            )}
+          </AnimatePresence>
 
           {/* Repo picker bottom sheet */}
           <AnimatePresence>
             {showRepoPicker && (
-              <RepoPickerSheet onClose={() => setShowRepoPicker(false)} />
+              <RepoPickerSheet
+                onClose={handleRepoPickerClose}
+                onRepoSelected={moveTaskId ? handleRepoSelectedForMove : undefined}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Undo toast for delete */}
+          <AnimatePresence>
+            {pendingDelete && (
+              <UndoToast
+                key="undo-toast"
+                message="Task deleted"
+                onUndo={handleUndo}
+                onExpire={() => {
+                  if (pendingDelete) {
+                    removeTask(pendingDelete.task.id)
+                    setPendingDelete(null)
+                  }
+                }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Toast for repo move feedback */}
+          <AnimatePresence>
+            {toastMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={TRANSITION_FAST}
+                className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-lg text-body"
+                style={{
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-primary)',
+                }}
+                data-testid="toast-message"
+              >
+                {toastMessage}
+              </motion.div>
             )}
           </AnimatePresence>
 

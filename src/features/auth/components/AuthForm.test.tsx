@@ -25,10 +25,10 @@ describe('AuthForm', () => {
     vi.clearAllMocks()
   })
 
-  it('renders the auth form with inputs and submit button', () => {
+  it('renders the auth form with token input and submit button (no passphrase)', () => {
     render(<AuthForm onSuccess={mockOnSuccess} />)
     expect(screen.getByLabelText(/personal access token/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/app passphrase/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/passphrase/i)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /authenticate/i })).toBeInTheDocument()
   })
 
@@ -39,17 +39,7 @@ describe('AuthForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/token cannot be empty/i)
   })
 
-  it('shows an error when submitting empty passphrase', async () => {
-    render(<AuthForm onSuccess={mockOnSuccess} />)
-    const tokenInput = screen.getByLabelText(/personal access token/i)
-    await userEvent.type(tokenInput, 'some-token')
-
-    const button = screen.getByRole('button', { name: /authenticate/i })
-    await userEvent.click(button)
-    expect(screen.getByRole('alert')).toHaveTextContent(/app passphrase cannot be empty/i)
-  })
-
-  it('calls validateToken and sets auth on valid token and passphrase', async () => {
+  it('calls validateToken and sets auth with token only (no passphrase)', async () => {
     mockValidateToken.mockResolvedValueOnce({
       valid: true,
       user: { login: 'testuser', avatarUrl: 'https://example.com/avatar.png', name: 'Test' },
@@ -61,9 +51,6 @@ describe('AuthForm', () => {
     const tokenInput = screen.getByLabelText(/personal access token/i)
     await userEvent.type(tokenInput, 'ghp_validtoken123')
 
-    const passphraseInput = screen.getByLabelText(/app passphrase/i)
-    await userEvent.type(passphraseInput, 'my-master-passphrase')
-
     const button = screen.getByRole('button', { name: /authenticate/i })
     await userEvent.click(button)
 
@@ -71,7 +58,6 @@ describe('AuthForm', () => {
     expect(mockSetAuth).toHaveBeenCalledWith(
       'ghp_validtoken123',
       { login: 'testuser', avatarUrl: 'https://example.com/avatar.png', name: 'Test' },
-      'my-master-passphrase',
     )
     expect(mockOnSuccess).toHaveBeenCalled()
   })
@@ -86,9 +72,6 @@ describe('AuthForm', () => {
 
     const tokenInput = screen.getByLabelText(/personal access token/i)
     await userEvent.type(tokenInput, 'bad-token')
-
-    const passphraseInput = screen.getByLabelText(/app passphrase/i)
-    await userEvent.type(passphraseInput, 'some-passphrase')
 
     const button = screen.getByRole('button', { name: /authenticate/i })
     await userEvent.click(button)
@@ -105,12 +88,16 @@ describe('AuthForm', () => {
     const tokenInput = screen.getByLabelText(/personal access token/i)
     await userEvent.type(tokenInput, 'some-token')
 
-    const passphraseInput = screen.getByLabelText(/app passphrase/i)
-    await userEvent.type(passphraseInput, 'some-passphrase')
-
     const button = screen.getByRole('button', { name: /authenticate/i })
     await userEvent.click(button)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/network error/i)
+  })
+
+  it('shows help text about local-only encrypted storage', () => {
+    render(<AuthForm onSuccess={mockOnSuccess} />)
+    expect(screen.getByText(/stored locally on this device/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/encrypted at rest/i).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/passphrase/i)).not.toBeInTheDocument()
   })
 })

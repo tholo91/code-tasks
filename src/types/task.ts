@@ -12,6 +12,8 @@ export interface Task {
   id: string
   /** Username that created this task (scoping key) */
   username: string
+  /** Repository full name (e.g., "owner/repo") — scoping key for per-repo task lists */
+  repoFullName: string
   /** First line of the captured text (title) */
   title: string
   /** Remaining lines (body), may be empty */
@@ -20,6 +22,14 @@ export interface Task {
   createdAt: string
   /** Whether the task was marked as important at capture time */
   isImportant: boolean
+  /** Whether the task has been completed */
+  isCompleted: boolean
+  /** ISO 8601 timestamp when task was completed, null if active */
+  completedAt: string | null
+  /** ISO 8601 timestamp when task was last edited, null if never edited */
+  updatedAt: string | null
+  /** Sort position for drag & drop reorder (lower = higher in list) */
+  order: number
   /** Sync status: 'pending' = local only, 'synced' = pushed to GitHub */
   syncStatus: SyncStatus
   /** GitHub issue number once synced, null while pending */

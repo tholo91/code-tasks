@@ -5,6 +5,10 @@ workflowType: 'architecture'
 project_name: 'code-tasks'
 user_name: 'Thomas'
 date: '2026-03-10'
+lastEdited: '2026-03-16'
+editHistory:
+  - date: '2026-03-16'
+    changes: 'Course Correction: Updated data model (per-repo tasks, completion, ordering), auth (device-derived key, no passphrase), component architecture (FAB + Bottom Sheet, TaskDetailSheet, drag & drop), replaced Pulse references with current task management paradigm.'
 ---
 
 ...
@@ -57,9 +61,10 @@ date: '2026-03-10'
 **Confidence Level:** High
 
 **Key Strengths:**
-- **Capture Velocity:** Instant synchronous capture via LocalStorage meets the "Max Test."
-- **Sync Integrity:** Octokit-driven "Get-Modify-Set" pattern prevents remote data loss.
-- **Modular Evolution:** Feature-based structure facilitates Phase 2/3 growth without debt.
+- **Capture Velocity:** FAB (+) → Bottom Sheet → instant local persist. One-tap creation meets the "5-second capture" goal.
+- **Markdown-as-Backend:** Each repo's `captured-ideas-{username}.md` IS the database. The app is a beautiful, native-feeling frontend for a single markdown file per project.
+- **Sync Integrity:** Octokit-driven "Get-Modify-Set" pattern with conflict retry prevents remote data loss.
+- **Modular Evolution:** Feature-based structure facilitates growth without debt.
 
 ### Implementation Handoff
 
@@ -77,29 +82,40 @@ Initialize the core project: `npm create @vite-pwa/pwa@latest`
 
 ```text
 code-tasks/
-├── public/                # Static assets (logo, manifest.json, sw.js)
+├── public/                     # Static assets (logo, manifest.json, sw.js)
 ├── src/
-│   ├── assets/            # Global styles and images
-│   ├── components/        # Shared UI components (Button, Input, etc.)
-│   ├── features/          # Feature-based modules
-│   │   ├── auth/          # PAT entry and validation
-│   │   ├── capture/       # "The Pulse" input and priority pills
-│   │   ├── repos/         # Repository selection and search
-│   │   └── sync/          # FAB and sync status indicators
-│   ├── hooks/             # Shared React hooks
-│   ├── services/          # Infrastructure / API layer
-│   │   ├── github/        # Octokit wrapper (github-service.ts)
-│   │   └── storage/       # LocalStorage buffer (storage-service.ts)
-│   ├── stores/            # Zustand global state (useSyncStore.ts)
-│   ├── types/             # Shared TypeScript interfaces
-│   ├── utils/             # Pure utility functions (formatting, dates)
-│   ├── App.tsx            # Main app shell & router
-│   └── main.tsx           # Entry point
-├── tests/                 # Integration and E2E tests (Playwright)
-├── .env                   # Environment variables (MODE, etc.)
-├── capacitor.config.ts    # Native bridge config
-├── vite.config.ts         # PWA and build config
-└── package.json           # Dependencies (React 19, Octokit, Zustand)
+│   ├── components/             # Shared UI components
+│   │   ├── auth/               # AuthGuard, hydration logic
+│   │   ├── layout/             # AppHeader, SyncHeaderStatus
+│   │   └── ui/                 # Skeletons, shared primitives
+│   ├── config/                 # App configuration (motion.ts constants)
+│   ├── features/               # Feature-based modules
+│   │   ├── auth/               # PAT entry, validation, AuthForm
+│   │   ├── capture/            # Task CRUD — the core interaction layer
+│   │   │   ├── components/     # CreateTaskFAB, CreateTaskSheet, TaskCard,
+│   │   │   │                   # TaskDetailSheet, PriorityPill, TaskSearchBar,
+│   │   │   │                   # PriorityFilterPills
+│   │   │   └── utils/          # fuzzy-search, filter-tasks
+│   │   ├── community/          # Roadmap teaser, voting (paused)
+│   │   ├── repos/              # Repository selection, RepoSelector
+│   │   └── sync/               # SyncFAB, sync status, useAutoSync hook
+│   │       └── utils/          # markdown-templates (AI-Ready header, task formatting)
+│   ├── hooks/                  # Shared React hooks (useNetworkStatus)
+│   ├── services/               # Infrastructure / API layer
+│   │   ├── github/             # Octokit provider, auth-service, sync-service
+│   │   ├── native/             # Haptic feedback (haptic-service.ts)
+│   │   └── storage/            # IDB + LocalStorage persistence
+│   ├── stores/                 # Zustand global state (useSyncStore.ts)
+│   ├── types/                  # Shared TypeScript interfaces (task.ts)
+│   ├── utils/                  # Pure utility functions (uuid, formatting)
+│   ├── App.tsx                 # Main app shell — view routing, task list,
+│   │                           # bottom sheet orchestration, Active/Completed split
+│   ├── index.css               # Design system tokens + utility classes
+│   └── main.tsx                # Entry point
+├── capacitor.config.ts         # Native bridge config
+├── vite.config.ts              # PWA and build config
+└── package.json                # Dependencies (React 19, Vite 7, Octokit, Zustand,
+                                # Framer Motion, Fuse.js, TailwindCSS 4)
 ```
 
 ### Architectural Boundaries
@@ -110,17 +126,20 @@ code-tasks/
 
 **Component Boundaries:**
 - **Feature-Based Isolation:** Logic for "Capture" vs. "Sync" vs. "Auth" is strictly isolated in `src/features/`. Cross-feature communication is handled via the global `useSyncStore`.
+- **Bottom Sheet System:** All modal interactions (CreateTaskSheet, TaskDetailSheet, RepoPickerSheet) share a consistent spring-animated bottom sheet pattern. Sheet orchestration lives in `App.tsx`.
 
 **Data Boundaries:**
 - **AI-Ready Header Logic:** The `sync` service encapsulates all logic for detecting new repository files and injecting the AI-Ready header.
+- **Per-Repo Task Scoping:** Tasks are stored flat in `useSyncStore.tasks[]` but always filtered by `selectedRepo.fullName` before display. Each repo acts as an independent project.
 
 ### Requirements to Structure Mapping
 
 **Feature/Epic Mapping:**
-- **Identity & Auth:** `src/features/auth/`, `src/services/github/auth-service.ts`
-- **"The Pulse" Capture:** `src/features/capture/`, `src/services/storage/`
-- **Sync Engine:** `src/features/sync/`, `src/services/github/sync-service.ts`
-- **Repo Selector:** `src/features/repos/`, `src/services/github/repo-service.ts`
+- **Identity & Auth (Epics 1, 7.1):** `src/features/auth/`, `src/services/github/auth-service.ts`, `src/components/auth/`
+- **Task Management (Epics 3, 7.3–7.7):** `src/features/capture/` — CreateTaskFAB, CreateTaskSheet, TaskCard, TaskDetailSheet, drag & drop reorder, deletion
+- **Sync Engine (Epics 4, 7.9):** `src/features/sync/`, `src/services/github/sync-service.ts`
+- **Repo Selector (Epics 2, 7.2):** `src/features/repos/`, per-repo task scoping in `useSyncStore`
+- **Community (Epic 5, paused):** `src/features/community/`
 
 **Cross-Cutting Concerns:**
 - **Global State:** `src/stores/useSyncStore.ts`
@@ -132,10 +151,10 @@ code-tasks/
 ### Naming Patterns
 
 **Code Naming Conventions:**
-- **Components:** `PascalCase` (e.g., `TaskCard.tsx`, `PulseInput.tsx`).
-- **Services/Utils:** `kebab-case` (e.g., `github-service.ts`, `local-storage-buffer.ts`).
-- **Hooks:** `camelCase` with `use` prefix (e.g., `useSyncStore.ts`).
-- **CSS Modules:** `camelCase` for class names (e.g., `.taskItem`, `.pulseActive`).
+- **Components:** `PascalCase` (e.g., `TaskCard.tsx`, `CreateTaskFAB.tsx`, `TaskDetailSheet.tsx`).
+- **Services/Utils:** `kebab-case` (e.g., `github-service.ts`, `storage-service.ts`, `haptic-service.ts`).
+- **Hooks:** `camelCase` with `use` prefix (e.g., `useSyncStore.ts`, `useAutoSync.ts`).
+- **CSS:** Utility classes in `index.css` (e.g., `.btn-primary`, `.text-body`, `.input-field`). TailwindCSS 4 for layout.
 
 ### Structure Patterns
 
@@ -194,13 +213,61 @@ code-tasks/
 
 ### Data Architecture
 
-- **Local Storage:** **LocalStorage**. Markdown content is small enough to fit within standard 5MB browser limits, allowing for instant, synchronous local "Capture" without the overhead of IndexedDB for the MVP.
-- **Data Schema:** The Markdown file follows the `captured-ideas-{username}.md` schema with a persistent AI-Ready instruction header.
+**Core Principle — Markdown-as-Backend:**
+The app is a native-feeling frontend for a single `captured-ideas-{username}.md` file per GitHub repository. The markdown file IS the database. There is no server, no API backend. Each repository acts as an independent project.
+
+**Local Persistence — Dual-Layer:**
+- **IndexedDB (IDB):** Primary persistent store for task objects. Tasks are persisted to IDB immediately on creation/update (fire-and-forget). IDB survives page reloads and provides offline durability.
+- **Zustand + LocalStorage:** In-memory state with `persist` middleware syncing to LocalStorage. Provides instant reactive UI updates. On app load, IDB tasks are merged into Zustand state.
+- **Write-Through Pattern:** State updates flow: UI action → Zustand store → IDB persist (async, non-blocking) → UI re-renders from Zustand.
+
+**Task Data Model:**
+```typescript
+interface Task {
+  id: string                    // UUID v4
+  username: string              // GitHub login — scoping key
+  repoFullName: string          // "owner/repo" — per-repo scoping
+  title: string                 // First line of captured text
+  body: string                  // Description/notes, may be empty
+  createdAt: string             // ISO 8601
+  isImportant: boolean          // Priority flag
+  isCompleted: boolean          // Completion state
+  completedAt: string | null    // ISO 8601 when completed, null if active
+  order: number                 // Sort position for drag & drop reorder
+  syncStatus: 'pending' | 'synced'
+  githubIssueNumber: number | null
+}
+```
+
+**Per-Repo Task Scoping:**
+Tasks are stored flat in `useSyncStore.tasks[]` but always filtered by `selectedRepo.fullName.toLowerCase()` before display. Switching repos instantly shows a different task list. Each repo's tasks sync independently to that repo's `captured-ideas-{username}.md`.
+
+**Store Actions (useSyncStore):**
+| Action | Purpose |
+|--------|---------|
+| `addTask(title, body)` | Create task scoped to `selectedRepo`, `syncStatus: 'pending'` |
+| `toggleComplete(taskId)` | Flip `isCompleted`, set/clear `completedAt`, reset `syncStatus: 'pending'` |
+| `updateTask(taskId, updates)` | Partial update (title, body, isImportant), reset `syncStatus: 'pending'` |
+| `moveTaskToRepo(taskId, targetRepoFullName)` | Reassign task to different repo |
+| `reorderTasks(repoFullName, orderedTaskIds)` | Persist new sort order for active tasks |
+| `removeTask(taskId)` | Delete from store + IDB |
+| `markTaskSynced(taskId, issueNumber)` | Mark as synced after GitHub push |
+| `loadTasksFromIDB()` | Merge IDB tasks into Zustand on app load |
+
+**Markdown Sync Format:**
+```markdown
+- [ ] **Task Title** ([Created: 2026-03-16]) (Priority: 🔴 Important)
+  Optional description/notes indented below
+
+- [x] **Completed Task** ([Created: 2026-03-15]) (Priority: ⚪ Normal)
+```
 
 ### Authentication & Security
 
-- **Auth Provider:** **GitHub PAT**. Users provide a Personal Access Token with `repo` scope. This eliminates the need for a complex OAuth proxy backend for the MVP.
-- **Local Security:** Tokens are stored securely in LocalStorage (or session storage) and used strictly for HTTPS communication with the GitHub API.
+- **Auth Provider:** **GitHub PAT**. Users provide a Personal Access Token with `repo` scope once. No OAuth proxy required.
+- **Token Persistence:** PAT is Base64-encoded and stored in Zustand's persisted LocalStorage partition. The token is set once and auto-recovered on subsequent sessions — no per-session passphrase or unlock gate.
+- **Session Flow:** App load → Zustand hydration → token recovered → Octokit instance created → user lands on last-used repo's task list. If token is invalid/expired, user is redirected to the auth form.
+- **Security Layer:** Device-level security (passcode/biometric) provides the protection layer. The app trusts the device boundary rather than adding its own passphrase gate.
 
 ### API & Communication Patterns
 
@@ -209,19 +276,33 @@ code-tasks/
 
 ### Frontend Architecture
 
-- **State Management:** **`zustand` (v5+)**. Used to track global app state: current repository selection, local "Dirty" (unsynced) tasks, and network status.
-- **Gesture Support:** "Pull-to-Refresh" for manual repository synchronization (Automated Pull).
+- **State Management:** **`zustand` (v5+)** with `persist` middleware. Single store (`useSyncStore`) tracks auth, repo selection, tasks, sync status, and UI state. `skipHydration: true` with manual hydration via `AuthGuard` component.
+- **Animation Engine:** **Framer Motion (v12+)**. Spring-based physics for all interactions: bottom sheet slides, checkbox fills, list layout transitions, drag & drop reorder. `useReducedMotion()` fallback to instant transitions.
+- **Component Architecture:**
+  - **Bottom Sheet System:** Shared pattern for all modal interactions — `CreateTaskSheet`, `TaskDetailSheet`, `RepoPickerSheet`. Spring animation `{ stiffness: 400, damping: 35 }`, swipe-down-to-dismiss, click-outside-dismiss.
+  - **CreateTaskFAB (+):** Primary task creation entry point. Fixed position bottom-right. Opens `CreateTaskSheet`.
+  - **SyncFAB:** "Push to GitHub" trigger. Shows pending count badge. Positioned above CreateTaskFAB.
+  - **TaskCard:** Compact list item with animated checkbox, sync status dot, priority badge, body preview. Tapping opens `TaskDetailSheet`.
+  - **Active/Completed Split:** Task list divided into active tasks (reorderable) and collapsible "Completed (N)" section.
+- **Design System:** GitHub Dark Dimmed palette via CSS custom properties in `index.css`. Utility classes (`.btn-primary`, `.text-body`, `.input-field`) + TailwindCSS 4 for layout. Mobile-first, 44x44px minimum touch targets.
+- **Haptic Feedback:** `src/services/native/haptic-service.ts` — `triggerSelectionHaptic()` on checkbox, priority toggle, drag start.
 
 ### Decision Impact Analysis
 
-**Implementation Sequence:**
-1. Initialize Vite PWA with TypeScript.
-2. Implement Octokit Auth via PAT input.
-3. Build LocalStorage "Task Buffer" with Zustand state.
-4. Implement the FAB "Push" logic and "AI Header" injection.
+**Implementation Sequence (Epic 7 — The Real App):**
+1. ~~Initialize Vite PWA with TypeScript~~ (Done — Epic 1)
+2. ~~Implement PAT Auth with device-derived key, remove passphrase gate~~ (Done — Story 7.1)
+3. ~~Per-repo task scoping in Zustand store~~ (Done — Story 7.2)
+4. ~~FAB + Bottom Sheet task creation~~ (Done — Story 7.3)
+5. ~~Task checkboxes, completion, Active/Completed split~~ (Review — Story 7.4)
+6. Task detail view with inline editing, auto-save, repo reassignment (Ready — Story 7.5)
+7. Drag & drop reorder for active tasks (Backlog — Story 7.6)
+8. Task deletion with confirmation (Backlog — Story 7.7)
+9. Branch protection detection and user guidance (Backlog — Story 7.8)
+10. Sync UX polish — per-repo push, change detection, clear CTA (Backlog — Story 7.9)
 
 **Cross-Component Dependencies:**
-The `octokit` instance is the central dependency for both the Repository Selector and the Sync Engine. Zustand acts as the "Heartbeat" connecting the UI to the local-first storage.
+The `octokit` instance is the central dependency for both the Repository Selector and the Sync Engine. Zustand acts as the "Heartbeat" connecting the UI to local-first storage. Framer Motion's `layout` prop and `AnimatePresence` provide automatic transition animations as tasks move between Active and Completed sections.
 
 ## Starter Template Evaluation
 
@@ -271,27 +352,29 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### Requirements Overview
 
 **Functional Requirements:**
-**code-tasks** requires a high-performance capture interface ("The Pulse") with fluid animations and a robust synchronization engine. The system must manage GitHub OAuth authentication, repository selection (with "Last Used" intelligence), and file-level Markdown manipulation (`captured-ideas-{username}.md`). Key capabilities include offline-first local persistence (IndexedDB) and manual push/automated pull synchronization.
+**code-tasks (Gitty)** is a native-feeling todo app where each GitHub repository is a project backed by a single `captured-ideas-{username}.md` file. The app provides full task CRUD (create via FAB + Bottom Sheet, read as sorted list, update via detail view, delete with confirmation), drag & drop reordering, completion tracking, and explicit "Push to GitHub" sync. Authentication is a one-time PAT entry with auto-recovery on subsequent sessions. The system manages repository selection (with "Last Used" default), per-repo task scoping, and AI-Ready markdown formatting for agent consumption.
 
 **Non-Functional Requirements:**
-- **Performance:** Time-to-Interactive (TTI) < 1.5s; 60 FPS animations.
-- **Security:** Encrypted local storage for tokens; HTTPS transport.
-- **Reliability:** 100% data retention for captured ideas; exponential backoff for sync failures.
+- **Performance:** Time-to-Interactive (TTI) < 1.5s; 60 FPS spring animations via Framer Motion.
+- **Security:** Base64-encoded token in persisted LocalStorage; all API traffic over HTTPS.
+- **Reliability:** 100% local data retention via IDB; exponential backoff for failed syncs.
 
 **Scale & Complexity:**
-The project is of **Medium Complexity** due to the technical depth required for the offline-to-online state machine and the high-fidelity UX on a PWA footprint.
+The project is of **Medium/High Complexity** due to the native-like UX requirements (spring physics, drag & drop, haptics), the offline-to-online sync state machine, and per-repo task scoping on a PWA footprint.
 - **Primary technical domain:** Mobile / Web App (PWA)
-- **Complexity level:** Medium
-- **Estimated architectural components:** Auth Provider, Repository Service, Sync Engine (IndexedDB + GitHub API), Pulse UI Component, AI Header Generator.
+- **Complexity level:** Medium/High
+- **Core architectural components:** Auth Service, Repository Service, Sync Engine (IDB + Octokit), Task Management UI (FAB, Bottom Sheets, TaskCard, drag & drop), AI Header Generator.
 
 ### Technical Constraints & Dependencies
 
-- **GitHub REST/GraphQL API:** Primary data storage and authentication provider.
-- **IndexedDB:** Local-first storage engine for offline reliability.
-- **PWA / Service Workers:** Enabling the "Native-like" feel and offline availability.
+- **GitHub REST API:** Primary remote storage via Octokit — file-level `createOrUpdateFileContents` for atomic commits.
+- **IndexedDB:** Local-first persistent store for task objects, accessed via `StorageService`.
+- **Framer Motion:** Animation engine for spring physics, layout transitions, bottom sheet gestures.
+- **PWA / Service Workers:** "Add to Home Screen" capability and offline availability.
 
 ### Cross-Cutting Concerns Identified
 
-- **Authentication State Persistence:** Managing tokens across sessions and reloads.
-- **Conflict Avoidance:** Using `{username}` file-scoping to prevent merge conflicts.
-- **AI-Ready Standardization:** Ensuring every captured task list follows a unified "Living Document" schema.
+- **Authentication State Persistence:** Auto-recovery of PAT on app load via Zustand hydration, with `AuthGuard` + Suspense boundary managing the async flow.
+- **Conflict Avoidance:** Using `{username}` file-scoping to prevent merge conflicts in shared repos.
+- **AI-Ready Standardization:** Every synced markdown file includes an instruction header for AI agent consumption.
+- **Per-Repo Scoping:** All task operations are filtered/scoped to `selectedRepo.fullName`. Switching repos is instant.

@@ -2,6 +2,12 @@
 
 Status: ready-for-dev
 
+## Update Notes (2026-03-17)
+
+- MVP can ship with **local-only votes** (no backend). This is still valuable as a personal prioritization tool, but does **not** capture community demand.
+- If you want real community signal without building a database, the lightest path is **GitHub Issues + Reactions** (public issues per roadmap item; app reads reaction counts and can deep-link users to vote). This leverages GitHub as the backend.
+- Until aggregated voting exists, consider adding a simple **"Feedback" link** (GitHub Discussion / issue template) from the Roadmap view to capture qualitative input.
+
 ## Story
 
 As a User,

@@ -47,19 +47,24 @@ Object.defineProperty(globalThis, 'sessionStorage', { value: sessionStorageMock 
 import { useSyncStore } from '../../stores/useSyncStore'
 import { SyncHeaderStatus } from './SyncHeaderStatus'
 
-const makePendingTask = (id: string, username = 'testuser') => ({
+const makePendingTask = (id: string, username = 'testuser', repoFullName = 'testuser/my-repo') => ({
   id,
   username,
+  repoFullName,
   title: `Task ${id}`,
   body: '',
   isImportant: false,
+  isCompleted: false,
+  completedAt: null,
+  updatedAt: null,
+  order: 0,
   createdAt: new Date().toISOString(),
   syncStatus: 'pending' as const,
   githubIssueNumber: null,
 })
 
-const makeSyncedTask = (id: string, username = 'testuser') => ({
-  ...makePendingTask(id, username),
+const makeSyncedTask = (id: string, username = 'testuser', repoFullName = 'testuser/my-repo') => ({
+  ...makePendingTask(id, username, repoFullName),
   syncStatus: 'synced' as const,
   githubIssueNumber: 1,
 })
@@ -71,9 +76,12 @@ describe('SyncHeaderStatus', () => {
     useSyncStore.setState({
       tasks: [],
       user: { login: 'testuser', avatarUrl: '', name: null },
+      selectedRepo: { id: 1, fullName: 'testuser/my-repo', owner: 'testuser' },
       syncEngineStatus: 'idle',
       syncError: null,
+      syncErrorType: null,
       isSyncing: false,
+      lastSyncedAt: null,
     })
   })
 
@@ -82,12 +90,25 @@ describe('SyncHeaderStatus', () => {
     expect(screen.getByText('All caught up')).toBeInTheDocument()
   })
 
+  it('shows "All caught up" with relative time when lastSyncedAt is set', () => {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    useSyncStore.setState({ lastSyncedAt: twoHoursAgo })
+    render(<SyncHeaderStatus />)
+    expect(screen.getByText(/All caught up · 2h ago/)).toBeInTheDocument()
+  })
+
+  it('shows "All caught up" without timestamp when lastSyncedAt is null', () => {
+    render(<SyncHeaderStatus />)
+    const el = screen.getByTestId('sync-header-status')
+    expect(el.textContent).toBe('All caught up')
+  })
+
   it('shows "All caught up" when all tasks are synced', () => {
     useSyncStore.setState({
       tasks: [makeSyncedTask('1'), makeSyncedTask('2')],
     })
     render(<SyncHeaderStatus />)
-    expect(screen.getByText('All caught up')).toBeInTheDocument()
+    expect(screen.getByText(/All caught up/)).toBeInTheDocument()
   })
 
   it('shows pending count for single pending task', () => {
@@ -125,6 +146,26 @@ describe('SyncHeaderStatus', () => {
     })
     render(<SyncHeaderStatus />)
     expect(screen.getByText('Syncing...')).toBeInTheDocument()
+  })
+
+  it('shows "Sync failed" on error', () => {
+    useSyncStore.setState({
+      syncEngineStatus: 'error',
+      syncError: 'Something went wrong',
+      syncErrorType: 'unknown',
+    })
+    render(<SyncHeaderStatus />)
+    expect(screen.getByText('Sync failed')).toBeInTheDocument()
+  })
+
+  it('shows "Sync blocked" for branch-protection error', () => {
+    useSyncStore.setState({
+      syncEngineStatus: 'error',
+      syncError: 'Branch protection',
+      syncErrorType: 'branch-protection',
+    })
+    render(<SyncHeaderStatus />)
+    expect(screen.getByText('Sync blocked')).toBeInTheDocument()
   })
 
   it('has role="status" for accessibility', () => {

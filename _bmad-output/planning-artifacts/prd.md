@@ -1,7 +1,9 @@
 ---
 stepsCompleted: ["step-01-init", "step-01b-continue", "step-02-discovery", "step-02b-vision", "step-02c-executive-summary", "step-03-success", "step-04-journeys", "step-05-domain", "step-06-innovation", "step-07-project-type", "step-08-scoping", "step-09-functional", "step-10-nonfunctional", "step-11-polish", "step-e-01-discovery", "step-e-02-review", "step-e-03-edit"]
-lastEdited: '2026-03-11'
+lastEdited: '2026-03-16'
 editHistory:
+  - date: '2026-03-16'
+    changes: 'Updated Phase 1 scope and User Journey 1 to reflect Epic 7 course correction: FAB + Bottom Sheet capture, full task CRUD, no passphrase gate.'
   - date: '2026-03-11'
     changes: 'Added mobile project-type requirements, refined FRs for measurability, added NFR measurement methods, removed technology leakage.'
 inputDocuments: ["_bmad-output/planning-artifacts/product-brief-code-tasks-2026-03-10.md", "docs/vision.md", "docs/example-format.md", "docs/new-names.md", "docs/research-impulses.md", "README.md", "_bmad-output/planning-artifacts/prd-validation-report.md"]
@@ -46,12 +48,12 @@ classification:
 
 ## Product Scope
 
-### Phase 1: MVP (Zero-Friction PWA)
-- **Identity:** GitHub OAuth with persistent local session management.
-- **Routing:** Intelligent "Last Opened Repo" default with a high-fidelity selector.
-- **Input:** "The Pulse" text area with "Important" priority pills and fluid animations.
-- **Storage:** IndexedDB local persistence with automated synchronization logic.
-- **Markdown:** Automated injection of AI-Ready headers and formatted task appends.
+### Phase 1: MVP (Zero-Friction PWA + Task Management)
+- **Identity:** GitHub PAT with auto-recovery — set once, never re-enter. No passphrase gate.
+- **Routing:** Intelligent "Last Opened Repo" default with per-repo task scoping.
+- **Task Management:** FAB (+) → Bottom Sheet creation, animated checkboxes, Things-style detail view, drag & drop reorder, task deletion. Full CRUD for a todo app.
+- **Storage:** IndexedDB local persistence with explicit "Push to GitHub" sync.
+- **Markdown:** AI-Ready headers, `- [ ]` / `- [x]` checkbox formatting, priority and timestamp metadata.
 
 ### Phase 2: Growth (Mobile Presence & Discovery)
 - **Store Readiness:** Native iOS and Android wrappers via Capacitor/similar.
@@ -66,8 +68,8 @@ classification:
 
 ### 1. The High-Velocity Developer (Success Path)
 - **Scene:** breakthrough in transit; needs to capture an idea immediately.
-- **Action:** Opens app (< 1.5s), types into Pulse, toggles "Important," and swipes to capture.
-- **Outcome:** Idea is on GitHub before they reach their destination; ready for morning execution.
+- **Action:** Opens app (< 1.5s), taps (+) FAB, types title in Bottom Sheet, toggles "Important," taps "Add Task."
+- **Outcome:** Idea is captured locally in < 5 seconds. User pushes to GitHub when ready; AI agent picks it up for morning execution.
 
 ### 2. The Overnight Hacker (Reliability Case)
 - **Scene:** Late-night ideation with intermittent or no connectivity.
@@ -97,16 +99,21 @@ classification:
 ## Functional Requirements
 
 ### 1. Identity & Data Management
-- **FR1:** Users can authenticate via GitHub OAuth (AES-GCM encrypted token storage).
+- **FR1:** Users can authenticate via GitHub PAT with persistent encrypted token storage. Token is set once and auto-unlocked on subsequent sessions — no per-session passphrase required. Device-level encryption provides the security layer.
 - **FR2:** Users can select a target repository with a persistent "Last Used" default.
-- **FR3:** System can persist access tokens in local storage (AES-GCM encrypted).
+- **FR3:** System can persist access tokens in local storage (AES-GCM encrypted with device-derived key, no passphrase gate).
 
 ### 2. Capture & Interaction
-- **FR4:** Users can enter task titles/descriptions via the "Pulse" interface.
+- **FR4:** Users can create tasks via a FAB (+) button that opens a structured bottom sheet (title, notes, priority). Keyboard shortcut (Cmd+Enter) retained as power-user path.
 - **FR5:** Users can toggle "Important" flags and trigger capture via a single gesture.
 - **FR6:** System can provide visual animation-based feedback (latency < 100ms) upon local capture.
 
-### 3. Synchronization & Formatting
+### 3. Task Management
+- **FR10:** Users can mark tasks as complete, edit task details inline, and delete tasks.
+- **FR11:** Users can reorder tasks via drag & drop within a repository's task list.
+- **FR12:** Each repository maintains an independent task list, scoped to that repo. Each repo acts as a "project" with its own `captured-ideas-{username}.md` file.
+
+### 4. Synchronization & Formatting
 - **FR7:** System can store ideas in persistent local storage to prevent data loss during offline sessions.
 - **FR8:** System can automatically synchronize pending changes to GitHub upon reconnection.
 - **FR9:** System can inject standardized AI-Ready headers and metadata into `captured-ideas-{username}.md`.

@@ -1,32 +1,31 @@
-import { useSyncStore, base64ToArrayBuffer } from '../../stores/useSyncStore'
-import { decryptData } from '../storage/crypto-utils'
+import { useSyncStore } from '../../stores/useSyncStore'
 import { getOctokit, getExistingOctokit } from './auth-service'
-
-const PASSPHRASE_SESSION_KEY = 'code-tasks:passphrase'
+import { TokenVault } from '../storage/token-vault'
 
 /**
- * Recovers the Octokit instance by decrypting the stored token.
+ * Recovers the Octokit instance by reading the stored token directly.
  * If an Octokit singleton already exists (e.g. right after login),
- * returns it immediately without re-deriving the PBKDF2 key.
+ * returns it immediately.
  */
 export async function recoverOctokit() {
-  // Fast path: reuse existing singleton (avoids expensive PBKDF2 re-derivation)
+  // Fast path: reuse existing singleton
   const existing = getExistingOctokit()
   if (existing) return existing
 
-  const { encryptedToken, isAuthenticated } = useSyncStore.getState()
+  const { token: storedToken, isAuthenticated } = useSyncStore.getState()
 
-  if (!isAuthenticated || !encryptedToken) {
+  if (!isAuthenticated) {
     throw new Error('Not authenticated')
   }
 
-  const passphrase = sessionStorage.getItem(PASSPHRASE_SESSION_KEY)
-  if (!passphrase) {
-    throw new Error('Passphrase missing from session')
+  const token = storedToken ?? (await TokenVault.loadToken())
+  if (!token) {
+    throw new Error('Token missing')
   }
 
-  const buffer = base64ToArrayBuffer(encryptedToken)
-  const token = await decryptData(buffer, passphrase)
+  if (!storedToken) {
+    useSyncStore.setState({ token })
+  }
 
   return getOctokit(token)
 }

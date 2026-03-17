@@ -1,16 +1,27 @@
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import App from './App'
 import { useSyncStore } from './stores/useSyncStore'
+
+// Mock sync-service (avoid GitHub calls during App render)
+vi.mock('./services/github/sync-service', () => ({
+  fetchRemoteTasksForRepo: vi.fn().mockResolvedValue({ tasks: [], sha: null }),
+  fetchRemoteFileContent: vi.fn().mockResolvedValue({ content: null, sha: null }),
+  syncPendingTasks: vi.fn().mockResolvedValue({ syncedCount: 0 }),
+}))
 
 // Mock the store
 vi.mock('./stores/useSyncStore', () => ({
   useSyncStore: Object.assign(vi.fn(), {
     getState: vi.fn(() => ({
       setSelectedRepo: vi.fn(),
+      tasks: [],
+      user: null,
     })),
+    setState: vi.fn(),
   }),
+  selectPendingSyncCount: vi.fn(() => 0),
 }))
 
 // Mock useNetworkStatus
@@ -37,33 +48,206 @@ vi.mock('./features/auth/components/AuthForm', () => ({
   AuthForm: () => <div data-testid="auth-form">Auth Form</div>,
 }))
 
+// Mock framer-motion to avoid heavy bundle in test environment
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+    svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
+  },
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+  Reorder: {
+    Group: ({ children, ...props }: any) => <ul {...props}>{children}</ul>,
+    Item: ({ children, ...props }: any) => <li {...props}>{children}</li>,
+  },
+  useDragControls: () => ({ start: () => {} }),
+  useReducedMotion: () => false,
+}))
+
+// Mock heavy components not under test to reduce memory pressure
+vi.mock('./features/sync/hooks/useAutoSync', () => ({
+  useAutoSync: () => {},
+}))
+vi.mock('./features/sync/components/SyncConflictBanner', () => ({
+  SyncConflictBanner: () => null,
+}))
+vi.mock('./features/sync/components/BranchProtectionBanner', () => ({
+  BranchProtectionBanner: ({ visible, onDismiss, onSwitchRepo }: any) =>
+    visible ? (
+      <div data-testid="branch-protection-banner">
+        <button data-testid="banner-dismiss" onClick={onDismiss}>Dismiss</button>
+        <button data-testid="banner-switch-repo" onClick={onSwitchRepo}>Switch Repo</button>
+      </div>
+    ) : null,
+}))
+vi.mock('./features/sync/components/SyncImportBanner', () => ({
+  SyncImportBanner: () => null,
+}))
+vi.mock('./features/community/components/RoadmapView', () => ({
+  RoadmapView: () => null,
+}))
+vi.mock('./features/capture/components/QuickCaptureBar', () => ({
+  QuickCaptureBar: () => null,
+}))
+vi.mock('./features/capture/components/CreateTaskSheet', () => ({
+  CreateTaskSheet: () => null,
+}))
+vi.mock('./services/github/octokit-provider', () => ({
+  recoverOctokit: vi.fn().mockResolvedValue({}),
+}))
+
+// Mock DraggableTaskCard to render as simple wrapper
+vi.mock('./features/capture/components/DraggableTaskCard', () => ({
+  DraggableTaskCard: ({ task, onTap, onComplete, isNewest }: any) => (
+    <li data-testid={`reorder-item-${task.id}`}>
+      <div
+        data-testid={`task-card-${task.id}`}
+        onClick={() => onTap?.(task.id)}
+      >
+        <button
+          data-testid={`task-checkbox-${task.id}`}
+          role="checkbox"
+          onClick={(e: any) => { e.stopPropagation(); onComplete?.(task.id) }}
+        />
+        <span data-testid={`task-title-${task.id}`}>{task.title}</span>
+        <span data-testid={`sync-status-${task.id}`}>{task.syncStatus === 'pending' ? 'Pending' : 'Synced'}</span>
+        {task.body && <span data-testid={`task-body-${task.id}`}>{task.body}</span>}
+        {isNewest && <span data-testid="newest-indicator" />}
+      </div>
+    </li>
+  ),
+}))
+
+// Mock SwipeableTaskCard
+vi.mock('./features/capture/components/SwipeableTaskCard', () => ({
+  SwipeableTaskCard: ({ task, onTap, onComplete, onDelete, onMove, isNewest, isDraggable }: any) => (
+    <div data-testid={`swipeable-card-${task.id}`}>
+      <div
+        data-testid={`task-card-${task.id}`}
+        onClick={() => onTap?.(task.id)}
+      >
+        <button
+          data-testid={`task-checkbox-${task.id}`}
+          role="checkbox"
+          onClick={(e: any) => { e.stopPropagation(); onComplete?.(task.id) }}
+        />
+        <span data-testid={`task-title-${task.id}`}>{task.title}</span>
+      </div>
+      <button
+        data-testid={`swipe-delete-${task.id}`}
+        onClick={() => onDelete?.(task.id)}
+      >Delete</button>
+      <button
+        data-testid={`swipe-move-${task.id}`}
+        onClick={() => onMove?.(task.id)}
+      >Move</button>
+    </div>
+  ),
+}))
+
+// Mock UndoToast
+vi.mock('./features/capture/components/UndoToast', () => ({
+  UndoToast: ({ message, onUndo, onExpire }: any) => (
+    <div data-testid="undo-toast">
+      <span>{message}</span>
+      <button data-testid="undo-button" onClick={onUndo}>Undo</button>
+    </div>
+  ),
+}))
+
+// Mock TaskCard (used in completed section)
+vi.mock('./features/capture/components/TaskCard', () => ({
+  TaskCard: ({ task, onTap, onComplete }: any) => (
+    <div data-testid={`task-card-${task.id}`} onClick={() => onTap?.(task.id)}>
+      <button
+        data-testid={`task-checkbox-${task.id}`}
+        role="checkbox"
+        onClick={(e: any) => { e.stopPropagation(); onComplete?.(task.id) }}
+      />
+      <span data-testid={`task-title-${task.id}`}>{task.title}</span>
+    </div>
+  ),
+}))
+
+// Mock other components that import framer-motion
+vi.mock('./features/capture/components/CreateTaskFAB', () => ({
+  CreateTaskFAB: ({ onClick }: any) => <button data-testid="create-task-fab" onClick={onClick}>+</button>,
+}))
+vi.mock('./features/sync/components/SyncFAB', () => ({
+  SyncFAB: () => null,
+}))
+vi.mock('./features/capture/components/TaskDetailSheet', () => ({
+  TaskDetailSheet: () => null,
+}))
+vi.mock('./features/capture/components/PriorityFilterPills', () => ({
+  PriorityFilterPills: ({ currentFilter, onChange }: any) => (
+    <div data-testid="priority-filter">{currentFilter}</div>
+  ),
+}))
+
 const mockTasks = [
-  { id: '1', title: 'Buy milk', body: 'Get whole milk', isImportant: false, syncStatus: 'synced', createdAt: '2026-03-14T10:00:00Z' },
-  { id: '2', title: 'Fix bug', body: 'High priority', isImportant: true, syncStatus: 'synced', createdAt: '2026-03-14T11:00:00Z' },
+  { id: '1', title: 'Buy milk', body: 'Get whole milk', isImportant: false, isCompleted: false, completedAt: null, updatedAt: null, order: 0, syncStatus: 'synced', createdAt: '2026-03-14T10:00:00Z', repoFullName: 'testuser/repo', username: 'testuser', githubIssueNumber: null },
+  { id: '2', title: 'Fix bug', body: 'High priority', isImportant: true, isCompleted: false, completedAt: null, updatedAt: null, order: 1, syncStatus: 'synced', createdAt: '2026-03-14T11:00:00Z', repoFullName: 'testuser/repo', username: 'testuser', githubIssueNumber: null },
 ]
 
+const mockTasksWithCompleted = [
+  { id: '1', title: 'Buy milk', body: 'Get whole milk', isImportant: false, isCompleted: false, completedAt: null, updatedAt: null, order: 0, syncStatus: 'synced', createdAt: '2026-03-14T10:00:00Z', repoFullName: 'testuser/repo', username: 'testuser', githubIssueNumber: null },
+  { id: '2', title: 'Fix bug', body: 'High priority', isImportant: true, isCompleted: true, completedAt: '2026-03-14T12:00:00Z', updatedAt: null, order: 1, syncStatus: 'pending', createdAt: '2026-03-14T11:00:00Z', repoFullName: 'testuser/repo', username: 'testuser', githubIssueNumber: null },
+  { id: '3', title: 'Done task', body: '', isImportant: false, isCompleted: true, completedAt: '2026-03-14T13:00:00Z', updatedAt: null, order: 2, syncStatus: 'pending', createdAt: '2026-03-14T09:00:00Z', repoFullName: 'testuser/repo', username: 'testuser', githubIssueNumber: null },
+]
+
+// Stable mock function references — creating vi.fn() inside mockImplementation
+// causes new references on every render, triggering infinite React re-renders → OOM.
+const stableFns = {
+  setAuth: vi.fn(),
+  clearAuth: vi.fn(),
+  setAuthError: vi.fn(),
+  setSelectedRepo: vi.fn(),
+  setRepoSyncMeta: vi.fn(),
+  clearRepoConflict: vi.fn(),
+  replaceTasksForRepo: vi.fn(),
+  toggleImportant: vi.fn(),
+  toggleComplete: vi.fn(),
+  reorderTasks: vi.fn(),
+  updateTask: vi.fn(),
+  moveTaskToRepo: vi.fn(),
+  addTask: vi.fn(),
+  markTaskSynced: vi.fn(),
+  removeTask: vi.fn(),
+  loadTasksFromIDB: vi.fn().mockResolvedValue(undefined),
+}
+
+function mockStoreWith(overrides: Record<string, unknown>) {
+  vi.mocked(useSyncStore).mockImplementation((selector) =>
+    selector({
+      ...stableFns,
+      isImportant: false,
+      authError: null,
+      syncEngineStatus: 'idle',
+      syncError: null,
+      syncErrorType: null,
+      repoSyncMeta: {},
+      hasPendingDeletions: false,
+      ...overrides,
+    } as never),
+  )
+}
+
 describe('App', () => {
+  beforeEach(() => {
+    // Reset all stable mock fns between tests
+    Object.values(stableFns).forEach((fn) => fn.mockClear())
+    stableFns.loadTasksFromIDB.mockResolvedValue(undefined)
+  })
+
   it('shows auth form when not authenticated', async () => {
-    vi.mocked(useSyncStore).mockImplementation((selector) =>
-      selector({
-        isAuthenticated: false,
-        user: null,
-        encryptedToken: null,
-        selectedRepo: null,
-        currentDraft: '',
-        isImportant: false,
-        tasks: [],
-        setAuth: vi.fn(),
-        clearAuth: vi.fn(),
-        setSelectedRepo: vi.fn(),
-        setCurrentDraft: vi.fn(),
-        toggleImportant: vi.fn(),
-        addTask: vi.fn(),
-        markTaskSynced: vi.fn(),
-        removeTask: vi.fn(),
-        loadTasksFromIDB: vi.fn(),
-      } as never),
-    )
+    mockStoreWith({
+      isAuthenticated: false,
+      user: null,
+      token: null,
+      selectedRepo: null,
+      tasks: [],
+    })
 
     await act(async () => {
       render(<App />)
@@ -73,26 +257,13 @@ describe('App', () => {
   })
 
   it('shows main interface when authenticated', async () => {
-    vi.mocked(useSyncStore).mockImplementation((selector) =>
-      selector({
-        isAuthenticated: true,
-        user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
-        encryptedToken: null,
-        selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
-        currentDraft: '',
-        isImportant: false,
-        tasks: mockTasks,
-        setAuth: vi.fn(),
-        clearAuth: vi.fn(),
-        setSelectedRepo: vi.fn(),
-        setCurrentDraft: vi.fn(),
-        toggleImportant: vi.fn(),
-        addTask: vi.fn(),
-        markTaskSynced: vi.fn(),
-        removeTask: vi.fn(),
-        loadTasksFromIDB: vi.fn(),
-      } as never),
-    )
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasks,
+    })
 
     await act(async () => {
       render(<App />)
@@ -105,19 +276,17 @@ describe('App', () => {
 
   it('filters tasks based on search query', async () => {
     const user = userEvent.setup()
-    vi.mocked(useSyncStore).mockImplementation((selector) =>
-      selector({
-        isAuthenticated: true,
-        user: { login: 'testuser' },
-        selectedRepo: { id: 1, fullName: 'repo' },
-        tasks: mockTasks,
-        currentDraft: '',
-        isImportant: false,
-        loadTasksFromIDB: vi.fn(),
-      } as never),
-    )
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasks,
+    })
 
-    render(<App />)
+    await act(async () => {
+      render(<App />)
+    })
 
     const searchInput = screen.getByTestId('task-search-input')
     await user.type(searchInput, 'milk')
@@ -128,23 +297,165 @@ describe('App', () => {
 
   it('shows empty state when no tasks match', async () => {
     const user = userEvent.setup()
-    vi.mocked(useSyncStore).mockImplementation((selector) =>
-      selector({
-        isAuthenticated: true,
-        user: { login: 'testuser' },
-        selectedRepo: { id: 1, fullName: 'repo' },
-        tasks: mockTasks,
-        currentDraft: '',
-        isImportant: false,
-        loadTasksFromIDB: vi.fn(),
-      } as never),
-    )
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasks,
+    })
 
-    render(<App />)
+    await act(async () => {
+      render(<App />)
+    })
 
     const searchInput = screen.getByTestId('task-search-input')
     await user.type(searchInput, 'nonexistent')
 
     expect(screen.getByTestId('filter-empty-state')).toHaveTextContent(/No tasks match/)
+  })
+
+  it('shows completed tasks in "Completed" section', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasksWithCompleted,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    const header = screen.getByTestId('completed-section-header')
+    expect(header).toHaveTextContent('Completed (2)')
+    expect(screen.getByText('Buy milk')).toBeInTheDocument()
+  })
+
+  it('"Completed (N)" header shows correct count', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasksWithCompleted,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    const header = screen.getByTestId('completed-section-header')
+    expect(header).toHaveTextContent('Completed (2)')
+  })
+
+  it('section header toggle collapses completed list', async () => {
+    const user = userEvent.setup()
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasksWithCompleted,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.getByText('Fix bug')).toBeInTheDocument()
+    await user.click(screen.getByTestId('completed-section-header'))
+
+    const header = screen.getByTestId('completed-section-header')
+    expect(header.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('active tasks do NOT appear in completed section', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasksWithCompleted,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    const taskList = screen.getByTestId('task-list')
+    expect(taskList).toHaveTextContent('Buy milk')
+  })
+
+  it('shows branch protection banner when syncErrorType is branch-protection', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasks,
+      syncErrorType: 'branch-protection',
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.getByTestId('branch-protection-banner')).toBeInTheDocument()
+  })
+
+  it('does not show branch protection banner for other error types', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasks,
+      syncErrorType: 'network',
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.queryByTestId('branch-protection-banner')).not.toBeInTheDocument()
+  })
+
+  it('hides branch protection banner when dismissed', async () => {
+    const user = userEvent.setup()
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasks,
+      syncErrorType: 'branch-protection',
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.getByTestId('branch-protection-banner')).toBeInTheDocument()
+    await user.click(screen.getByTestId('banner-dismiss'))
+    expect(screen.queryByTestId('branch-protection-banner')).not.toBeInTheDocument()
+  })
+
+  it('does not show branch protection banner when syncErrorType is null', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: mockTasks,
+      syncErrorType: null,
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.queryByTestId('branch-protection-banner')).not.toBeInTheDocument()
   })
 })

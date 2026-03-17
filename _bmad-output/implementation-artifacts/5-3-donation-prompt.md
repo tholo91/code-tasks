@@ -2,6 +2,11 @@
 
 Status: ready-for-dev
 
+## Update Notes (2026-03-17)
+
+- No backend is required for this story. All trigger logic can remain client-side (localStorage / Zustand persist).
+- Keep the CTA **hidden or “Coming soon”** until a real donation URL is configured (ties to Story 5.4).
+
 ## Story
 
 As a User,

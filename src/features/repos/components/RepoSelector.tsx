@@ -1,6 +1,7 @@
-import { useState, use, useMemo, useEffect, Suspense, Component, type ReactNode } from 'react'
+import { useState, useEffect } from 'react'
 import type { Octokit } from 'octokit'
 import { getMyRepos, searchUserRepos, type GitHubRepo } from '../../../services/github/repo-service'
+import { useSyncStore, selectPendingSyncCountsByRepo, selectPendingSyncCountAllRepos } from '../../../stores/useSyncStore'
 
 interface RepoSelectorProps {
   octokit: Octokit
@@ -8,58 +9,17 @@ interface RepoSelectorProps {
   selectedRepoId: number | null
 }
 
-interface ErrorBoundaryProps {
-  children: ReactNode
-  fallback: (error: Error, reset: () => void) => ReactNode
-  onReset?: () => void
-  resetKey?: unknown
-}
-
-interface ErrorBoundaryState {
-  error: Error | null
-}
-
-class RepoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { error: null }
-  private resetting = false
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { error }
-  }
-
-  componentDidUpdate(prevProps: ErrorBoundaryProps) {
-    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
-      this.resetting = false
-      this.setState({ error: null })
-    }
-  }
-
-  reset = () => {
-    if (this.resetting) return
-    this.resetting = true
-    this.setState({ error: null })
-    this.props.onReset?.()
-  }
-
-  render() {
-    if (this.state.error) {
-      return this.props.fallback(this.state.error, this.reset)
-    }
-    return this.props.children
-  }
-}
-
 function RepoList({
-  resultsPromise,
   onSelect,
   selectedRepoId,
+  pendingByRepo,
+  repos,
 }: {
-  resultsPromise: Promise<GitHubRepo[]>
   onSelect: (repo: GitHubRepo) => void
   selectedRepoId: number | null
+  pendingByRepo: Record<string, number>
+  repos: GitHubRepo[]
 }) {
-  const repos = use(resultsPromise)
-
   if (repos.length === 0) {
     return (
       <li className="px-3 py-4 text-center text-body" style={{ color: 'var(--color-text-secondary)' }}>
@@ -72,6 +32,7 @@ function RepoList({
     <>
       {repos.map((repo) => {
         const isSelected = repo.id === selectedRepoId
+        const pendingCount = pendingByRepo[repo.fullName.toLowerCase()] ?? 0
         return (
           <li
             key={repo.id}
@@ -97,6 +58,11 @@ function RepoList({
                   Private
                 </span>
               )}
+              {pendingCount > 0 && (
+                <span className="badge badge-amber" data-testid={`repo-pending-${repo.fullName}`}>
+                  {pendingCount} pending
+                </span>
+              )}
             </div>
             {repo.description && (
               <p className="mt-0.5 text-label" style={{ color: 'var(--color-text-secondary)' }}>
@@ -114,6 +80,11 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [retryCount, setRetryCount] = useState(0)
+  const [repos, setRepos] = useState<GitHubRepo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const pendingByRepo = useSyncStore(selectPendingSyncCountsByRepo)
+  const pendingAll = useSyncStore(selectPendingSyncCountAllRepos)
 
   useEffect(() => {
     if (!query.trim()) {
@@ -126,11 +97,30 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
     return () => clearTimeout(timer)
   }, [query])
 
-  const resultsPromise = useMemo(() => {
-    if (!debouncedQuery.trim()) {
-      return getMyRepos(octokit)
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
+    const fetchPromise = debouncedQuery.trim()
+      ? searchUserRepos(octokit, debouncedQuery)
+      : getMyRepos(octokit)
+
+    fetchPromise
+      .then((data) => {
+        if (cancelled) return
+        setRepos(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setError(err instanceof Error ? err : new Error(String(err)))
+        setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
     }
-    return searchUserRepos(octokit, debouncedQuery)
   }, [octokit, debouncedQuery, retryCount])
 
   const handleRetry = () => {
@@ -150,41 +140,36 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
         />
       </div>
 
+      {pendingAll > 0 && (
+        <div className="border-b px-3 py-2 text-caption" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
+          {pendingAll} pending change{pendingAll === 1 ? '' : 's'} across repos
+        </div>
+      )}
+
       <ul className="max-h-64 overflow-y-auto" role="listbox">
-        <RepoErrorBoundary
-          onReset={handleRetry}
-          resetKey={octokit}
-          fallback={(error, reset) => {
-            const msg = error instanceof Error ? error.message : String(error)
-            const isRateLimit = msg.toLowerCase().includes('rate limit')
-            return (
-              <li className="px-3 py-4 text-center">
-                <p className="mb-2 text-body" style={{ color: 'var(--color-text-secondary)' }}>
-                  {isRateLimit
-                    ? 'API rate limit exceeded. Please try again later.'
-                    : 'Failed to load repositories.'}
-                </p>
-                <button onClick={reset} className="btn-primary max-w-[120px] mx-auto text-label">
-                  Retry
-                </button>
-              </li>
-            )
-          }}
-        >
-          <Suspense
-            fallback={
-              <li className="px-3 py-4 text-center text-body" style={{ color: 'var(--color-text-secondary)' }}>
-                Loading repositories...
-              </li>
-            }
-          >
-            <RepoList
-              resultsPromise={resultsPromise}
-              onSelect={onSelect}
-              selectedRepoId={selectedRepoId}
-            />
-          </Suspense>
-        </RepoErrorBoundary>
+        {loading ? (
+          <li className="px-3 py-4 text-center text-body" style={{ color: 'var(--color-text-secondary)' }}>
+            Loading repositories...
+          </li>
+        ) : error ? (
+          <li className="px-3 py-4 text-center">
+            <p className="mb-2 text-body" style={{ color: 'var(--color-text-secondary)' }}>
+              {error.message.toLowerCase().includes('rate limit')
+                ? 'API rate limit exceeded. Please try again later.'
+                : 'Failed to load repositories.'}
+            </p>
+            <button onClick={handleRetry} className="btn-primary max-w-[120px] mx-auto text-label">
+              Retry
+            </button>
+          </li>
+        ) : (
+          <RepoList
+            repos={repos}
+            onSelect={onSelect}
+            selectedRepoId={selectedRepoId}
+            pendingByRepo={pendingByRepo}
+          />
+        )}
       </ul>
     </div>
   )

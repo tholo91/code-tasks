@@ -146,6 +146,11 @@ code, pre, kbd {
   color: var(--color-info);
   border-color: rgba(56, 139, 253, 0.2);
 }
+.badge-red {
+  background-color: rgba(248, 81, 73, 0.15);
+  color: var(--color-danger);
+  border-color: rgba(248, 81, 73, 0.2);
+}
 
 .card {
   border-radius: 0.5rem;

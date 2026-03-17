@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock crypto-utils
-vi.mock('../../services/storage/crypto-utils', () => ({
-  encryptData: vi.fn().mockResolvedValue(new ArrayBuffer(64)),
-  decryptData: vi.fn().mockResolvedValue('decrypted-token'),
-}))
-
 // Mock auth-service
 const { mockValidateToken, mockGetOctokit, mockClearOctokitInstance } = vi.hoisted(() => ({
   mockValidateToken: vi.fn(),
@@ -26,6 +20,20 @@ vi.mock('../../services/github/repo-service', () => ({
   validateRepoAccess: mockValidateRepoAccess,
 }))
 
+// Mock token-vault
+const { mockLoadToken, mockStoreToken, mockClearToken } = vi.hoisted(() => ({
+  mockLoadToken: vi.fn(),
+  mockStoreToken: vi.fn(),
+  mockClearToken: vi.fn(),
+}))
+vi.mock('../../services/storage/token-vault', () => ({
+  TokenVault: {
+    loadToken: (...args: unknown[]) => mockLoadToken(...args),
+    storeToken: (...args: unknown[]) => mockStoreToken(...args),
+    clearToken: (...args: unknown[]) => mockClearToken(...args),
+  },
+}))
+
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -38,83 +46,58 @@ const localStorageMock = (() => {
 })()
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock })
 
-// Mock sessionStorage
-const sessionStorageMock = (() => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value }),
-    removeItem: vi.fn((key: string) => { delete store[key] }),
-    clear: vi.fn(() => { store = {} }),
-  }
-})()
-Object.defineProperty(globalThis, 'sessionStorage', { value: sessionStorageMock })
-
 import { getHydrationPromise, resetHydration } from './hydration'
 import { useSyncStore } from '../../stores/useSyncStore'
 
 describe('hydration', () => {
   beforeEach(() => {
     localStorageMock.clear()
-    sessionStorageMock.clear()
     vi.clearAllMocks()
     resetHydration()
     useSyncStore.setState({
       isAuthenticated: false,
       user: null,
-      encryptedToken: null,
+      token: null,
     })
     vi.spyOn(useSyncStore.persist, 'rehydrate').mockImplementation(() => Promise.resolve())
     mockValidateToken.mockResolvedValue({ valid: true, user: { login: 'test', avatarUrl: '', name: null } })
     mockGetOctokit.mockReturnValue({} as never)
     mockValidateRepoAccess.mockResolvedValue(true)
+    mockLoadToken.mockResolvedValue(null)
   })
 
-  it('clears auth when no token exists after rehydration', async () => {
+  it('does nothing when no token exists after rehydration', async () => {
     await getHydrationPromise()
 
     const state = useSyncStore.getState()
     expect(state.isAuthenticated).toBe(false)
+    expect(mockValidateToken).not.toHaveBeenCalled()
   })
 
-  it('validates session when token and passphrase exist', async () => {
+  it('validates token after recovery from vault', async () => {
+    mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
     useSyncStore.setState({
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
-      encryptedToken: 'dGVzdA==',
-    })
-    sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
-
-    await getHydrationPromise()
-
-    expect(mockValidateToken).toHaveBeenCalledWith('decrypted-token')
-    const state = useSyncStore.getState()
-    expect(state.isAuthenticated).toBe(true)
-  })
-
-  it('sets needsPassphrase when no passphrase in sessionStorage', async () => {
-    useSyncStore.setState({
-      isAuthenticated: true,
-      user: { login: 'testuser', avatarUrl: '', name: 'Test' },
-      encryptedToken: 'dGVzdA==',
+      token: null,
     })
 
     await getHydrationPromise()
 
+    expect(mockValidateToken).toHaveBeenCalledWith('ghp_validtoken123')
     const state = useSyncStore.getState()
     expect(state.isAuthenticated).toBe(true)
-    expect(state.needsPassphrase).toBe(true)
-    expect(state.encryptedToken).toBe('dGVzdA==')
   })
 
   it('trusts local state when offline (AC 7)', async () => {
     const originalOnLine = navigator.onLine
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
 
+    mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
     useSyncStore.setState({
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
-      encryptedToken: 'dGVzdA==',
+      token: null,
     })
 
     await getHydrationPromise()
@@ -126,32 +109,32 @@ describe('hydration', () => {
     Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true })
   })
 
-  it('clears auth when token validation fails (AC 6)', async () => {
+  it('clears auth with message when token validation fails (expired/revoked)', async () => {
     mockValidateToken.mockResolvedValueOnce({ valid: false, error: 'Token expired' })
+    mockLoadToken.mockResolvedValueOnce('ghp_expiredtoken')
 
     useSyncStore.setState({
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
-      encryptedToken: 'dGVzdA==',
+      token: null,
     })
-    sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
 
     await getHydrationPromise()
 
     const state = useSyncStore.getState()
     expect(state.isAuthenticated).toBe(false)
+    expect(state.authError).toBe('Token expired — please reconnect')
   })
 
-  it('clears auth when decryption throws', async () => {
-    const { decryptData } = await import('../../services/storage/crypto-utils')
-    vi.mocked(decryptData).mockRejectedValueOnce(new Error('decrypt failed'))
+  it('clears auth when validateToken throws', async () => {
+    mockValidateToken.mockRejectedValueOnce(new Error('network error'))
+    mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
 
     useSyncStore.setState({
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
-      encryptedToken: 'dGVzdA==',
+      token: null,
     })
-    sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
 
     await getHydrationPromise()
 
@@ -166,17 +149,35 @@ describe('hydration', () => {
     await promise1
   })
 
+  describe('legacy token migration', () => {
+    it('migrates base64 token from persisted store when vault is empty', async () => {
+      mockLoadToken.mockResolvedValueOnce(null)
+      const encodedToken = btoa('ghp_validtoken123')
+
+      useSyncStore.setState({
+        isAuthenticated: true,
+        user: { login: 'testuser', avatarUrl: '', name: 'Test' },
+        token: encodedToken,
+      })
+
+      await getHydrationPromise()
+
+      expect(mockStoreToken).toHaveBeenCalledWith('ghp_validtoken123')
+      expect(mockValidateToken).toHaveBeenCalledWith('ghp_validtoken123')
+    })
+  })
+
   describe('last-used repo validation (Story 2.2)', () => {
     const validAuthState = {
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
-      encryptedToken: 'dGVzdA==',
+      token: null,
       selectedRepo: { id: 42, fullName: 'testuser/my-repo', owner: 'testuser' },
     }
 
-    it('keeps selectedRepo when validation succeeds (AC 3, 4)', async () => {
+    it('keeps selectedRepo when validation succeeds', async () => {
+      mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
       useSyncStore.setState(validAuthState)
-      sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
       mockValidateRepoAccess.mockResolvedValueOnce(true)
 
       await getHydrationPromise()
@@ -186,34 +187,35 @@ describe('hydration', () => {
       expect(mockValidateRepoAccess).toHaveBeenCalledWith(expect.anything(), 42)
     })
 
-    it('clears selectedRepo when repo is no longer accessible (AC 5)', async () => {
+    it('clears selectedRepo when repo is no longer accessible', async () => {
+      mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
       useSyncStore.setState(validAuthState)
-      sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
       mockValidateRepoAccess.mockResolvedValueOnce(false)
 
       await getHydrationPromise()
 
       const state = useSyncStore.getState()
       expect(state.selectedRepo).toBeNull()
-      expect(state.isAuthenticated).toBe(true) // auth should remain valid
+      expect(state.isAuthenticated).toBe(true)
     })
 
     it('skips repo validation when no selectedRepo is persisted', async () => {
+      mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
       useSyncStore.setState({
         ...validAuthState,
         selectedRepo: null,
       })
-      sessionStorageMock.setItem('code-tasks:passphrase', 'test-pass')
 
       await getHydrationPromise()
 
       expect(mockValidateRepoAccess).not.toHaveBeenCalled()
     })
 
-    it('skips repo validation when offline (trusts local state)', async () => {
+    it('skips repo validation when offline', async () => {
       const originalOnLine = navigator.onLine
       Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
 
+      mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
       useSyncStore.setState(validAuthState)
 
       await getHydrationPromise()

@@ -2,6 +2,11 @@
 
 Status: ready-for-dev
 
+## Update Notes (2026-03-17)
+
+- This is repo/config work and can be done **independently** of app code. It doesn’t require a backend.
+- If MVP speed is the priority, Story 5.4 can be deferred as long as Story 5.3 guards against a placeholder URL.
+
 ## Story
 
 As a Project Maintainer,
