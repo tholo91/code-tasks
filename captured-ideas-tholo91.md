@@ -16,10 +16,25 @@
 
 <!-- code-tasks:managed-start -->
 
-- [ ] **Completed tasks** ([Created: 2026-03-17]) (Priority: 🔴 Important)
+- [ ] **About this app** ([Created: 2026-03-17]) (Priority: ⚪ Normal)
+  In the settings there should be a third option like a Readme of the app "story of Gitty"? That should be the Readme or a how to or how I invented the idea
+Maybe we should create a link to the gitty repo to star it?
+
+- [ ] **Moving an open task to another repository** ([Created: 2026-03-17]) (Priority: ⚪ Normal)
+  - There should be an option to close the bottom sheet, right now there isn't that option
+- the list should have 30% opacity for the repository that it is in (and it's not clickable)
+
+- [ ] **List View UI** ([Created: 2026-03-17]) (Priority: 🔴 Important)
+  Find Ich gut, sollte aber näher an Things sein / Screenshots oder pencil.dev?
+
+- [ ] **Starting new tasks (bottom sheet opens)** ([Created: 2026-03-17]) (Priority: 🔴 Important) [Updated: 2026-03-17]
+  The input field (task name) should immediately be focused and it should expand the longer it gets, so allow a second line (but no line break, since this snps to the description, which works great)
+Sometimes, the keyboard and input are a bit off scroll wise, like the bottom sheet is not where it should be
+
+- [ ] **Completed tasks** ([Created: 2026-03-17]) (Priority: 🔴 Important) [Updated: 2026-03-17]
   It should be untoggled (closed) when opening the app. Also, how does the filtering or search work with completed tasks?
 
-- [ ] **X items pending (upper right)** ([Created: 2026-03-17]) (Priority: ⚪ Normal)
+- [ ] **X items pending (upper right)** ([Created: 2026-03-17]) (Priority: ⚪ Normal) [Updated: 2026-03-17]
   This I think can also go away, since the refresh button shows that as well. Maybe the refresh button should show a little popup first what happened (so like the commit message?)
 
 - [ ] **Slide to delete fix** ([Created: 2026-03-17]) (Priority: ⚪ Normal)
