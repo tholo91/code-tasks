@@ -339,7 +339,6 @@ function AppContent() {
     if (!task) return
 
     triggerSelectionHaptic()
-    setOpenSwipeId(null)
 
     const timeoutId = setTimeout(() => {
       removeTask(taskId)
@@ -354,11 +353,6 @@ function AppContent() {
     clearTimeout(pendingDelete.timeoutId)
     setPendingDelete(null)
   }, [pendingDelete])
-
-  // Determine if we should show the "Move to..." action (AC 5)
-  // Show only if the user has more than one repository in their sync metadata
-  const repoSyncMeta = useSyncStore((s) => s.repoSyncMeta)
-  const showMoveAction = useMemo(() => Object.keys(repoSyncMeta).length > 1, [repoSyncMeta])
 
   // Derive selected task for detail sheet
   const selectedTask = useMemo(() => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion, type Variants } from 'framer-motion'
 import { TRANSITION_SPRING } from '../../../config/motion'
 import type { SortMode } from '../../../types/task'
 
@@ -32,8 +32,8 @@ export function SortModeSelector({ currentMode, onChange }: SortModeSelectorProp
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open])
 
-  const dropdownVariants = prefersReducedMotion
-    ? {}
+  const dropdownVariants: Variants = prefersReducedMotion
+    ? { initial: {}, animate: {}, exit: {} }
     : {
         initial: { opacity: 0, scale: 0.95, y: -4 },
         animate: { opacity: 1, scale: 1, y: 0 },
