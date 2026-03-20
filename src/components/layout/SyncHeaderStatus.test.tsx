@@ -85,30 +85,39 @@ describe('SyncHeaderStatus', () => {
     })
   })
 
-  it('shows "All caught up" when no pending tasks', () => {
-    render(<SyncHeaderStatus />)
-    expect(screen.getByText('All caught up')).toBeInTheDocument()
+  it('renders nothing when lastSyncedAt is null and no pending tasks', () => {
+    const { container } = render(<SyncHeaderStatus />)
+    expect(container.innerHTML).toBe('')
   })
 
-  it('shows "All caught up" with relative time when lastSyncedAt is set', () => {
+  it('shows only relative timestamp when synced with lastSyncedAt', () => {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
     useSyncStore.setState({ lastSyncedAt: twoHoursAgo })
     render(<SyncHeaderStatus />)
-    expect(screen.getByText(/All caught up · 2h ago/)).toBeInTheDocument()
+    expect(screen.getByText(/2h ago/)).toBeInTheDocument()
+    expect(screen.queryByText(/All caught up/)).not.toBeInTheDocument()
   })
 
-  it('shows "All caught up" without timestamp when lastSyncedAt is null', () => {
+  it('passes size={12} to SyncStatusIcon when synced', () => {
+    const oneMinAgo = new Date(Date.now() - 60 * 1000).toISOString()
+    useSyncStore.setState({ lastSyncedAt: oneMinAgo })
     render(<SyncHeaderStatus />)
-    const el = screen.getByTestId('sync-header-status')
-    expect(el.textContent).toBe('All caught up')
+    const badge = screen.getByTestId('sync-header-status')
+    const svg = badge.querySelector('svg')
+    expect(svg).toBeTruthy()
+    expect(svg?.getAttribute('width')).toBe('12')
+    expect(svg?.getAttribute('height')).toBe('12')
   })
 
-  it('shows "All caught up" when all tasks are synced', () => {
+  it('shows synced badge when all tasks are synced and lastSyncedAt is set', () => {
+    const oneMinAgo = new Date(Date.now() - 60 * 1000).toISOString()
     useSyncStore.setState({
       tasks: [makeSyncedTask('1'), makeSyncedTask('2')],
+      lastSyncedAt: oneMinAgo,
     })
     render(<SyncHeaderStatus />)
-    expect(screen.getByText(/All caught up/)).toBeInTheDocument()
+    expect(screen.getByTestId('sync-header-status')).toBeInTheDocument()
+    expect(screen.queryByText(/All caught up/)).not.toBeInTheDocument()
   })
 
   it('shows pending count for single pending task', () => {
@@ -169,11 +178,13 @@ describe('SyncHeaderStatus', () => {
   })
 
   it('has role="status" for accessibility', () => {
+    useSyncStore.setState({ lastSyncedAt: new Date().toISOString() })
     render(<SyncHeaderStatus />)
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
   it('has data-testid for testing', () => {
+    useSyncStore.setState({ lastSyncedAt: new Date().toISOString() })
     render(<SyncHeaderStatus />)
     expect(screen.getByTestId('sync-header-status')).toBeInTheDocument()
   })

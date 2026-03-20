@@ -75,7 +75,9 @@ export function SyncHeaderStatus() {
     )
   }
 
-  const timeAgo = lastSyncedAt ? formatTimeAgo(lastSyncedAt) : null
+  if (!lastSyncedAt) return null
+
+  const timeAgo = formatTimeAgo(lastSyncedAt)
 
   return (
     <span
@@ -84,8 +86,8 @@ export function SyncHeaderStatus() {
       aria-live="polite"
       data-testid="sync-header-status"
     >
-      <SyncStatusIcon state="synced" />
-      All caught up{timeAgo ? ` · ${timeAgo}` : ''}
+      <SyncStatusIcon state="synced" size={12} />
+      {timeAgo}
     </span>
   )
 }

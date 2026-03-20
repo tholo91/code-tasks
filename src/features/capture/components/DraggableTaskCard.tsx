@@ -107,6 +107,9 @@ export function DraggableTaskCard({
         listStyle: 'none',
         opacity: isDimmed ? 0.5 : 1,
         transition: 'opacity 0.15s',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',
       }}
       data-testid={`reorder-item-${task.id}`}
     >

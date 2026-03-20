@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-03-18
+# Updated: 2026-03-20
 # Sprint 3: Epic 8 (The Polish) — 12 stories, in progress
 
 status_definitions:
@@ -33,10 +33,22 @@ development_status:
 
   # --- Remaining sprint (recommended order) ---
   8-12-additive-import-with-diff-summary: "in-progress"  # PRIORITY: fixes trust/data-loss issue
-  8-6-sync-result-feedback: "ready-for-dev"
-  8-10-list-view-card-redesign: "ready-for-dev"
-  8-7-per-repo-ai-instructions: "ready-for-dev"
-  8-8-about-gitty-settings: "ready-for-dev"
+  8-6-sync-result-feedback: "ready-for-dev"               # Post-sync toast, remove pending badge — users notice this every sync
+  8-8-about-gitty-settings: "ready-for-dev"               # Quick win: About Gitty + Report Issue link — gives users a feedback channel
+  8-10-list-view-card-redesign: "ready-for-dev"            # Visual polish, no functional urgency
+  8-7-per-repo-ai-instructions: "ready-for-dev"            # Power-user feature, lowest priority in Epic 8
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 9: The Safe Haven (BACKLOG — sync trust + navigation)
+  # Theme: Nothing should ever be lost on the phone
+  # ═══════════════════════════════════════════════════════
+  epic-9: "backlog"
+  # 9-5 (Skip CI) — do FIRST as quick-spec/quick-dev warmup (one-line change, not a full story)
+  9-3-pull-to-refresh: "backlog"                 # P1: Small standalone — pull-down gesture triggers remote check
+  9-1-bottom-tab-navigation: "backlog"           # P0: Foundation — tab bar (Tasks, Completed, Archive)
+  9-2-archive-tab-and-data-model: "backlog"      # P0: Depends on 9-1 — proper isArchived field, Archive UI
+  9-4-push-to-branch-fallback: "backlog"         # P1: Independent — ask once, remember, auto-push to branch
+  9-6-move-task-to-another-repo: "backlog"       # P2: Lowest priority — move action in TaskDetailSheet
 
   # ═══════════════════════════════════════════════════════
   # Epic 7: The Real App (DONE)

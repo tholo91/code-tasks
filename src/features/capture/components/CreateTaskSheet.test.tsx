@@ -101,9 +101,9 @@ describe('CreateTaskSheet', () => {
     const onClose = vi.fn()
     render(<CreateTaskSheet {...defaultProps} onClose={onClose} />)
 
-    // Click on the backdrop (the outer motion.div)
-    const dialog = screen.getByTestId('create-task-sheet')
-    fireEvent.click(dialog)
+    // Click on the backdrop overlay
+    const backdrop = screen.getByTestId('create-task-sheet-backdrop')
+    fireEvent.click(backdrop)
 
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(defaultProps.onTaskCreated).not.toHaveBeenCalled()
@@ -187,9 +187,9 @@ describe('CreateTaskSheet', () => {
     useSyncStore.setState({ isImportant: true })
     render(<CreateTaskSheet {...defaultProps} />)
 
-    // Click on backdrop
-    const dialog = screen.getByTestId('create-task-sheet')
-    fireEvent.click(dialog)
+    // Click on backdrop overlay
+    const backdrop = screen.getByTestId('create-task-sheet-backdrop')
+    fireEvent.click(backdrop)
 
     expect(useSyncStore.getState().isImportant).toBe(false)
   })

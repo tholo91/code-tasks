@@ -116,9 +116,9 @@ describe('TaskDetailSheet', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
 
-    // Click the backdrop (the outermost dialog element)
-    const dialog = screen.getByTestId('task-detail-sheet')
-    await user.click(dialog)
+    // Click the backdrop overlay
+    const backdrop = screen.getByTestId('task-detail-sheet-backdrop')
+    await user.click(backdrop)
 
     expect(defaultProps.onClose).toHaveBeenCalled()
   })

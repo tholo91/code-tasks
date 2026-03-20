@@ -173,4 +173,18 @@ describe('DraggableTaskCard', () => {
     const item = screen.getByTestId('reorder-item-test-uuid-1')
     expect(item.style.opacity).toBe('1')
   })
+
+  it('applies user-select: none to prevent text selection during drag', () => {
+    render(
+      <DraggableTaskCard
+        task={createTask()}
+        onTap={vi.fn()}
+        onComplete={vi.fn()}
+        isNewest={false}
+      />
+    )
+
+    const item = screen.getByTestId('reorder-item-test-uuid-1')
+    expect(item.style.userSelect).toBe('none')
+  })
 })

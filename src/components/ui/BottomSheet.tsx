@@ -32,9 +32,6 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
         exit={{ opacity: 0 }}
         transition={prefersReducedMotion ? { duration: 0.15 } : undefined}
         className="fixed inset-0 z-50 flex flex-col items-center justify-end"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose()
-        }}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
@@ -43,6 +40,8 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
         {/* Backdrop */}
         <div
           className={`absolute inset-0 bg-black/50${backdropBlur ? ' backdrop-blur-sm' : ''}`}
+          onClick={(e) => { e.stopPropagation(); onClose() }}
+          data-testid={testId ? `${testId}-backdrop` : undefined}
         />
 
         {/* Sheet surface */}
