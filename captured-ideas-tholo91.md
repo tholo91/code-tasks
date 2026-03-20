@@ -17,7 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
-- [ ] **Test** ([Created: 2026-03-20]) (Priority: ⚪ Normal)
+- [ ] **Letzte Reviews machen** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20]
+  Sind die Stories alle durch? Ein redesign vom task Detail oder beim create scheint nicht verändert, der list view aber schon
+Außerdem sind zu viele Details noch im Detailview sichtbar 
 
 
 ## Completed
