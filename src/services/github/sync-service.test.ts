@@ -6,8 +6,13 @@ const { mockOctokit } = vi.hoisted(() => {
   const mockOctokit = {
     rest: {
       repos: {
+        get: vi.fn(),
         getContent: vi.fn(),
         createOrUpdateFileContents: vi.fn(),
+      },
+      git: {
+        getRef: vi.fn(),
+        createRef: vi.fn(),
       },
     },
   }
@@ -598,6 +603,80 @@ describe('sync-service', () => {
       const result = await syncPendingTasks({ maxRetries: 0 })
 
       expect(result.errorType).toBe('unknown')
+    })
+
+    it('passes branch parameter to commitTasks and getFileContent', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.get.mockResolvedValue({ data: { default_branch: 'main' } })
+      mockOctokit.rest.git.getRef.mockResolvedValue({ data: { object: { sha: 'main-sha' } } })
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const result = await syncPendingTasks({ branch: 'gitty/user' })
+
+      expect(result.syncedCount).toBe(1)
+      expect(mockOctokit.rest.repos.getContent).toHaveBeenCalledWith(
+        expect.objectContaining({ ref: 'gitty/user' })
+      )
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalledWith(
+        expect.objectContaining({ branch: 'gitty/user' })
+      )
+    })
+
+    it('creates branch from default branch HEAD when it does not exist', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.get.mockResolvedValue({ data: { default_branch: 'main' } })
+      // First getRef for target branch fails with 404
+      mockOctokit.rest.git.getRef
+        .mockRejectedValueOnce({ status: 404 })
+        // Second getRef for default branch succeeds
+        .mockResolvedValueOnce({ data: { object: { sha: 'main-sha' } } })
+      
+      mockOctokit.rest.git.createRef.mockResolvedValue({})
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      await syncPendingTasks({ branch: 'gitty/user' })
+
+      expect(mockOctokit.rest.git.createRef).toHaveBeenCalledWith({
+        owner: 'testuser',
+        repo: 'my-repo',
+        ref: 'refs/heads/gitty/user',
+        sha: 'main-sha',
+      })
+    })
+
+    it('skips conflict detection when branch is provided', async () => {
+      const task = createTask()
+      useSyncStore.setState({ 
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 1,
+            lastSyncedRevision: 1,
+            conflict: null,
+          }
+        }
+      })
+
+      mockOctokit.rest.repos.get.mockResolvedValue({ data: { default_branch: 'main' } })
+      mockOctokit.rest.git.getRef.mockResolvedValue({ data: { object: { sha: 'main-sha' } } })
+      // Remote SHA is different (normally a conflict)
+      mockOctokit.rest.repos.getContent.mockResolvedValue({ data: { content: btoa('# content'), sha: 'new-remote-sha' } })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const result = await syncPendingTasks({ branch: 'gitty/user' })
+
+      expect(result.error).toBeUndefined()
+      expect(result.syncedCount).toBe(1)
+      expect(result.status).not.toBe('conflict')
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalled()
     })
   })
 

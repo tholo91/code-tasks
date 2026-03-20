@@ -26,10 +26,15 @@ export function SyncConflictBanner() {
     setIsResolving(true)
 
     const { setSyncStatus, updateLastSyncedAt } = useSyncStore.getState()
+    const fallbackBranch = selectedRepo ? selectSyncBranch(selectedRepo.fullName)(useSyncStore.getState()) : null
     setSyncStatus('syncing')
 
     try {
-      const result = await syncPendingTasks({ allowConflict: true, maxRetries: 1 })
+      const result = await syncPendingTasks({ 
+        allowConflict: true, 
+        maxRetries: 1,
+        branch: fallbackBranch ?? undefined
+      })
       if (result.error) {
         setSyncStatus('error', result.error)
       } else {
@@ -43,7 +48,7 @@ export function SyncConflictBanner() {
     } finally {
       setIsResolving(false)
     }
-  }, [clearRepoConflict, isResolving, selectedRepo?.fullName])
+  }, [clearRepoConflict, isResolving, selectedRepo])
 
   return (
     <>

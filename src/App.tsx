@@ -1,6 +1,6 @@
 import { Suspense, use, useMemo, useState, useEffect, useRef, useCallback, Component, type ReactNode } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { useSyncStore } from './stores/useSyncStore'
+import { useSyncStore, selectSyncBranch } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AppHeader } from './components/layout/AppHeader'
@@ -16,25 +16,30 @@ import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
 import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
 import { SortModeSelector } from './features/capture/components/SortModeSelector'
 import { RoadmapView } from './features/community/components/RoadmapView'
+import { AboutGittyView } from './features/community/components/AboutGittyView'
 import { SyncFAB } from './features/sync/components/SyncFAB'
+import { SyncResultToast } from './features/sync/components/SyncResultToast'
 import { SyncConflictBanner } from './features/sync/components/SyncConflictBanner'
 import { BranchProtectionBanner } from './features/sync/components/BranchProtectionBanner'
+import { BranchFallbackPrompt } from './features/sync/components/BranchFallbackPrompt'
 import { SyncImportBanner } from './features/sync/components/SyncImportBanner'
 import { useAutoSync } from './features/sync/hooks/useAutoSync'
 import { useRemoteChangeDetection } from './hooks/useRemoteChangeDetection'
+import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { SettingsSheet } from './components/layout/SettingsSheet'
 import { TRANSITION_SHEET } from './config/motion'
 import { SheetHandle } from './components/ui/SheetHandle'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import type { PriorityFilter, SortMode, Task } from './types/task'
-import { computeImportDiff, isAllZero } from './utils/task-diff'
+import { computeImportDiff, isAllZero, buildImportFeedbackMessage } from './utils/task-diff'
 import type { ImportDiffSummary } from './utils/task-diff'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
 import { triggerSelectionHaptic } from './services/native/haptic-service'
-import { pageVariants, listContainerVariants, TRANSITION_NORMAL, TRANSITION_FAST } from './config/motion'
+import { pageVariants, listContainerVariants, listItemVariants, TRANSITION_NORMAL, TRANSITION_FAST } from './config/motion'
 import { sortTasksForDisplay } from './utils/task-sorting'
-import { fetchRemoteTasksForRepo } from './services/github/sync-service'
+import { fetchRemoteTasksForRepo, syncAllRepoTasks } from './services/github/sync-service'
+import { PullToRefreshIndicator } from './components/ui/PullToRefreshIndicator'
 
 function RepoSelectorContainer({ onSelect, onRepoSelected }: { onSelect?: () => void; onRepoSelected?: (repoFullName: string) => void }) {
   const setSelectedRepo = useSyncStore((s) => s.setSelectedRepo)
@@ -223,6 +228,11 @@ function AppContent() {
   const setRepoSyncMeta = useSyncStore((s) => s.setRepoSyncMeta)
   const repoSortModes = useSyncStore((s) => s.repoSortModes)
   const setRepoSortMode = useSyncStore((s) => s.setRepoSortMode)
+  const setRepoSyncBranch = useSyncStore((s) => s.setRepoSyncBranch)
+  const setSyncStatus = useSyncStore((s) => s.setSyncStatus)
+  const fallbackBranch = useSyncStore(
+    selectedRepo ? selectSyncBranch(selectedRepo.fullName) : () => null
+  )
 
   const syncErrorType = useSyncStore((s) => s.syncErrorType)
 
@@ -232,9 +242,11 @@ function AppContent() {
 
   const { isOnline, showOfflineNotification, dismissOfflineNotification } = useNetworkStatus()
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [showBranchPrompt, setShowBranchPrompt] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null)
@@ -257,6 +269,9 @@ function AppContent() {
   } | null>(null)
   const [diffSummary, setDiffSummary] = useState<ImportDiffSummary | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [syncResultMessage, setSyncResultMessage] = useState<string | null>(null)
+  const syncToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [pullToRefreshResult, setPullToRefreshResult] = useState<'up-to-date' | null>(null)
   const importAttemptedRef = useRef<Set<string>>(new Set())
 
   // Track tasks that have been toggled but are waiting for the 500ms transition delay
@@ -281,6 +296,69 @@ function AppContent() {
   }, [loadTasksFromIDB])
 
   useAutoSync()
+
+  // Pull to refresh handler
+  const handlePullRefresh = useCallback(async () => {
+    if (!selectedRepo || !user || !isOnline) return
+
+    const result = await fetchRemoteTasksForRepo(selectedRepo.fullName, user.login)
+    if (result.error) return
+
+    const repoKey = selectedRepo.fullName.toLowerCase()
+    const lastSha = useSyncStore.getState().repoSyncMeta[repoKey]?.lastSyncedSha
+    const localTasks = useSyncStore.getState().tasks.filter((t) => t.repoFullName.toLowerCase() === repoKey)
+    const diff = computeImportDiff(localTasks, result.tasks)
+
+    if (result.sha !== lastSha && !isAllZero(diff)) {
+      setDiffSummary(diff)
+      setImportPrompt({
+        repoFullName: selectedRepo.fullName,
+        tasks: result.tasks,
+        sha: result.sha,
+        source: 'remote-update',
+      })
+    } else {
+      setPullToRefreshResult('up-to-date')
+      setTimeout(() => setPullToRefreshResult(null), 1500)
+    }
+  }, [selectedRepo, user, isOnline, setRepoSyncMeta])
+
+  const { pullDistance, isRefreshing: isPullRefreshing, handlers: pullHandlers } = usePullToRefresh({
+    onRefresh: handlePullRefresh,
+    disabled: !isOnline || useSyncStore((s) => s.syncEngineStatus) === 'syncing',
+  })
+
+  // Show branch fallback prompt when branch-protection error occurs and no fallback is set
+  useEffect(() => {
+    if (syncErrorType === 'branch-protection' && !fallbackBranch) {
+      setShowBranchPrompt(true)
+    }
+  }, [syncErrorType, fallbackBranch])
+
+  const handleBranchConfirm = useCallback(async (branchName: string) => {
+    if (!selectedRepo) return
+    const finalBranch = branchName.trim() || null
+    setRepoSyncBranch(selectedRepo.fullName, finalBranch)
+    setShowBranchPrompt(false)
+    setBannerDismissed(false)
+    setSyncStatus('idle')
+
+    if (!finalBranch) return
+
+    // Re-trigger sync with the new branch
+    setSyncStatus('syncing')
+    try {
+      const result = await syncAllRepoTasks({ branch: finalBranch, maxRetries: 2 })
+      if (result.error) {
+        setSyncStatus('error', result.error, result.errorType)
+      } else {
+        setSyncStatus('success')
+        useSyncStore.getState().updateLastSyncedAt()
+      }
+    } catch {
+      setSyncStatus('error', 'Sync failed')
+    }
+  }, [selectedRepo, setRepoSyncBranch, setSyncStatus])
 
   useRemoteChangeDetection((data) => {
     if (!selectedRepo) return
@@ -614,6 +692,8 @@ function AppContent() {
               onImport={() => {
                 if (isImporting || !importPrompt) return
                 setIsImporting(true)
+                // Capture feedback message before clearing diffSummary
+                const feedbackMessage = diffSummary ? buildImportFeedbackMessage(diffSummary) : null
                 if (importPrompt.source === 'remote-update') {
                   mergeRemoteTasksForRepo(importPrompt.repoFullName, importPrompt.tasks)
                 } else {
@@ -631,19 +711,34 @@ function AppContent() {
                 setImportPrompt(null)
                 setDiffSummary(null)
                 setIsImporting(false)
+                // Show post-import confirmation toast
+                if (feedbackMessage) {
+                  if (syncToastTimerRef.current) clearTimeout(syncToastTimerRef.current)
+                  setSyncResultMessage(feedbackMessage)
+                  syncToastTimerRef.current = setTimeout(() => setSyncResultMessage(null), 2500)
+                }
               }}
             />
           )}
 
           <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} onOpenSettings={() => setShowSettings(true)} />
 
-          <main className="flex w-full flex-1 flex-col items-center">
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            isRefreshing={isPullRefreshing}
+            threshold={80}
+            result={pullToRefreshResult}
+          />
+
+          <main className="relative flex w-full flex-1 flex-col items-center" {...pullHandlers}>
 
             <div className="w-full max-w-[640px] px-4">
               <BranchProtectionBanner
-                visible={syncErrorType === 'branch-protection' && !bannerDismissed}
+                visible={(syncErrorType === 'branch-protection' || !!fallbackBranch) && !bannerDismissed}
+                fallbackBranch={fallbackBranch}
                 onDismiss={() => setBannerDismissed(true)}
                 onSwitchRepo={() => setShowRepoPicker(true)}
+                onChangeBranch={() => setShowBranchPrompt(true)}
               />
             </div>
 
@@ -715,14 +810,17 @@ function AppContent() {
                       </AnimatePresence>
                     </Reorder.Group>
                   ) : (
-                    <ul
+                    <motion.ul
                       className="flex flex-col gap-0 list-none p-0 m-0"
                       data-testid="task-list"
                       aria-label="Task list"
+                      variants={listContainerVariants}
+                      initial="initial"
+                      animate="animate"
                     >
                       <AnimatePresence mode="popLayout" initial={false}>
                         {activeTasks.map((task) => (
-                          <motion.li key={task.id} layout>
+                          <motion.li key={task.id} layout variants={listItemVariants}>
                             <TaskCard
                               task={task}
                               onTap={(taskId) => setSelectedTaskId(taskId)}
@@ -732,7 +830,7 @@ function AppContent() {
                           </motion.li>
                         ))}
                       </AnimatePresence>
-                    </ul>
+                    </motion.ul>
                   )
                 ) : displayedTasks.length === 0 ? (
                   <p
@@ -764,8 +862,8 @@ function AppContent() {
                       <motion.svg
                         animate={{ rotate: showCompleted ? 90 : 0 }}
                         transition={TRANSITION_FAST}
-                        width="12"
-                        height="12"
+                        width="16"
+                        height="16"
                         viewBox="0 0 12 12"
                       >
                         <path d="M4 2L8 6L4 10" stroke="var(--color-text-secondary)" strokeWidth="1.5" fill="none" />
@@ -788,7 +886,7 @@ function AppContent() {
                           exit={{ opacity: 0 }}
                         >
                           {completedTasks.map((task) => (
-                            <motion.div key={task.id} layout>
+                            <motion.div key={task.id} layout variants={listItemVariants}>
                               <TaskCard
                                 task={task}
                                 onTap={(taskId) => setSelectedTaskId(taskId)}
@@ -806,31 +904,17 @@ function AppContent() {
             ) : (
               /* Empty state */
               <motion.div
-                className="mt-12 flex flex-col items-center gap-3 px-4"
+                className="mt-16 flex flex-col items-center gap-2 px-8 text-center"
                 variants={pageVariants}
                 initial="initial"
                 animate="animate"
+                data-testid="empty-state"
               >
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: 'var(--color-text-secondary)', opacity: 0.3 }}
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-                <p className="text-body font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                  No tasks yet
+                <p className="text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  Capture your first thought
                 </p>
-                <p className="text-label" style={{ color: 'var(--color-text-secondary)', opacity: 0.7 }}>
-                  Tap (+) to capture your first idea
+                <p className="text-body" style={{ color: 'var(--color-text-secondary)', opacity: 0.7 }}>
+                  Tap + to get started
                 </p>
               </motion.div>
             )}
@@ -839,6 +923,14 @@ function AppContent() {
 
           <CreateTaskFAB onClick={() => setShowCreateSheet(true)} />
           <SyncFAB />
+
+          {/* Branch fallback prompt */}
+          <BranchFallbackPrompt
+            visible={showBranchPrompt}
+            defaultBranchName={fallbackBranch ?? `gitty/${user?.login ?? 'user'}`}
+            onConfirm={handleBranchConfirm}
+            onDismiss={() => setShowBranchPrompt(false)}
+          />
 
           {/* Create task bottom sheet */}
           <AnimatePresence>
@@ -896,6 +988,17 @@ function AppContent() {
             )}
           </AnimatePresence>
 
+          {/* Sync result toast */}
+          <AnimatePresence>
+            {syncResultMessage && (
+              <SyncResultToast
+                key="sync-result-toast"
+                message={syncResultMessage}
+                onDismiss={() => setSyncResultMessage(null)}
+              />
+            )}
+          </AnimatePresence>
+
           {/* Toast for repo move feedback */}
           <AnimatePresence>
             {toastMessage && (
@@ -923,6 +1026,7 @@ function AppContent() {
               <SettingsSheet
                 onClose={() => setShowSettings(false)}
                 onOpenRoadmap={() => setIsRoadmapOpen(true)}
+                onOpenAbout={() => setShowAbout(true)}
               />
             )}
           </AnimatePresence>
@@ -932,6 +1036,15 @@ function AppContent() {
             {isRoadmapOpen && (
               <div className="fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto bg-[var(--color-canvas)]">
                 <RoadmapView onClose={() => setIsRoadmapOpen(false)} />
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* About Gitty overlay */}
+          <AnimatePresence>
+            {showAbout && (
+              <div className="fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto bg-[var(--color-canvas)]">
+                <AboutGittyView onClose={() => setShowAbout(false)} />
               </div>
             )}
           </AnimatePresence>

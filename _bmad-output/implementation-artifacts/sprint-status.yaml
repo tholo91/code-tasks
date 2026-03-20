@@ -1,6 +1,6 @@
 # code-tasks - Sprint Status Report
 # Updated: 2026-03-20
-# Sprint 3: Epic 8 (The Polish) — 12 stories, in progress
+# Sprint 3: MVP Wrap-Up (Epic 8 + selected Epic 9 stories)
 
 status_definitions:
   backlog: "Story identified in epics but story file not yet created"
@@ -9,46 +9,51 @@ status_definitions:
   review: "Implementation complete, pending peer/AI review"
   done: "Story complete and merged"
   paused: "Story or epic paused pending other work"
+  deferred-post-mvp: "Intentionally cut from MVP scope — revisit for v1.1"
 
 sprint_info:
-  current_sprint: "Sprint 3: The Polish"
+  current_sprint: "Sprint 3: MVP Wrap-Up"
   start_date: "2026-03-17"
-  focus: "Epic 8 — Field-testing UX hardening: Things-quality polish, sort/filter, settings"
+  focus: "Close out MVP: finish Epic 8 core, cherry-pick Epic 9 sync-trust stories, defer non-essential"
   previous_sprint: "Sprint 2: The Real App (2026-03-15, Epic 7 — all 9 stories done)"
+  mvp_target: "Tag v1.0-mvp after remaining items complete"
 
 development_status:
   # ═══════════════════════════════════════════════════════
-  # Epic 8: The Polish (CURRENT FOCUS — Sprint 3)
+  # Epic 8: The Polish (MVP WRAP-UP — Sprint 3)
+  # 10/12 stories done, 1 decision pending, 1 deferred
   # ═══════════════════════════════════════════════════════
   epic-8: "in-progress"
   8-9-ai-agent-header-update: "done"
   8-2-completed-tasks-default-collapsed: "done"
-
   8-3-remove-swipe-to-delete: "done"
   8-1-list-view-ux-sticky-header-priority-visual: "done"
   8-4-task-creation-flow-polish: "done"
   8-5-sorting-and-filtering: "done"
-
   8-11-two-way-sync-remote-import: "done"
+  8-12-additive-import-with-diff-summary: "done"       # Completed 2026-03-20 — additive merge with safe-vault guarantee
+  8-6-sync-result-feedback: "done"                      # Completed 2026-03-20 — post-sync toast wired in App.tsx
+  8-8-about-gitty-settings: "done"                      # Completed 2026-03-20 — About Gitty + Star + Report Issue
 
-  # --- Remaining sprint (recommended order) ---
-  8-12-additive-import-with-diff-summary: "in-progress"  # PRIORITY: fixes trust/data-loss issue
-  8-6-sync-result-feedback: "ready-for-dev"               # Post-sync toast, remove pending badge — users notice this every sync
-  8-8-about-gitty-settings: "ready-for-dev"               # Quick win: About Gitty + Report Issue link — gives users a feedback channel
-  8-10-list-view-card-redesign: "ready-for-dev"            # Visual polish, no functional urgency
-  8-7-per-repo-ai-instructions: "ready-for-dev"            # Power-user feature, lowest priority in Epic 8
+  # --- Remaining Epic 8 ---
+  8-10-list-view-card-redesign: "review"                   # Completed 2026-03-20 — card redesign, empty state, stagger animation
+  8-7-per-repo-ai-instructions: "deferred-post-mvp"      # Power-user feature — default AI header is fine for MVP
 
   # ═══════════════════════════════════════════════════════
-  # Epic 9: The Safe Haven (BACKLOG — sync trust + navigation)
-  # Theme: Nothing should ever be lost on the phone
+  # Epic 9: The Safe Haven (CHERRY-PICKED for MVP)
+  # Only sync-trust stories pulled into Sprint 3
   # ═══════════════════════════════════════════════════════
-  epic-9: "backlog"
-  # 9-5 (Skip CI) — do FIRST as quick-spec/quick-dev warmup (one-line change, not a full story)
-  9-3-pull-to-refresh: "backlog"                 # P1: Small standalone — pull-down gesture triggers remote check
-  9-1-bottom-tab-navigation: "backlog"           # P0: Foundation — tab bar (Tasks, Completed, Archive)
-  9-2-archive-tab-and-data-model: "backlog"      # P0: Depends on 9-1 — proper isArchived field, Archive UI
-  9-4-push-to-branch-fallback: "backlog"         # P1: Independent — ask once, remember, auto-push to branch
-  9-6-move-task-to-another-repo: "backlog"       # P2: Lowest priority — move action in TaskDetailSheet
+  epic-9: "in-progress"  # Partially addressed — sync-trust stories only
+
+  # --- Done ---
+  9-3-pull-to-refresh: "done"                            # Completed 2026-03-20 — hook + indicator built
+  9-4-push-to-branch-fallback: "done"                    # Completed 2026-03-20 — branch fallback prompt + auto-remember
+
+  # --- Deferred post-MVP ---
+  9-1-bottom-tab-navigation: "deferred-post-mvp"         # Structural UI overhaul — v1.1 navigation redesign
+  9-2-archive-tab-and-data-model: "deferred-post-mvp"    # Depends on 9-1 — proper archive UX
+  9-6-move-task-to-another-repo: "deferred-post-mvp"     # Edge case — users can recreate in target repo for now
+  9-7-bulk-task-selection: "deferred-post-mvp"            # Productivity feature — individual task management works for MVP
 
   # ═══════════════════════════════════════════════════════
   # Epic 7: The Real App (DONE)
@@ -97,13 +102,13 @@ development_status:
   4-4-manual-sync-trigger: "done"
 
   # ═══════════════════════════════════════════════════════
-  # Paused Epics (resume after Epic 7)
+  # Paused Epics
   # ═══════════════════════════════════════════════════════
 
-  # Epic 5: The Village (PAUSED — resume after Epic 7)
+  # Epic 5: The Village (PAUSED — resume post-MVP for community features)
   epic-5: "paused"
   5-1-roadmap-teaser-data-model: "done"
-  5-2-feature-voting: "paused"
+  5-2-feature-voting: "paused"                           # Consider for v1.1 — let early users shape the roadmap
   5-3-donation-prompt: "paused"
   5-4-github-sponsor-setup: "paused"
 

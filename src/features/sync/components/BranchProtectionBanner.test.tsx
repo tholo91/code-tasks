@@ -131,4 +131,71 @@ describe('BranchProtectionBanner', () => {
 
     expect(screen.getByLabelText('Dismiss')).toBeInTheDocument()
   })
+
+  // === Fallback branch state tests ===
+
+  it('shows branch icon and "Syncing to branch" when fallbackBranch is set', () => {
+    render(
+      <BranchProtectionBanner
+        visible={true}
+        fallbackBranch="gitty/testuser"
+        onDismiss={vi.fn()}
+        onSwitchRepo={vi.fn()}
+        onChangeBranch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/Syncing to branch/)).toBeInTheDocument()
+    expect(screen.getByText('gitty/testuser')).toBeInTheDocument()
+    // Should NOT show the lock/warning text
+    expect(screen.queryByText(/Can't sync/)).not.toBeInTheDocument()
+  })
+
+  it('shows "Change" button when fallback is active', async () => {
+    const onChangeBranch = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <BranchProtectionBanner
+        visible={true}
+        fallbackBranch="gitty/testuser"
+        onDismiss={vi.fn()}
+        onSwitchRepo={vi.fn()}
+        onChangeBranch={onChangeBranch}
+      />,
+    )
+
+    const changeBtn = screen.getByTestId('banner-change-branch')
+    expect(changeBtn).toBeInTheDocument()
+    await user.click(changeBtn)
+    expect(onChangeBranch).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows lock + "Can\'t sync" when fallbackBranch is null', () => {
+    render(
+      <BranchProtectionBanner
+        visible={true}
+        fallbackBranch={null}
+        onDismiss={vi.fn()}
+        onSwitchRepo={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/Can't sync to this repo/)).toBeInTheDocument()
+    expect(screen.queryByText(/Syncing to branch/)).not.toBeInTheDocument()
+  })
+
+  it('does not show "Switch Repo" when fallback is active', () => {
+    render(
+      <BranchProtectionBanner
+        visible={true}
+        fallbackBranch="gitty/testuser"
+        onDismiss={vi.fn()}
+        onSwitchRepo={vi.fn()}
+        onChangeBranch={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByTestId('banner-switch-repo')).not.toBeInTheDocument()
+  })
 })

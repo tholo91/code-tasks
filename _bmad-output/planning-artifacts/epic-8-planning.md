@@ -3,7 +3,7 @@
 **Created:** 2026-03-17
 **Source:** Field-testing feedback from `captured-ideas-tholo91.md` (16 tasks captured by Thomas)
 **Process:** SM + Party Mode (PM John, UX Sally, Architect Winston, QA Quinn) analysis
-**Status:** Planning complete — ready for story creation
+**Status:** Nearly done — 10/12 stories shipped (2026-03-20). Card redesign (8-10) pending decision, per-repo AI instructions (8-7) deferred post-MVP.
 
 ---
 

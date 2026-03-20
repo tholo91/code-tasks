@@ -61,6 +61,33 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
 }
 
 /**
+ * Builds a human-readable feedback message from an ImportDiffSummary.
+ * Used for the post-import confirmation toast.
+ */
+export function buildImportFeedbackMessage(diff: ImportDiffSummary): string {
+  const parts: string[] = []
+
+  const totalCompleted = diff.completedByAgent + diff.archived
+  if (totalCompleted > 0) {
+    parts.push(`${totalCompleted} task${totalCompleted === 1 ? '' : 's'} completed`)
+  }
+  if (diff.updatedWithNotes > 0) {
+    parts.push(`${diff.updatedWithNotes} updated with notes`)
+  }
+  if (diff.newFromRemote > 0) {
+    parts.push(`${diff.newFromRemote} new from remote`)
+  }
+
+  const headline = parts.length > 0 ? parts.join(', ') + '.' : 'Nothing changed locally.'
+
+  if (diff.localSafeCount > 0) {
+    const verb = diff.localSafeCount === 1 ? 'is' : 'are'
+    return `${headline} Your ${diff.localSafeCount} idea${diff.localSafeCount === 1 ? '' : 's'} ${verb} safe.`
+  }
+  return headline
+}
+
+/**
  * Returns true if all counts in the diff summary are zero.
  */
 export function isAllZero(diff: ImportDiffSummary): boolean {
@@ -142,6 +169,18 @@ export function buildMergedTaskList(localTasks: Task[], remoteTasks: Task[]): Ta
       maxOrder++
       result.push({ ...remote, syncStatus: 'synced', order: maxOrder })
     }
+  }
+
+  // Safety guard: every local task ID must exist in the output
+  const resultIds = new Set(result.map((t) => t.id))
+  const missingIds = localTasks.filter((t) => !resultIds.has(t.id))
+  if (missingIds.length > 0) {
+    console.warn(
+      `[buildMergedTaskList] Safety guard triggered: ${missingIds.length} local task(s) missing from merge result. Returning local tasks + new remote tasks as fail-safe.`,
+    )
+    const localIds = new Set(localTasks.map((t) => t.id))
+    const remoteOnly = result.filter((t) => !localIds.has(t.id))
+    return [...localTasks, ...remoteOnly]
   }
 
   return result

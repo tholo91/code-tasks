@@ -71,8 +71,13 @@ export function SyncConflictSheet({ isOpen, repoFullName, username, onClose }: S
     if (isResolving) return
     setIsResolving(true)
     setSyncStatus('syncing')
+    const fallbackBranch = selectSyncBranch(repoFullName)(useSyncStore.getState())
     try {
-      const result = await syncPendingTasks({ allowConflict: true, maxRetries: 1 })
+      const result = await syncPendingTasks({ 
+        allowConflict: true, 
+        maxRetries: 1,
+        branch: fallbackBranch ?? undefined
+      })
       if (result.error) {
         setSyncStatus('error', result.error)
       } else {

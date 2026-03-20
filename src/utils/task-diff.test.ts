@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeImportDiff, buildMergedTaskList, isAllZero } from './task-diff'
+import { computeImportDiff, buildMergedTaskList, buildImportFeedbackMessage, isAllZero } from './task-diff'
 import type { Task } from '../types/task'
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -204,5 +204,74 @@ describe('buildMergedTaskList', () => {
     expect(result[0].order).toBe(5)
     expect(result[0].isImportant).toBe(true)
     expect(result[0].createdAt).toBe('2026-01-15T00:00:00.000Z')
+  })
+
+  it('never returns fewer tasks than the local input (safety guard)', () => {
+    const local = [
+      makeTask({ id: 'a', title: 'Task A', syncStatus: 'synced' }),
+      makeTask({ id: 'b', title: 'Task B', syncStatus: 'pending' }),
+      makeTask({ id: 'c', title: 'Task C', syncStatus: 'synced' }),
+    ]
+    const remote = [makeTask({ title: 'Task A', isCompleted: true })]
+    const result = buildMergedTaskList(local, remote)
+    expect(result.length).toBeGreaterThanOrEqual(local.length)
+    // Every local task ID must exist in result
+    const resultIds = new Set(result.map((t) => t.id))
+    for (const t of local) {
+      expect(resultIds.has(t.id)).toBe(true)
+    }
+  })
+
+  it('preserves all local IDs even with empty remote', () => {
+    const local = [
+      makeTask({ id: 'x', title: 'Idea 1', syncStatus: 'pending' }),
+      makeTask({ id: 'y', title: 'Idea 2', syncStatus: 'synced' }),
+    ]
+    const result = buildMergedTaskList(local, [])
+    const resultIds = new Set(result.map((t) => t.id))
+    expect(resultIds.has('x')).toBe(true)
+    expect(resultIds.has('y')).toBe(true)
+  })
+})
+
+describe('buildImportFeedbackMessage', () => {
+  it('shows completed tasks and safe ideas', () => {
+    const msg = buildImportFeedbackMessage({
+      completedByAgent: 2, archived: 1, updatedWithNotes: 0,
+      processedByAdded: 0, newFromRemote: 0, localSafeCount: 3,
+    })
+    expect(msg).toBe('3 tasks completed. Your 3 ideas are safe.')
+  })
+
+  it('shows new from remote', () => {
+    const msg = buildImportFeedbackMessage({
+      completedByAgent: 0, archived: 0, updatedWithNotes: 0,
+      processedByAdded: 0, newFromRemote: 1, localSafeCount: 0,
+    })
+    expect(msg).toBe('1 new from remote.')
+  })
+
+  it('shows nothing changed when all zeros', () => {
+    const msg = buildImportFeedbackMessage({
+      completedByAgent: 0, archived: 0, updatedWithNotes: 0,
+      processedByAdded: 0, newFromRemote: 0, localSafeCount: 0,
+    })
+    expect(msg).toBe('Nothing changed locally.')
+  })
+
+  it('appends safe ideas count when > 0', () => {
+    const msg = buildImportFeedbackMessage({
+      completedByAgent: 0, archived: 0, updatedWithNotes: 0,
+      processedByAdded: 0, newFromRemote: 0, localSafeCount: 5,
+    })
+    expect(msg).toBe('Nothing changed locally. Your 5 ideas are safe.')
+  })
+
+  it('uses singular for 1 idea', () => {
+    const msg = buildImportFeedbackMessage({
+      completedByAgent: 1, archived: 0, updatedWithNotes: 0,
+      processedByAdded: 0, newFromRemote: 0, localSafeCount: 1,
+    })
+    expect(msg).toBe('1 task completed. Your 1 idea is safe.')
   })
 })

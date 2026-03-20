@@ -1,6 +1,7 @@
 # Story 8.7: Per-Repo AI Instructions in Settings
 
-Status: ready-for-dev
+Status: deferred-post-mvp
+<!-- Deferred 2026-03-20: Power-user feature, not needed for MVP launch. Default AI header works. Revisit for v1.1. -->
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

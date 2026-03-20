@@ -1,6 +1,6 @@
 # Story 8.6: Sync Result Feedback
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

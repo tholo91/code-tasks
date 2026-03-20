@@ -84,8 +84,12 @@ CR4 (GitHub Sponsor Setup): Epic 5 - The Village
 
 ## Epic List (Priority Order)
 
-### Epic 8: The Polish (Field-Testing UX Hardening) ← NEXT FOCUS
-Transform Gitty from "functional" to "delightful". 9 stories derived from real field-testing feedback by tholo91. Closes the gap to Things-quality UX: sticky context header, visual priority, completed section behavior, creation flow polish, sort/filter power, and settings features.
+### Epic 9: The Safe Haven (Sync Trust & Navigation) — PARTIALLY DONE, REST DEFERRED
+Ensure nothing is ever lost on the phone. Cherry-picked for MVP: pull-to-refresh (9-3) and push-to-branch fallback (9-4). Remaining stories (bottom tab navigation, archive, move-task, bulk selection) deferred to v1.1.
+**FRs covered:** FR8 (sync reliability), FR10 (task management UX)
+
+### Epic 8: The Polish (Field-Testing UX Hardening) — NEARLY DONE
+Transform Gitty from "functional" to "delightful". 12 stories derived from real field-testing feedback by tholo91. Closes the gap to Things-quality UX: sticky context header, visual priority, completed section behavior, creation flow polish, sort/filter power, and settings features. 10/12 stories done, 1 pending decision (card redesign), 1 deferred (per-repo AI instructions).
 **FRs covered:** FR4 (creation polish), FR10 (task management UX), FR12 (per-repo settings)
 
 ### Epic 7: The Real App (Task Management UX Overhaul) — DONE
@@ -665,9 +669,9 @@ So that visitors on GitHub can easily find ways to support the project.
 
 ---
 
-## Epic 8: The Polish (Field-Testing UX Hardening) — CURRENT FOCUS
+## Epic 8: The Polish (Field-Testing UX Hardening) — NEARLY DONE
 
-Real field-testing feedback from tholo91 (captured in `captured-ideas-tholo91.md`). Transforms Gitty from "functional" to "delightful" — closing the gap to Things-quality UX. 9 stories, all `ready-for-dev` as of 2026-03-17.
+Real field-testing feedback from tholo91 (captured in `captured-ideas-tholo91.md`). Transforms Gitty from "functional" to "delightful" — closing the gap to Things-quality UX. 12 stories total. 10 done, 1 pending decision (8-10 card redesign), 1 deferred post-MVP (8-7 per-repo AI instructions).
 
 **Source:** Party Mode discussion (PM John, UX Sally, Architect Winston, QA Quinn) + SM planning.
 **Story files:** `_bmad-output/implementation-artifacts/8-*.md`
@@ -904,3 +908,97 @@ So that I know exactly what I'm allowed to do with the task list.
 - Files: `markdown-templates.ts`, `markdown-templates.test.ts`
 
 **Priority:** P2 (do first — smallest warmup story)
+
+---
+
+## Epic 9: The Safe Haven (Sync Trust & Navigation) — PARTIALLY DONE, REST DEFERRED
+
+Theme: "Nothing should ever be lost on the phone." Ensures sync operations are trustworthy and navigation scales beyond a single list view.
+
+**MVP scope (done):** Pull-to-refresh (9-3), Push-to-branch fallback (9-4)
+**Deferred to v1.1:** Bottom tab navigation (9-1), Archive tab (9-2), Move task to repo (9-6), Bulk task selection (9-7)
+
+**Story files:** `_bmad-output/implementation-artifacts/9-*.md`
+
+### Story 9.3: Pull to Refresh — DONE
+
+As a mobile user,
+I want to pull down on the task list to check for remote changes,
+So that I can quickly see if an AI agent or VS Code session has updated my tasks without hunting for a button.
+
+**Acceptance Criteria:**
+- Pull down ≥80px triggers a read-only remote change check (fetch only, no push)
+- Shows "Check for updates" text during pull, cancellable by pushing back
+- If changes detected, SyncImportBanner appears with diff summary
+- If no changes, "Up to date" indicator for ~1.5s
+- Ignored when offline, during active sync, or within 15s cooldown
+
+**Technical Notes:**
+- Custom `usePullToRefresh` hook with threshold, cooldown, and disabled guards
+- `PullToRefreshIndicator` component with pull/refresh/success states
+- Files: `usePullToRefresh.ts`, `PullToRefreshIndicator.tsx`, `App.tsx`
+
+**Priority:** P1
+
+---
+
+### Story 9.4: Push to Branch Fallback — DONE
+
+As a user with a branch-protected repository,
+I want Gitty to automatically push my tasks to a fallback branch instead of failing,
+So that my tasks are safely synced to GitHub even when the default branch blocks direct pushes.
+
+**Acceptance Criteria:**
+- On branch-protection push failure, prompt appears suggesting `gitty/{username}` branch
+- User can accept (branch created + push) or dismiss
+- Branch choice remembered per repo — no re-prompting on subsequent syncs
+- BranchProtectionBanner shows active fallback branch + "Change" option
+- If fallback push also fails, standard error flow shown (no infinite loop)
+
+**Technical Notes:**
+- `repoSyncBranches: Record<string, string>` in store with persistence
+- `BranchFallbackPrompt.tsx` bottom sheet for branch selection
+- `sync-service.ts` extended with `getDefaultBranch`, `ensureBranchExists`, branch-aware sync
+- Files: `useSyncStore.ts`, `sync-service.ts`, `BranchFallbackPrompt.tsx`, `BranchProtectionBanner.tsx`, `SyncFAB.tsx`, `App.tsx`
+
+**Priority:** P1
+
+---
+
+### Story 9.1: Bottom Tab Navigation — DEFERRED POST-MVP
+
+As a user with many tasks across states,
+I want a bottom tab bar (Tasks, Completed, Archive),
+So that I can navigate between task states without scrolling through a single long list.
+
+**Priority:** P0 (for v1.1 — structural foundation)
+
+---
+
+### Story 9.2: Archive Tab & Data Model — DEFERRED POST-MVP
+
+As a user,
+I want completed tasks to eventually move to an Archive tab,
+So that my completed list stays focused on recent wins while nothing is ever lost.
+
+**Priority:** P0 (for v1.1 — depends on 9-1)
+
+---
+
+### Story 9.6: Move Task to Another Repo — DEFERRED POST-MVP
+
+As a user,
+I want to move a task from one repository to another,
+So that I can reorganize ideas as project scope evolves.
+
+**Priority:** P2
+
+---
+
+### Story 9.7: Bulk Task Selection — DEFERRED POST-MVP
+
+As a user,
+I want to select multiple tasks and perform batch actions (complete, delete, move),
+So that I can manage groups of tasks efficiently.
+
+**Priority:** P2

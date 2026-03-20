@@ -43,6 +43,7 @@ export interface RemoteTasksResult {
 export interface SyncOptions {
   allowConflict?: boolean
   maxRetries?: number
+  branch?: string
 }
 
 /**
@@ -54,13 +55,16 @@ async function getFileContent(
   owner: string,
   repo: string,
   path: string,
+  ref?: string,
 ): Promise<FileContent | null> {
   try {
-    const { data } = await octokit.rest.repos.getContent({
+    const params: { owner: string; repo: string; path: string; ref?: string } = {
       owner,
       repo,
       path,
-    })
+    }
+    if (ref) params.ref = ref
+    const { data } = await octokit.rest.repos.getContent(params)
 
     if ('content' in data && 'sha' in data) {
       const content = atob(data.content.replace(/\n/g, ''))
@@ -89,9 +93,10 @@ async function commitTasks(
   tasks: Task[],
   username: string,
   pendingCount?: number,
+  branch?: string,
 ): Promise<string | null> {
   for (let attempt = 0; attempt < MAX_CONFLICT_RETRIES; attempt++) {
-    const existing = await getFileContent(octokit, owner, repo, filePath)
+    const existing = await getFileContent(octokit, owner, repo, filePath, branch)
 
     const updatedContent = buildFileContent(
       existing?.content ?? null,
@@ -108,6 +113,7 @@ async function commitTasks(
         message: string
         content: string
         sha?: string
+        branch?: string
       } = {
         owner,
         repo,
@@ -118,6 +124,10 @@ async function commitTasks(
 
       if (sha) {
         commitParams.sha = sha
+      }
+
+      if (branch) {
+        commitParams.branch = branch
       }
 
       const response = await octokit.rest.repos.createOrUpdateFileContents(commitParams)
@@ -186,6 +196,42 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 async function delay(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function getDefaultBranch(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+): Promise<string> {
+  const { data } = await octokit.rest.repos.get({ owner, repo })
+  return data.default_branch
+}
+
+async function ensureBranchExists(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branchName: string,
+  defaultBranch: string,
+): Promise<void> {
+  try {
+    await octokit.rest.git.getRef({ owner, repo, ref: `heads/${branchName}` })
+    // Branch already exists
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'status' in err && err.status === 404) {
+      // Branch doesn't exist — create from default branch HEAD
+      const { data: refData } = await octokit.rest.git.getRef({
+        owner, repo, ref: `heads/${defaultBranch}`,
+      })
+      await octokit.rest.git.createRef({
+        owner, repo,
+        ref: `refs/heads/${branchName}`,
+        sha: refData.object.sha,
+      })
+    } else {
+      throw err
+    }
+  }
 }
 
 export function classifySyncError(err: unknown): {
@@ -284,13 +330,20 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
 
   const repoKey = selectedRepo.fullName.toLowerCase()
   const syncMeta = repoSyncMeta[repoKey]
+  const targetBranch = options.branch
 
-  // Get existing file for SHA (content will be discarded — full rebuild)
-  const existing = await getFileContent(octokit, owner, repo, filePath)
+  // If pushing to a fallback branch, ensure it exists
+  if (targetBranch) {
+    const defaultBranch = await getDefaultBranch(octokit, owner, repo)
+    await ensureBranchExists(octokit, owner, repo, targetBranch, defaultBranch)
+  }
+
+  // Get existing file for SHA — use branch ref if targeting a fallback branch
+  const existing = await getFileContent(octokit, owner, repo, filePath, targetBranch)
   const remoteSha = existing?.sha ?? null
 
-  // Conflict detection
-  if (!options.allowConflict && syncMeta?.lastSyncedSha) {
+  // Conflict detection (skip for branch fallback — branch is append-only for Gitty)
+  if (!targetBranch && !options.allowConflict && syncMeta?.lastSyncedSha) {
     if (remoteSha !== syncMeta.lastSyncedSha) {
       setRepoSyncMeta(selectedRepo.fullName, {
         conflict: {
@@ -323,7 +376,7 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   for (let conflictAttempt = 0; conflictAttempt < MAX_CONFLICT_RETRIES; conflictAttempt++) {
     const currentExisting = conflictAttempt === 0
       ? existing
-      : await getFileContent(octokit, owner, repo, filePath)
+      : await getFileContent(octokit, owner, repo, filePath, targetBranch)
 
     try {
       const commitParams: {
@@ -333,6 +386,7 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
         message: string
         content: string
         sha?: string
+        branch?: string
       } = {
         owner,
         repo,
@@ -343,6 +397,9 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
 
       if (currentExisting?.sha) {
         commitParams.sha = currentExisting.sha
+      }
+      if (targetBranch) {
+        commitParams.branch = targetBranch
       }
 
       const response = await octokit.rest.repos.createOrUpdateFileContents(commitParams)
@@ -522,11 +579,18 @@ async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
 
   const repoKey = selectedRepo.fullName.toLowerCase()
   const syncMeta = repoSyncMeta[repoKey]
+  const targetBranch = options.branch
 
-  const existing = await getFileContent(octokit, owner, repo, filePath)
+  // If pushing to a fallback branch, ensure it exists
+  if (targetBranch) {
+    const defaultBranch = await getDefaultBranch(octokit, owner, repo)
+    await ensureBranchExists(octokit, owner, repo, targetBranch, defaultBranch)
+  }
+
+  const existing = await getFileContent(octokit, owner, repo, filePath, targetBranch)
   const remoteSha = existing?.sha ?? null
 
-  if (!options.allowConflict && syncMeta?.lastSyncedSha) {
+  if (!targetBranch && !options.allowConflict && syncMeta?.lastSyncedSha) {
     if (remoteSha !== syncMeta.lastSyncedSha) {
       setRepoSyncMeta(selectedRepo.fullName, {
         conflict: {
@@ -553,6 +617,7 @@ async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
     sortedTasks,
     user.login,
     pendingTasks.length,
+    targetBranch,
   )
 
   setRepoSyncMeta(selectedRepo.fullName, {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges } from '../../../stores/useSyncStore'
+import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges, selectSyncBranch } from '../../../stores/useSyncStore'
 import { syncAllRepoTasks, classifySyncError } from '../../../services/github/sync-service'
 import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
 import { TRANSITION_SPRING, TRANSITION_FAST, successFlash } from '../../../config/motion'
@@ -11,6 +11,9 @@ export function SyncFAB() {
   const hasUnsyncedChanges = useSyncStore(selectHasUnsyncedChanges)
   const pendingSyncCount = useSyncStore(selectPendingSyncCount)
   const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
+  const selectedRepo = useSyncStore((s) => s.selectedRepo)
+  const repoSyncBranches = useSyncStore((s) => s.repoSyncBranches)
+  const fallbackBranch = selectedRepo ? repoSyncBranches[selectedRepo.fullName.toLowerCase()] : null
   const isConflict = syncEngineStatus === 'conflict'
 
   const [fabState, setFabState] = useState<FabState>('pending')
@@ -42,7 +45,9 @@ export function SyncFAB() {
     setSyncStatus('syncing')
 
     try {
-      const result = await syncAllRepoTasks({ maxRetries: 2 })
+      const syncOptions: { maxRetries: number; branch?: string } = { maxRetries: 2 }
+      if (fallbackBranch) syncOptions.branch = fallbackBranch
+      const result = await syncAllRepoTasks(syncOptions)
       if (result.status === 'conflict') {
         setSyncStatus('conflict', result.error)
         setFabState('pending')

@@ -1,6 +1,6 @@
 # Story 8.8: About Gitty in Settings
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -16,28 +16,30 @@ so that I can read the backstory, understand what Gitty is for, and easily star 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add "About Gitty" row to SettingsSheet (AC: #1)
-  - [ ] Add `onOpenAbout` prop to `SettingsSheetProps` interface
-  - [ ] Add an "About Gitty" button row below the existing GitHub row, matching the existing Roadmap row pattern (icon, label, chevron)
-  - [ ] Wire the button: call `onClose()` then `onOpenAbout()` — same pattern as the Roadmap row
-- [ ] Task 2: Create `AboutGittyView.tsx` presentational component (AC: #1, #2, #3)
-  - [ ] Scaffold component at `src/features/community/components/AboutGittyView.tsx`
-  - [ ] Use `motion.div` with `pageVariants` + `TRANSITION_NORMAL` (matching `RoadmapView` pattern)
-  - [ ] Render: header with title "About Gitty" + close button (44x44px touch target)
-  - [ ] Render: app name and tagline (e.g. "Gitty — task capture for developers")
-  - [ ] Render: "Story of Gitty" paragraph with placeholder text (see Dev Notes)
-  - [ ] Render: "⭐ Star on GitHub" `<a>` tag pointing to `https://github.com/tholo91/code-tasks` with `target="_blank" rel="noopener noreferrer"`
-  - [ ] Render: app version label (read from a constants file or display `v0.0.1` matching existing `SettingsSheet` version label)
-  - [ ] Apply `useReducedMotion()` fallback for instant transitions
-- [ ] Task 3: Wire `AboutGittyView` into `App.tsx` (AC: #1, #3)
-  - [ ] Add `showAbout` boolean state to `App.tsx` (alongside existing `showRoadmap`, `showSettings` state)
-  - [ ] Pass `onOpenAbout` handler to `SettingsSheet`
-  - [ ] Render `AboutGittyView` inside `AnimatePresence` using the same slide-up pattern as `RoadmapView`
-- [ ] Task 4: Write render test for `AboutGittyView` (AC: #1, #2)
-  - [ ] Create `src/features/community/components/AboutGittyView.test.tsx`
-  - [ ] Test: component renders app name/tagline
-  - [ ] Test: "Star on GitHub" link has correct `href` and `target="_blank"`
-  - [ ] Test: close button is present and calls `onClose`
+- [x] Task 1: Add "About Gitty" row to SettingsSheet (AC: #1)
+  - [x] Add `onOpenAbout` prop to `SettingsSheetProps` interface
+  - [x] Add an "About Gitty" button row below the existing GitHub row, matching the existing Roadmap row pattern (icon, label, chevron)
+  - [x] Wire the button: call `onClose()` then `onOpenAbout()` — same pattern as the Roadmap row
+- [x] Task 2: Create `AboutGittyView.tsx` presentational component (AC: #1, #2, #3)
+  - [x] Scaffold component at `src/features/community/components/AboutGittyView.tsx`
+  - [x] Use `motion.div` with `pageVariants` + `TRANSITION_NORMAL` (matching `RoadmapView` pattern)
+  - [x] Render: header with title "About Gitty" + close button (44x44px touch target)
+  - [x] Render: app name and tagline (e.g. "Gitty — task capture for developers")
+  - [x] Render: "Story of Gitty" paragraph with placeholder text (see Dev Notes)
+  - [x] Render: "⭐ Star on GitHub" `<a>` tag pointing to `https://github.com/tholo91/code-tasks` with `target="_blank" rel="noopener noreferrer"`
+  - [x] Render: app version label (matching existing SettingsSheet static string `code-tasks v0.0.1`)
+  - [x] Apply `useReducedMotion()` fallback for instant transitions
+- [x] Task 3: Wire `AboutGittyView` into `App.tsx` (AC: #1, #3)
+  - [x] Add `showAbout` boolean state to `App.tsx` (alongside existing `showRoadmap`, `showSettings` state)
+  - [x] Pass `onOpenAbout` handler to `SettingsSheet`
+  - [x] Render `AboutGittyView` inside `AnimatePresence` using the same slide-up pattern as `RoadmapView`
+- [x] Task 4: Write render test for `AboutGittyView` (AC: #1, #2)
+  - [x] Create `src/features/community/components/AboutGittyView.test.tsx`
+  - [x] Test: component renders app name/tagline
+  - [x] Test: "Star on GitHub" link has correct `href` and `target="_blank"`
+  - [x] Test: "Report an Issue" link has correct `href` and `target="_blank"`
+  - [x] Test: close button is present and calls `onClose`
+  - [x] Test: version string renders
 
 ## Dev Notes
 
@@ -75,4 +77,14 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- All 4 tasks complete. 5 new tests added, all passing.
+- `useReducedMotion()` applied via conditional variants (instant vs pageVariants).
+- "Report an Issue" link included and tested (was in AC #4, not in original task list — added to task 4 subtasks).
+- Pre-existing `AuthForm.test.tsx` failure unrelated to this story (text assertion mismatch from prior work).
+
 ### File List
+
+- `src/features/community/components/AboutGittyView.tsx` (new)
+- `src/features/community/components/AboutGittyView.test.tsx` (new)
+- `src/components/layout/SettingsSheet.tsx` (modified — added `onOpenAbout` prop + About Gitty menu item)
+- `src/App.tsx` (modified — import, `showAbout` state, `onOpenAbout` prop, About Gitty overlay)

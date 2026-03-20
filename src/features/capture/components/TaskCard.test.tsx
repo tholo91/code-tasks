@@ -41,22 +41,20 @@ describe('TaskCard', () => {
     expect(screen.queryByTestId('task-body-test-uuid-1')).not.toBeInTheDocument()
   })
 
-  it('shows sync status dot indicator', () => {
+  it('shows pending sync dot when syncStatus is pending', () => {
     render(<TaskCard task={createTask({ syncStatus: 'pending' })} />)
-    const dot = screen.getByTestId('sync-icon-test-uuid-1')
+    const dot = screen.getByTestId('sync-pending-test-uuid-1')
     expect(dot).toBeInTheDocument()
     expect(dot.title).toBe('Sync pending')
   })
 
-  it('shows synced dot indicator for synced tasks', () => {
+  it('does not show sync indicator when synced', () => {
     render(
       <TaskCard
         task={createTask({ syncStatus: 'synced', githubIssueNumber: 42 })}
       />,
     )
-    const dot = screen.getByTestId('sync-icon-test-uuid-1')
-    expect(dot).toBeInTheDocument()
-    expect(dot.title).toBe('Synced to GitHub')
+    expect(screen.queryByTestId('sync-pending-test-uuid-1')).not.toBeInTheDocument()
   })
 
   it('renders checkbox with correct data-testid', () => {
@@ -99,22 +97,31 @@ describe('TaskCard', () => {
     expect(onTap).not.toHaveBeenCalled()
   })
 
-  it('applies danger left-border when task.isImportant is true', () => {
+  it('shows flag icon when task.isImportant is true', () => {
     render(<TaskCard task={createTask({ isImportant: true })} />)
-    const card = screen.getByTestId('task-card-test-uuid-1')
-    expect(card.style.borderLeft).toBe('3px solid var(--color-danger)')
+    expect(screen.getByTestId('task-flag-test-uuid-1')).toBeInTheDocument()
   })
 
-  it('does NOT apply danger left-border when task.isImportant is false', () => {
+  it('does not show flag icon when task.isImportant is false', () => {
     render(<TaskCard task={createTask({ isImportant: false })} />)
-    const card = screen.getByTestId('task-card-test-uuid-1')
-    expect(card.style.borderLeft).not.toContain('var(--color-danger)')
+    expect(screen.queryByTestId('task-flag-test-uuid-1')).not.toBeInTheDocument()
   })
 
-  it('suppresses danger left-border when task.isImportant is true but isNewest is true', () => {
+  it('shows flag icon even when isNewest is true', () => {
     render(<TaskCard task={createTask({ isImportant: true })} isNewest={true} />)
-    const card = screen.getByTestId('task-card-test-uuid-1')
-    expect(card.style.borderLeft).not.toBe('3px solid var(--color-danger)')
+    expect(screen.getByTestId('task-flag-test-uuid-1')).toBeInTheDocument()
+  })
+
+  it('body preview uses text-caption class', () => {
+    render(<TaskCard task={createTask()} />)
+    const body = screen.getByTestId('task-body-test-uuid-1')
+    expect(body.className).toContain('text-caption')
+  })
+
+  it('body preview has reduced opacity when completed', () => {
+    render(<TaskCard task={createTask({ isCompleted: true, completedAt: '2026-03-14T12:00:00Z' })} />)
+    const body = screen.getByTestId('task-body-test-uuid-1')
+    expect(body.style.opacity).toBe('0.5')
   })
 
   it('renders "Processed by Claude" label when task.processedBy is set', () => {

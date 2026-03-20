@@ -78,7 +78,7 @@ describe('SyncImportBanner', () => {
         diffSummary={null}
       />
     )
-    expect(screen.getByText('Want the latest status?')).toBeInTheDocument()
+    expect(screen.getByText('New updates available from remote.')).toBeInTheDocument()
   })
 
   it('does not render diff summary for variant initial-import', () => {
@@ -93,5 +93,30 @@ describe('SyncImportBanner', () => {
     expect(screen.queryByText(/new ideas are safe/)).not.toBeInTheDocument()
     // Should show normal initial import UI
     expect(screen.getByText(/5 tasks found in owner\/repo/)).toBeInTheDocument()
+  })
+
+  it('shows safe wording for initial-import variant', () => {
+    render(
+      <SyncImportBanner {...baseProps} variant="initial-import" />
+    )
+    expect(screen.getByText(/Your local list is empty/)).toBeInTheDocument()
+  })
+
+  it('renders "Apply updates" button for remote-update variant', () => {
+    render(
+      <SyncImportBanner
+        {...baseProps}
+        variant="remote-update"
+        diffSummary={makeDiff({ completedByAgent: 1 })}
+      />
+    )
+    expect(screen.getByText('Apply updates')).toBeInTheDocument()
+  })
+
+  it('renders "Load tasks" button for initial-import variant', () => {
+    render(
+      <SyncImportBanner {...baseProps} variant="initial-import" />
+    )
+    expect(screen.getByText('Load tasks')).toBeInTheDocument()
   })
 })

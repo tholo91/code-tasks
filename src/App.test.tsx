@@ -9,6 +9,7 @@ vi.mock('./services/github/sync-service', () => ({
   fetchRemoteTasksForRepo: vi.fn().mockResolvedValue({ tasks: [], sha: null }),
   fetchRemoteFileContent: vi.fn().mockResolvedValue({ content: null, sha: null }),
   syncPendingTasks: vi.fn().mockResolvedValue({ syncedCount: 0 }),
+  syncAllRepoTasks: vi.fn().mockResolvedValue({ syncedCount: 0 }),
 }))
 
 // Mock the store
@@ -22,6 +23,7 @@ vi.mock('./stores/useSyncStore', () => ({
     setState: vi.fn(),
   }),
   selectPendingSyncCount: vi.fn(() => 0),
+  selectSyncBranch: vi.fn(() => () => null),
 }))
 
 // Mock useNetworkStatus
@@ -149,6 +151,15 @@ vi.mock('./features/capture/components/CreateTaskFAB', () => ({
 vi.mock('./features/sync/components/SyncFAB', () => ({
   SyncFAB: () => null,
 }))
+vi.mock('./components/ui/PullToRefreshIndicator', () => ({
+  PullToRefreshIndicator: ({ pullDistance, isRefreshing, result }: any) => (
+    <div data-testid="pull-to-refresh-indicator">
+      {pullDistance > 0 && <span>Pulling: {pullDistance}</span>}
+      {isRefreshing && <span>Checking…</span>}
+      {result === 'up-to-date' && <span>Up to date</span>}
+    </div>
+  ),
+}))
 vi.mock('./features/capture/components/TaskDetailSheet', () => ({
   TaskDetailSheet: () => null,
 }))
@@ -253,6 +264,24 @@ describe('App', () => {
     expect(screen.getByText(/code-tasks/i)).toBeInTheDocument()
     expect(screen.getByTestId('selected-repo')).toHaveTextContent('testuser/repo')
     expect(screen.getByTestId('task-search-input')).toBeInTheDocument()
+  })
+
+  it('shows empty state with inviting text when no tasks exist', async () => {
+    mockStoreWith({
+      isAuthenticated: true,
+      user: { login: 'testuser', avatarUrl: 'https://example.com/a.png', name: 'Test' },
+      token: 'ghp_token',
+      selectedRepo: { id: 1, fullName: 'testuser/repo', owner: 'testuser' },
+      tasks: [],
+    })
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.getByText('Capture your first thought')).toBeInTheDocument()
+    expect(screen.getByText('Tap + to get started')).toBeInTheDocument()
+    expect(screen.getByTestId('empty-state')).toBeInTheDocument()
   })
 
   it('filters tasks based on search query', async () => {

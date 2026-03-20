@@ -54,6 +54,7 @@ interface SyncState {
   authError: string | null
   hasPendingDeletions: boolean
   repoSortModes: Record<string, SortMode>
+  repoSyncBranches: Record<string, string>
 
   setAuth: (token: string, user: GitHubUser) => Promise<void>
   clearAuth: (error?: string) => void
@@ -75,6 +76,7 @@ interface SyncState {
   replaceTasksForRepo: (repoFullName: string, importedTasks: Task[]) => void
   mergeRemoteTasksForRepo: (repoFullName: string, remoteTasks: Task[]) => void
   setRepoSortMode: (repoFullName: string, mode: SortMode) => void
+  setRepoSyncBranch: (repoFullName: string, branch: string | null) => void
 }
 
 /**
@@ -139,6 +141,9 @@ export const selectPendingSyncCountsByRepo = (state: SyncState) => {
   return counts
 }
 
+export const selectSyncBranch = (repoFullName: string) => (state: SyncState) =>
+  state.repoSyncBranches[repoFullName.toLowerCase()] ?? null
+
 export const selectPendingSyncCountAllRepos = (state: SyncState) => {
   const counts = selectPendingSyncCountsByRepo(state)
   return Object.values(counts).reduce((sum, count) => sum + count, 0)
@@ -162,6 +167,7 @@ export const useSyncStore = create<SyncState>()(
       authError: null,
       hasPendingDeletions: false,
       repoSortModes: {},
+      repoSyncBranches: {},
 
       setAuth: async (token: string, user: GitHubUser) => {
         try {
@@ -649,6 +655,19 @@ export const useSyncStore = create<SyncState>()(
           repoSortModes: { ...state.repoSortModes, [key]: mode },
         }))
       },
+
+      setRepoSyncBranch: (repoFullName: string, branch: string | null) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => {
+          const updated = { ...state.repoSyncBranches }
+          if (branch) {
+            updated[key] = branch
+          } else {
+            delete updated[key]
+          }
+          return { repoSyncBranches: updated }
+        })
+      },
     }),
     {
       name: 'code-tasks:store',
@@ -662,6 +681,7 @@ export const useSyncStore = create<SyncState>()(
         lastSyncedAt: state.lastSyncedAt,
         repoSyncMeta: state.repoSyncMeta,
         repoSortModes: state.repoSortModes,
+        repoSyncBranches: state.repoSyncBranches,
       }),
       skipHydration: true,
     },
