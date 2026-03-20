@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges, selectSyncBranch } from '../../../stores/useSyncStore'
+import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges } from '../../../stores/useSyncStore'
 import { syncAllRepoTasks, classifySyncError } from '../../../services/github/sync-service'
 import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
 import { TRANSITION_SPRING, TRANSITION_FAST, successFlash } from '../../../config/motion'

@@ -26,7 +26,8 @@ export function SyncConflictBanner() {
     setIsResolving(true)
 
     const { setSyncStatus, updateLastSyncedAt } = useSyncStore.getState()
-    const fallbackBranch = selectedRepo ? selectSyncBranch(selectedRepo.fullName)(useSyncStore.getState()) : null
+    const repoSyncBranches = useSyncStore.getState().repoSyncBranches
+    const fallbackBranch = selectedRepo ? repoSyncBranches[selectedRepo.fullName.toLowerCase()] ?? null : null
     setSyncStatus('syncing')
 
     try {
