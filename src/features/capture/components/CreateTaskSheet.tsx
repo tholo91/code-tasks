@@ -164,6 +164,7 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
             />
             <motion.button
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 setIsImportant(!isImportant)
                 triggerSelectionHaptic()

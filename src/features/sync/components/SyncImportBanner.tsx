@@ -1,17 +1,33 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { TRANSITION_NORMAL } from '../../../config/motion'
+import type { ImportDiffSummary } from '../../../utils/task-diff'
 
 interface SyncImportBannerProps {
   repoFullName: string
   remoteCount: number
   isImporting: boolean
   variant?: 'initial-import' | 'remote-update'
+  diffSummary?: ImportDiffSummary | null
   onImport: () => void
   onDismiss: () => void
 }
 
-export function SyncImportBanner({ repoFullName, remoteCount, isImporting, variant = 'initial-import', onImport, onDismiss }: SyncImportBannerProps) {
+function buildPrimaryLine(diff: ImportDiffSummary): string {
+  if (diff.completedByAgent > 0) {
+    return `Agent completed ${diff.completedByAgent} task${diff.completedByAgent === 1 ? '' : 's'}`
+  }
+  if (diff.updatedWithNotes > 0) {
+    return `${diff.updatedWithNotes} task${diff.updatedWithNotes === 1 ? '' : 's'} updated with notes`
+  }
+  if (diff.newFromRemote > 0) {
+    return `${diff.newFromRemote} new task${diff.newFromRemote === 1 ? '' : 's'} from remote`
+  }
+  return 'Remote changes detected'
+}
+
+export function SyncImportBanner({ repoFullName, remoteCount, isImporting, variant = 'initial-import', diffSummary, onImport, onDismiss }: SyncImportBannerProps) {
   const isRemoteUpdate = variant === 'remote-update'
+  const shouldReduceMotion = useReducedMotion()
 
   return (
     <AnimatePresence>
@@ -19,7 +35,7 @@ export function SyncImportBanner({ repoFullName, remoteCount, isImporting, varia
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -24, opacity: 0 }}
-        transition={TRANSITION_NORMAL}
+        transition={shouldReduceMotion ? { duration: 0 } : TRANSITION_NORMAL}
         className="fixed left-0 right-0 top-24 z-40 px-4"
         data-testid="sync-import-banner"
       >
@@ -34,15 +50,26 @@ export function SyncImportBanner({ repoFullName, remoteCount, isImporting, varia
             <span className="text-label font-semibold uppercase tracking-wider" style={{ color: 'var(--color-info)' }}>
               {isRemoteUpdate ? 'Updates on main' : 'Import Available'}
             </span>
-            <span className="text-body" style={{ color: 'var(--color-text-primary)' }}>
-              {isRemoteUpdate
-                ? 'Want the latest status?'
-                : `${remoteCount} task${remoteCount === 1 ? '' : 's'} found in ${repoFullName}.`}
-            </span>
-            {!isRemoteUpdate && (
-              <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                Importing will overwrite your local list for this repo.
-              </span>
+            {isRemoteUpdate ? (
+              <>
+                <span className="text-caption" style={{ color: 'var(--color-text-primary)' }}>
+                  {diffSummary ? buildPrimaryLine(diffSummary) : 'Want the latest status?'}
+                </span>
+                {diffSummary && diffSummary.localSafeCount > 0 && (
+                  <span className="text-caption" style={{ color: 'var(--color-success)' }}>
+                    {`Your ${diffSummary.localSafeCount} new idea${diffSummary.localSafeCount === 1 ? '' : 's'} are safe`}
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-body" style={{ color: 'var(--color-text-primary)' }}>
+                  {`${remoteCount} task${remoteCount === 1 ? '' : 's'} found in ${repoFullName}.`}
+                </span>
+                <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                  Importing will overwrite your local list for this repo.
+                </span>
+              </>
             )}
           </div>
           <div className="flex items-center justify-end gap-2">

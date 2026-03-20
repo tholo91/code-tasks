@@ -27,6 +27,8 @@ import { TRANSITION_SHEET } from './config/motion'
 import { SheetHandle } from './components/ui/SheetHandle'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import type { PriorityFilter, SortMode, Task } from './types/task'
+import { computeImportDiff, isAllZero } from './utils/task-diff'
+import type { ImportDiffSummary } from './utils/task-diff'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { recoverOctokit } from './services/github/octokit-provider'
 import { triggerSelectionHaptic } from './services/native/haptic-service'
@@ -166,6 +168,25 @@ function RepoPickerSheet({ onClose, onRepoSelected }: { onClose: () => void; onR
       >
         <SheetHandle />
 
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 flex items-center justify-center rounded"
+          style={{
+            minWidth: '44px',
+            minHeight: '44px',
+            color: 'var(--color-text-secondary)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M1.707.293A1 1 0 00.293 1.707L4.586 6 .293 10.293a1 1 0 101.414 1.414L6 7.414l4.293 4.293a1 1 0 001.414-1.414L7.414 6l4.293-4.293A1 1 0 0010.293.293L6 4.586 1.707.293z" />
+          </svg>
+        </button>
+
         <OctokitErrorBoundary onLogout={clearAuth}>
           <Suspense
             fallback={
@@ -197,6 +218,8 @@ function AppContent() {
   const moveTaskToRepo = useSyncStore((s) => s.moveTaskToRepo)
   const loadTasksFromIDB = useSyncStore((s) => s.loadTasksFromIDB)
   const replaceTasksForRepo = useSyncStore((s) => s.replaceTasksForRepo)
+  const mergeRemoteTasksForRepo = useSyncStore((s) => s.mergeRemoteTasksForRepo)
+  const clearRepoConflict = useSyncStore((s) => s.clearRepoConflict)
   const setRepoSyncMeta = useSyncStore((s) => s.setRepoSyncMeta)
   const repoSortModes = useSyncStore((s) => s.repoSortModes)
   const setRepoSortMode = useSyncStore((s) => s.setRepoSortMode)
@@ -232,6 +255,7 @@ function AppContent() {
     sha: string | null
     source?: 'repo-switch' | 'remote-update'
   } | null>(null)
+  const [diffSummary, setDiffSummary] = useState<ImportDiffSummary | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   const importAttemptedRef = useRef<Set<string>>(new Set())
 
@@ -260,6 +284,20 @@ function AppContent() {
 
   useRemoteChangeDetection((data) => {
     if (!selectedRepo) return
+    const repoKey = selectedRepo.fullName.toLowerCase()
+    const localTasks = useSyncStore.getState().tasks.filter((t) => t.repoFullName.toLowerCase() === repoKey)
+    const diff = computeImportDiff(localTasks, data.tasks)
+
+    if (isAllZero(diff)) {
+      // SHA changed but no meaningful task differences — silently update SHA
+      setRepoSyncMeta(selectedRepo.fullName, {
+        lastSyncedSha: data.sha ?? null,
+        lastSyncAt: new Date().toISOString(),
+      })
+      return
+    }
+
+    setDiffSummary(diff)
     setImportPrompt({
       repoFullName: selectedRepo.fullName,
       tasks: data.tasks,
@@ -305,6 +343,7 @@ function AppContent() {
 
   useEffect(() => {
     setImportPrompt(null)
+    setDiffSummary(null)
     setIsImporting(false)
     setBannerDismissed(false)
   }, [selectedRepo?.fullName])
@@ -570,17 +609,27 @@ function AppContent() {
               remoteCount={importPrompt.tasks.length}
               isImporting={isImporting}
               variant={importPrompt.source === 'remote-update' ? 'remote-update' : 'initial-import'}
-              onDismiss={() => setImportPrompt(null)}
+              diffSummary={diffSummary}
+              onDismiss={() => { setImportPrompt(null); setDiffSummary(null) }}
               onImport={() => {
-                if (isImporting) return
+                if (isImporting || !importPrompt) return
                 setIsImporting(true)
-                replaceTasksForRepo(importPrompt.repoFullName, importPrompt.tasks)
+                if (importPrompt.source === 'remote-update') {
+                  mergeRemoteTasksForRepo(importPrompt.repoFullName, importPrompt.tasks)
+                } else {
+                  replaceTasksForRepo(importPrompt.repoFullName, importPrompt.tasks)
+                }
+                const repoKey = importPrompt.repoFullName.toLowerCase()
+                const currentRevision = useSyncStore.getState().repoSyncMeta[repoKey]?.localRevision ?? 0
                 setRepoSyncMeta(importPrompt.repoFullName, {
                   lastSyncedSha: importPrompt.sha ?? null,
+                  lastSyncedRevision: currentRevision,
                   lastSyncAt: new Date().toISOString(),
                   conflict: null,
                 })
+                clearRepoConflict(importPrompt.repoFullName)
                 setImportPrompt(null)
+                setDiffSummary(null)
                 setIsImporting(false)
               }}
             />
@@ -600,7 +649,7 @@ function AppContent() {
 
             {/* Search bar */}
             {repoTasks.length > 0 && (
-              <div className="mt-4 w-full max-w-[640px] px-4">
+              <div className="mt-4 w-full max-w-[640px] px-2">
                 <TaskSearchBar
                   value={searchQuery}
                   onChange={setSearchQuery}
@@ -609,9 +658,9 @@ function AppContent() {
               </div>
             )}
 
-            {/* Filter/sort toolbar — show when tasks exist */}
-            {repoTasks.length > 0 && (
-              <div className="mt-2 w-full max-w-[640px] px-4">
+            {/* Filter/sort toolbar — show when 5+ tasks */}
+            {repoTasks.length > 4 && (
+              <div className="mt-2 w-full max-w-[640px] px-2">
                 <div className="flex items-center gap-2 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                   {hasImportantTasks && (
                     <PriorityFilterPills
@@ -638,7 +687,7 @@ function AppContent() {
 
             {/* Task list */}
             {repoTasks.length > 0 ? (
-              <div className="mt-2 w-full max-w-[640px] px-4">
+              <div className="mt-2 w-full max-w-[640px] px-2">
                 {/* Active tasks */}
                 {activeTasks.length > 0 ? (
                   currentSortMode === 'manual' ? (
@@ -646,7 +695,7 @@ function AppContent() {
                       axis="y"
                       values={dragOrderedTasks}
                       onReorder={handleReorder}
-                      className="flex flex-col gap-2"
+                      className="flex flex-col gap-0"
                       data-testid="task-list"
                       aria-label="Reorder tasks"
                     >
@@ -667,7 +716,7 @@ function AppContent() {
                     </Reorder.Group>
                   ) : (
                     <ul
-                      className="flex flex-col gap-2 list-none p-0 m-0"
+                      className="flex flex-col gap-0 list-none p-0 m-0"
                       data-testid="task-list"
                       aria-label="Task list"
                     >
@@ -732,7 +781,7 @@ function AppContent() {
                       {showCompleted && (
                         <motion.div
                           id="completed-task-list"
-                          className="flex flex-col gap-2"
+                          className="flex flex-col gap-0"
                           variants={listContainerVariants}
                           initial="initial"
                           animate="animate"

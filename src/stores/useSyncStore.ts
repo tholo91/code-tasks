@@ -4,6 +4,7 @@ import { StorageService } from '../services/storage/storage-service'
 import { TokenVault } from '../services/storage/token-vault'
 import { clearOctokitInstance } from '../services/github/auth-service'
 import { generateUUID } from '../utils/uuid'
+import { buildMergedTaskList } from '../utils/task-diff'
 import type { GitHubUser } from '../services/github/auth-service'
 import type { Task, SortMode } from '../types/task'
 import type { SyncErrorType } from '../services/github/sync-service'
@@ -72,6 +73,7 @@ interface SyncState {
   setRepoSyncMeta: (repoFullName: string, updates: Partial<RepoSyncMeta>) => void
   clearRepoConflict: (repoFullName: string) => void
   replaceTasksForRepo: (repoFullName: string, importedTasks: Task[]) => void
+  mergeRemoteTasksForRepo: (repoFullName: string, remoteTasks: Task[]) => void
   setRepoSortMode: (repoFullName: string, mode: SortMode) => void
 }
 
@@ -605,6 +607,39 @@ export const useSyncStore = create<SyncState>()(
           }
 
           return { tasks: [...remainingTasks, ...importedTasks] }
+        })
+      },
+
+      mergeRemoteTasksForRepo: (repoFullName: string, remoteTasks: Task[]) => {
+        const repoKey = normalizeRepoKey(repoFullName)
+        set((state) => {
+          const localTasks = state.tasks.filter((t) => t.repoFullName.toLowerCase() === repoKey)
+          const merged = buildMergedTaskList(localTasks, remoteTasks)
+
+          const remainingTasks = state.tasks.filter((t) => t.repoFullName.toLowerCase() !== repoKey)
+
+          // Persist merged tasks to IDB; delete IDB entries for tasks that were dropped
+          const mergedIds = new Set(merged.map((t) => t.id))
+          for (const local of localTasks) {
+            if (!mergedIds.has(local.id)) {
+              StorageService.deleteTaskFromIDB(local.id)
+            }
+          }
+          for (const task of merged) {
+            StorageService.persistTaskToIDB(task).catch(() => {})
+          }
+
+          const existingMeta = state.repoSyncMeta[repoKey] ?? createDefaultRepoMeta()
+          return {
+            tasks: [...remainingTasks, ...merged],
+            repoSyncMeta: {
+              ...state.repoSyncMeta,
+              [repoKey]: {
+                ...existingMeta,
+                localRevision: existingMeta.localRevision + 1,
+              },
+            },
+          }
         })
       },
 

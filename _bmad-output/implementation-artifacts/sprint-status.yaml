@@ -1,6 +1,6 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-03-17
-# Sprint 3: Epic 8 (The Polish) — 10 story files, in progress
+# Updated: 2026-03-18
+# Sprint 3: Epic 8 (The Polish) — 12 stories, in progress
 
 status_definitions:
   backlog: "Story identified in epics but story file not yet created"
@@ -29,10 +29,14 @@ development_status:
   8-4-task-creation-flow-polish: "done"
   8-5-sorting-and-filtering: "done"
 
+  8-11-two-way-sync-remote-import: "done"
+
+  # --- Remaining sprint (recommended order) ---
+  8-12-additive-import-with-diff-summary: "in-progress"  # PRIORITY: fixes trust/data-loss issue
   8-6-sync-result-feedback: "ready-for-dev"
+  8-10-list-view-card-redesign: "ready-for-dev"
   8-7-per-repo-ai-instructions: "ready-for-dev"
   8-8-about-gitty-settings: "ready-for-dev"
-  8-10-list-view-card-redesign: "ready-for-dev"
 
   # ═══════════════════════════════════════════════════════
   # Epic 7: The Real App (DONE)

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useSyncStore, selectPendingSyncCount } from '../stores/useSyncStore'
+import { useSyncStore } from '../stores/useSyncStore'
 import { useNetworkStatus } from './useNetworkStatus'
 import { fetchRemoteTasksForRepo } from '../services/github/sync-service'
 import type { Task } from '../types/task'
@@ -8,10 +8,11 @@ const DEBOUNCE_MS = 30_000
 
 /**
  * Listens for app visibility changes and checks whether the remote GitHub file
- * has changed since the last sync. When a remote change is detected and there
- * are no local pending changes, calls `onRemoteChanges` so the caller can
- * prompt the user to import. If local pending changes exist, sets a conflict
- * on repoSyncMeta to trigger the existing SyncConflictSheet.
+ * has changed since the last sync. When a remote change is detected, calls
+ * `onRemoteChanges` so the caller can prompt the user to import.
+ * Additive merge preserves local pending tasks, so there is no conflict path —
+ * both pending and clean states show the import banner.
+ * Skips the remote check while a sync push is in progress to prevent phantom banners.
  */
 export function useRemoteChangeDetection(
   onRemoteChanges: (data: { tasks: Task[]; sha: string | null }) => void,
@@ -39,7 +40,11 @@ export function useRemoteChangeDetection(
       lastCheckRef.current = now
 
       const state = useSyncStore.getState()
-      const { selectedRepo, user, setRepoSyncMeta } = state
+      const { selectedRepo, user } = state
+
+      // Don't check during active push — could fetch a stale SHA and show a phantom banner
+      if (state.syncEngineStatus === 'syncing') return
+
       if (!selectedRepo || !user) return
 
       const result = await fetchRemoteTasksForRepo(selectedRepo.fullName, user.login)
@@ -54,18 +59,8 @@ export function useRemoteChangeDetection(
 
       if (remoteSha === localSha) return
 
-      const pendingCount = selectPendingSyncCount(useSyncStore.getState())
-
-      if (pendingCount > 0) {
-        setRepoSyncMeta(selectedRepo.fullName, {
-          conflict: {
-            remoteSha,
-            detectedAt: new Date().toISOString(),
-          },
-        })
-      } else {
-        onRemoteChangesRef.current({ tasks: result.tasks, sha: remoteSha })
-      }
+      // Always notify — additive merge preserves local pending tasks safely
+      onRemoteChangesRef.current({ tasks: result.tasks, sha: remoteSha })
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)

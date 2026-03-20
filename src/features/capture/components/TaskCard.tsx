@@ -19,7 +19,7 @@ interface TaskCardProps {
  */
 export function TaskCard({ task, onTap, onComplete, isNewest = false, className, style }: TaskCardProps) {
   const isPending = task.syncStatus === 'pending'
-  const rootClassName = `cursor-pointer rounded-lg px-4 py-3${className ? ` ${className}` : ''}`
+  const rootClassName = `cursor-pointer px-4 py-3${className ? ` ${className}` : ''}`
 
   return (
     <motion.div
@@ -29,14 +29,15 @@ export function TaskCard({ task, onTap, onComplete, isNewest = false, className,
       transition={TRANSITION_SPRING}
       className={rootClassName}
       style={{
-        backgroundColor: 'var(--color-surface)',
-        border: `1px solid ${isNewest ? 'var(--color-success)' : 'var(--color-border)'}`,
-        // isNewest (green flash) takes priority; priority indicator suppressed during new-card flash
+        backgroundColor: isNewest ? 'rgba(63, 185, 80, 0.08)' : 'transparent',
+        border: 'none',
         borderLeft: task.isImportant && !isNewest ? '3px solid var(--color-danger)' : undefined,
+        borderBottom: '1px solid rgba(48, 54, 61, 0.5)',
         boxShadow: task.isImportant && !isNewest
-          ? '-2px 0 10px var(--color-danger-subtle), var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04)'
-          : 'var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04)',
-        transition: 'border-color 0.5s ease',
+          ? '-2px 0 8px var(--color-danger-subtle)'
+          : 'none',
+        borderRadius: 0,
+        transition: 'background-color 0.5s ease',
         ...style,
       }}
       data-testid={`task-card-${task.id}`}

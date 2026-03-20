@@ -13,22 +13,21 @@ vi.mock('./useNetworkStatus', () => ({
 
 vi.mock('../stores/useSyncStore', () => ({
   useSyncStore: vi.fn(),
-  selectPendingSyncCount: vi.fn(),
 }))
 
 import { fetchRemoteTasksForRepo } from '../services/github/sync-service'
 import { useNetworkStatus } from './useNetworkStatus'
-import { useSyncStore, selectPendingSyncCount } from '../stores/useSyncStore'
+import { useSyncStore } from '../stores/useSyncStore'
 
 const mockFetchRemote = vi.mocked(fetchRemoteTasksForRepo)
 const mockUseNetworkStatus = vi.mocked(useNetworkStatus)
 const mockUseSyncStore = vi.mocked(useSyncStore)
-const mockSelectPendingSyncCount = vi.mocked(selectPendingSyncCount)
 
 function makeStoreState(overrides: Record<string, unknown> = {}) {
   return {
     selectedRepo: { fullName: 'owner/repo', id: 1, owner: 'owner' },
     user: { login: 'testuser' },
+    syncEngineStatus: 'idle',
     repoSyncMeta: {
       'owner/repo': { lastSyncedSha: 'abc123', lastSyncAt: null, localRevision: 0, lastSyncedRevision: 0, conflict: null },
     },
@@ -77,7 +76,6 @@ describe('useRemoteChangeDetection', () => {
     const storeState = makeStoreState()
     mockUseSyncStore.mockImplementation((selector: (s: ReturnType<typeof makeStoreState>) => unknown) => selector(storeState))
     ;(useSyncStore as unknown as { getState: () => ReturnType<typeof makeStoreState> }).getState = () => storeState
-    mockSelectPendingSyncCount.mockReturnValue(0)
     mockFetchRemote.mockResolvedValue({ tasks: makeRemoteTasks(), sha: 'def456' })
 
     const onRemoteChanges = vi.fn()
@@ -104,7 +102,6 @@ describe('useRemoteChangeDetection', () => {
     const storeState = makeStoreState()
     mockUseSyncStore.mockImplementation((selector: (s: ReturnType<typeof makeStoreState>) => unknown) => selector(storeState))
     ;(useSyncStore as unknown as { getState: () => ReturnType<typeof makeStoreState> }).getState = () => storeState
-    mockSelectPendingSyncCount.mockReturnValue(0)
     mockFetchRemote.mockResolvedValue({ tasks: makeRemoteTasks(), sha: 'def456' })
 
     const onRemoteChanges = vi.fn()
@@ -121,11 +118,10 @@ describe('useRemoteChangeDetection', () => {
     expect(mockFetchRemote).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onRemoteChanges when SHA differs and no pending changes', async () => {
+  it('calls onRemoteChanges when SHA differs even with pending changes', async () => {
     const storeState = makeStoreState()
     mockUseSyncStore.mockImplementation((selector: (s: ReturnType<typeof makeStoreState>) => unknown) => selector(storeState))
     ;(useSyncStore as unknown as { getState: () => ReturnType<typeof makeStoreState> }).getState = () => storeState
-    mockSelectPendingSyncCount.mockReturnValue(0)
     const remoteTasks = makeRemoteTasks()
     mockFetchRemote.mockResolvedValue({ tasks: remoteTasks, sha: 'def456' })
 
@@ -136,21 +132,18 @@ describe('useRemoteChangeDetection', () => {
     await vi.waitFor(() => expect(onRemoteChanges).toHaveBeenCalledWith({ tasks: remoteTasks, sha: 'def456' }))
   })
 
-  it('sets conflict when SHA differs and pending changes exist', async () => {
-    const storeState = makeStoreState()
+  it('skips remote check when syncEngineStatus is syncing', async () => {
+    const storeState = makeStoreState({ syncEngineStatus: 'syncing' })
     mockUseSyncStore.mockImplementation((selector: (s: ReturnType<typeof makeStoreState>) => unknown) => selector(storeState))
     ;(useSyncStore as unknown as { getState: () => ReturnType<typeof makeStoreState> }).getState = () => storeState
-    mockSelectPendingSyncCount.mockReturnValue(2)
     mockFetchRemote.mockResolvedValue({ tasks: makeRemoteTasks(), sha: 'def456' })
 
     const onRemoteChanges = vi.fn()
     renderHook(() => useRemoteChangeDetection(onRemoteChanges))
 
     triggerVisibilityChange('visible')
-    await vi.waitFor(() => expect(storeState.setRepoSyncMeta).toHaveBeenCalledWith(
-      'owner/repo',
-      expect.objectContaining({ conflict: expect.objectContaining({ remoteSha: 'def456' }) }),
-    ))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(mockFetchRemote).not.toHaveBeenCalled()
     expect(onRemoteChanges).not.toHaveBeenCalled()
   })
 
@@ -158,7 +151,6 @@ describe('useRemoteChangeDetection', () => {
     const storeState = makeStoreState()
     mockUseSyncStore.mockImplementation((selector: (s: ReturnType<typeof makeStoreState>) => unknown) => selector(storeState))
     ;(useSyncStore as unknown as { getState: () => ReturnType<typeof makeStoreState> }).getState = () => storeState
-    mockSelectPendingSyncCount.mockReturnValue(0)
     // Same SHA as localSha in storeState
     mockFetchRemote.mockResolvedValue({ tasks: makeRemoteTasks(), sha: 'abc123' })
 

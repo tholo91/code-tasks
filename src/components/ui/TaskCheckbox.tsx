@@ -26,7 +26,7 @@ export function TaskCheckbox({ isCompleted, onChange, size = 'sm', testId }: Tas
       style={{
         width: dim,
         height: dim,
-        borderRadius: '50%',
+        borderRadius: '4px',
         border: `2px solid ${isCompleted ? 'var(--color-success)' : 'var(--color-border)'}`,
         backgroundColor: isCompleted ? 'var(--color-success)' : 'transparent',
       }}

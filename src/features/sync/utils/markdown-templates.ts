@@ -28,6 +28,7 @@ export function getAIReadyHeader(username: string): string {
 > - Tasks use Markdown checkboxes (\`- [ ]\` / \`- [x]\`)
 > - Priority: 🔴 Important or ⚪ Normal
 > - Mark tasks as done (\`- [x]\`) after processing, add \`[Processed by: YourAgentName]\` to the task line, and optionally append notes to the task body
+> - Do NOT delete or remove tasks from this file — only the mobile app manages task lifecycle
 > - You may add notes or context below the \`managed-end\` marker — they will not be overwritten
 
 ---
@@ -205,11 +206,15 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
 export function buildFullFileContent(tasks: Task[], username: string): string {
   const header = getAIReadyHeader(username)
 
-  const active = tasks
+  // Archived tasks (body starts with "[Archived] ") are excluded from push
+  // to prevent zombie loops — they live locally as a record only.
+  const nonArchived = tasks.filter(t => !t.body.startsWith('[Archived] '))
+
+  const active = nonArchived
     .filter(t => !t.isCompleted)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
-  const completed = tasks
+  const completed = nonArchived
     .filter(t => t.isCompleted)
     .sort((a, b) =>
       new Date(b.completedAt ?? 0).getTime() - new Date(a.completedAt ?? 0).getTime()
