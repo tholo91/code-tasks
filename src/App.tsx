@@ -723,13 +723,6 @@ function AppContent() {
 
           <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} onOpenSettings={() => setShowSettings(true)} />
 
-          <PullToRefreshIndicator
-            pullDistance={pullDistance}
-            isRefreshing={isPullRefreshing}
-            threshold={80}
-            result={pullToRefreshResult}
-          />
-
           <main className="relative flex w-full flex-1 flex-col items-center" {...pullHandlers}>
 
             <div className="w-full max-w-[640px] px-4">
@@ -779,6 +772,14 @@ function AppContent() {
                 </div>
               </div>
             )}
+
+            {/* Pull to refresh indicator — inline above task list */}
+            <PullToRefreshIndicator
+              pullDistance={pullDistance}
+              isRefreshing={isPullRefreshing}
+              threshold={80}
+              result={pullToRefreshResult}
+            />
 
             {/* Task list */}
             {repoTasks.length > 0 ? (

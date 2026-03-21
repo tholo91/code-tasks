@@ -23,6 +23,11 @@ function createTask(overrides: Partial<Task> = {}): Task {
   }
 }
 
+/** Click the "More" toggle to reveal hidden metadata section */
+async function expandMore(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByTestId('task-detail-more-toggle'))
+}
+
 describe('TaskDetailSheet', () => {
   const defaultProps = {
     onClose: vi.fn(),
@@ -37,12 +42,12 @@ describe('TaskDetailSheet', () => {
     window.confirm = vi.fn().mockReturnValue(true)
   })
 
-  it('renders with task title, notes, and priority', () => {
+  it('renders with task title, notes, and priority flag', () => {
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
 
     expect(screen.getByTestId('task-detail-title')).toHaveValue('Fix login bug')
     expect(screen.getByTestId('task-detail-notes')).toHaveValue('The login button is broken on mobile')
-    expect(screen.getByTestId('task-detail-priority')).toBeInTheDocument()
+    expect(screen.getByTestId('task-detail-priority-flag')).toBeInTheDocument()
   })
 
   it('renders the sheet dialog with correct role', () => {
@@ -82,11 +87,11 @@ describe('TaskDetailSheet', () => {
     expect(defaultProps.onUpdate).toHaveBeenCalledWith('detail-test-1', expect.objectContaining({ body: 'My notes' }))
   })
 
-  it('priority toggle calls onUpdate immediately', async () => {
+  it('priority flag toggle calls onUpdate immediately', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
 
-    await user.click(screen.getByTestId('task-detail-priority-pill'))
+    await user.click(screen.getByTestId('task-detail-priority-flag'))
 
     expect(defaultProps.onUpdate).toHaveBeenCalledWith('detail-test-1', expect.objectContaining({ isImportant: true }))
   })
@@ -116,29 +121,47 @@ describe('TaskDetailSheet', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
 
-    // Click the backdrop overlay
     const backdrop = screen.getByTestId('task-detail-sheet-backdrop')
     await user.click(backdrop)
 
     expect(defaultProps.onClose).toHaveBeenCalled()
   })
 
-  it('"Move to..." button calls onMoveToRepo', async () => {
+  it('"More" toggle reveals metadata section', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
 
+    // Metadata not visible before expanding
+    expect(screen.queryByTestId('task-detail-sync-status')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('task-detail-created')).not.toBeInTheDocument()
+
+    await expandMore(user)
+
+    expect(screen.getByTestId('task-detail-sync-status')).toBeInTheDocument()
+    expect(screen.getByTestId('task-detail-created')).toBeInTheDocument()
+  })
+
+  it('"Move to..." button calls onMoveToRepo after expanding More', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
+
+    await expandMore(user)
     await user.click(screen.getByTestId('task-detail-move-repo'))
 
     expect(defaultProps.onMoveToRepo).toHaveBeenCalledWith('detail-test-1')
   })
 
-  it('displays created timestamp', () => {
+  it('displays created timestamp after expanding More', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
+
+    await expandMore(user)
 
     expect(screen.getByTestId('task-detail-created')).toBeInTheDocument()
   })
 
-  it('displays updated timestamp when present', () => {
+  it('displays updated timestamp when present after expanding More', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(
       <TaskDetailSheet
         task={createTask({ updatedAt: '2026-03-15T10:00:00Z' })}
@@ -146,22 +169,26 @@ describe('TaskDetailSheet', () => {
       />,
     )
 
+    await expandMore(user)
+
     expect(screen.getByTestId('task-detail-updated')).toBeInTheDocument()
   })
 
-  it('does not display updated timestamp when null', () => {
+  it('does not display updated timestamp when null', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask({ updatedAt: null })} {...defaultProps} />)
+
+    await expandMore(user)
 
     expect(screen.queryByTestId('task-detail-updated')).not.toBeInTheDocument()
   })
 
-  it('auto-focuses title on mount', async () => {
+  it('does not auto-focus title on mount (detail view is for reading first)', () => {
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
 
-    // Wait for the 50ms focus delay
-    act(() => { vi.advanceTimersByTime(50) })
+    act(() => { vi.advanceTimersByTime(100) })
 
-    expect(screen.getByTestId('task-detail-title')).toHaveFocus()
+    expect(screen.getByTestId('task-detail-title')).not.toHaveFocus()
   })
 
   it('does not call onUpdate when title is empty and no other changes', async () => {
@@ -176,7 +203,8 @@ describe('TaskDetailSheet', () => {
     expect(defaultProps.onUpdate).not.toHaveBeenCalled()
   })
 
-  it('displays completed timestamp when task is completed', () => {
+  it('displays completed timestamp when task is completed after expanding More', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(
       <TaskDetailSheet
         task={createTask({ isCompleted: true, completedAt: '2026-03-14T12:00:00Z' })}
@@ -184,24 +212,35 @@ describe('TaskDetailSheet', () => {
       />,
     )
 
+    await expandMore(user)
+
     expect(screen.getByTestId('task-detail-completed')).toBeInTheDocument()
   })
 
-  it('shows current repo name', () => {
+  it('shows current repo name after expanding More', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask({ repoFullName: 'testuser/my-project' })} {...defaultProps} />)
+
+    await expandMore(user)
 
     expect(screen.getByText('testuser/my-project')).toBeInTheDocument()
   })
 
-  it('renders delete button when onDelete prop is provided', () => {
+  it('renders delete button when onDelete prop is provided after expanding More', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onDelete = vi.fn()
     render(<TaskDetailSheet task={createTask()} {...defaultProps} onDelete={onDelete} />)
+
+    await expandMore(user)
 
     expect(screen.getByTestId('detail-delete-button')).toBeInTheDocument()
   })
 
-  it('does not render delete button when onDelete prop is absent', () => {
+  it('does not render delete button when onDelete prop is absent', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
+
+    await expandMore(user)
 
     expect(screen.queryByTestId('detail-delete-button')).not.toBeInTheDocument()
   })
@@ -211,6 +250,7 @@ describe('TaskDetailSheet', () => {
     const onDelete = vi.fn()
     render(<TaskDetailSheet task={createTask()} {...defaultProps} onDelete={onDelete} />)
 
+    await expandMore(user)
     await user.click(screen.getByTestId('detail-delete-button'))
 
     expect(defaultProps.onClose).toHaveBeenCalled()

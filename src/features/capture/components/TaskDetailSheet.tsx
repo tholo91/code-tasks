@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
-import { TRANSITION_SPRING } from '../../../config/motion'
+import { TRANSITION_FAST } from '../../../config/motion'
 import { BottomSheet } from '../../../components/ui/BottomSheet'
 import { TaskCheckbox } from '../../../components/ui/TaskCheckbox'
 import type { Task } from '../../../types/task'
@@ -19,7 +19,9 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
   const [title, setTitle] = useState(task.title)
   const [body, setBody] = useState(task.body)
   const [isImportant, setIsImportant] = useState(task.isImportant)
-  const titleRef = useRef<HTMLInputElement>(null)
+  const [showMore, setShowMore] = useState(false)
+  const titleRef = useRef<HTMLTextAreaElement>(null)
+  const notesRef = useRef<HTMLTextAreaElement>(null)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestValuesRef = useRef({ title: task.title, body: task.body, isImportant: task.isImportant })
 
@@ -73,12 +75,16 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
     }
   }, [flushSave])
 
-  // Auto-focus title on mount
+  // Set initial textarea heights on mount (no auto-focus — detail view is for reading first)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      titleRef.current?.focus()
-    }, 50)
-    return () => clearTimeout(timer)
+    if (titleRef.current) {
+      titleRef.current.style.height = 'auto'
+      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`
+    }
+    if (notesRef.current) {
+      notesRef.current.style.height = 'auto'
+      notesRef.current.style.height = `${notesRef.current.scrollHeight}px`
+    }
   }, [])
 
   const handleClose = useCallback(() => {
@@ -98,28 +104,23 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleClose])
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setTitle(value)
     latestValuesRef.current.title = value
+    e.target.style.height = 'auto'
+    e.target.style.height = `${e.target.scrollHeight}px`
     debouncedSave()
   }
-
-  const notesRef = useRef<HTMLTextAreaElement>(null)
-  
-  // Auto-expand textarea
-  useEffect(() => {
-    const textarea = notesRef.current
-    if (textarea) {
-      textarea.style.height = 'auto'
-      textarea.style.height = `${textarea.scrollHeight}px`
-    }
-  }, [body])
 
   const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setBody(value)
     latestValuesRef.current.body = value
+    if (notesRef.current) {
+      notesRef.current.style.height = 'auto'
+      notesRef.current.style.height = `${notesRef.current.scrollHeight}px`
+    }
     debouncedSave()
   }
 
@@ -135,6 +136,15 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
     onToggleComplete(task.id)
   }
 
+  // Shared borderless input style
+  const borderlessStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+    padding: 0,
+    color: 'var(--color-text-primary)',
+  }
+
   return (
     <BottomSheet
       onClose={handleClose}
@@ -142,171 +152,205 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
       ariaLabel="Task details"
       testId="task-detail-sheet"
     >
-        {/* Content with max height + scroll */}
-        <div className="max-h-[85vh] overflow-y-auto flex flex-col gap-4">
-          {/* Title row with checkbox */}
-          <div className="flex items-center gap-3">
-            {/* Completion checkbox */}
+      <div className="max-h-[85vh] overflow-y-auto flex flex-col gap-1">
+        {/* Title row: checkbox + title + flag */}
+        <div className="flex items-start gap-3">
+          <div className="pt-1.5 flex-shrink-0">
             <TaskCheckbox
               isCompleted={task.isCompleted}
               onChange={handleToggleComplete}
               size="md"
               testId="task-detail-checkbox"
             />
-
-            {/* Title input */}
-            <input
-              ref={titleRef}
-              type="text"
-              value={title}
-              onChange={handleTitleChange}
-              className="input-field w-full text-title font-semibold"
-              style={{
-                textDecoration: task.isCompleted ? 'line-through' : 'none',
-                opacity: task.isCompleted ? 0.7 : 1,
-              }}
-              aria-label="Task title"
-              data-testid="task-detail-title"
-            />
           </div>
 
-          {/* Notes/Description */}
-          <div>
-            <label
-              htmlFor="task-detail-notes-input"
-              className="text-label mb-1 block uppercase tracking-wider"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Notes
-            </label>
-            <textarea
-              id="task-detail-notes-input"
-              ref={notesRef}
-              value={body}
-              onChange={handleBodyChange}
-              placeholder="Add notes..."
-              className="input-field w-full min-h-[120px] overflow-hidden resize-none"
-              aria-label="Task notes"
-              data-testid="task-detail-notes"
-            />
-          </div>
+          <textarea
+            ref={titleRef}
+            value={title}
+            onChange={handleTitleChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+                e.preventDefault()
+                notesRef.current?.focus()
+              }
+            }}
+            rows={1}
+            className="flex-1 resize-none overflow-hidden text-title font-semibold"
+            style={{
+              ...borderlessStyle,
+              lineHeight: '1.4',
+              textDecoration: task.isCompleted ? 'line-through' : 'none',
+              opacity: task.isCompleted ? 0.6 : 1,
+            }}
+            placeholder="Task title"
+            aria-label="Task title"
+            data-testid="task-detail-title"
+          />
 
-          {/* Priority toggle */}
-          <div className="flex items-center justify-between" data-testid="task-detail-priority">
-            <span
-              className="text-label uppercase tracking-wider"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Priority
-            </span>
-            <motion.button
-              type="button"
-              onClick={handlePriorityToggle}
-              animate={{
-                backgroundColor: isImportant ? 'var(--color-accent)' : 'transparent',
-                borderColor: isImportant ? 'var(--color-accent)' : 'var(--color-border)',
-                color: isImportant ? 'var(--color-canvas)' : 'var(--color-text-secondary)',
-              }}
-              whileTap={{ scale: 0.95 }}
-              transition={TRANSITION_SPRING}
-              className="text-label px-3 py-1.5 rounded-full border font-semibold"
-              aria-pressed={isImportant}
-              aria-label="Toggle important priority"
-              data-testid="task-detail-priority-pill"
-            >
-              Important
-            </motion.button>
-          </div>
-
-          {/* Metadata section */}
-          <div className="flex flex-col gap-2 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
-            {/* Sync status */}
-            <div className="flex items-center justify-between">
-              <span className="text-label uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
-                Sync Status
-              </span>
-              <span
-                className={`badge ${task.syncStatus === 'pending' ? 'badge-amber' : 'badge-green'}`}
-                data-testid="task-detail-sync-status"
-              >
-                {task.syncStatus === 'pending' ? 'Pending' : 'Synced'}
-              </span>
-            </div>
-
-            {/* Created */}
-            <div className="flex items-center justify-between">
-              <span className="text-label uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
-                Created
-              </span>
-              <span className="text-body" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-created">
-                {formatRelativeTime(task.createdAt)}
-              </span>
-            </div>
-
-            {/* Updated */}
-            {task.updatedAt && (
-              <div className="flex items-center justify-between">
-                <span className="text-label uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
-                  Updated
-                </span>
-                <span className="text-body" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-updated">
-                  {formatRelativeTime(task.updatedAt)}
-                </span>
-              </div>
-            )}
-
-            {/* Completed */}
-            {task.isCompleted && task.completedAt && (
-              <div className="flex items-center justify-between">
-                <span className="text-label uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
-                  Completed
-                </span>
-                <span className="text-body" style={{ color: 'var(--color-success)' }} data-testid="task-detail-completed">
-                  {formatRelativeTime(task.completedAt)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Repository + Move */}
-          <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
-            <div>
-              <span className="text-label uppercase tracking-wider block" style={{ color: 'var(--color-text-secondary)' }}>
-                Repository
-              </span>
-              <span className="text-body" style={{ color: 'var(--color-text-primary)' }}>
-                {task.repoFullName}
-              </span>
-            </div>
-            <button
-              onClick={() => onMoveToRepo(task.id)}
-              className="btn-ghost text-label"
-              aria-label="Move task to repository"
-              data-testid="task-detail-move-repo"
-            >
-              Move to...
-            </button>
-          </div>
-
-          {/* Delete button */}
-          {onDelete && (
-            <button
-              onClick={() => {
-                if (window.confirm('Delete this task?')) {
-                  onClose()
-                  // Small delay to let sheet dismiss before triggering delete flow
-                  setTimeout(() => onDelete(task.id), 150)
-                }
-              }}
-              className="btn-ghost w-full text-body font-medium mt-2 py-3"
-              style={{ color: 'var(--color-danger)' }}
-              aria-label="Delete task"
-              data-testid="detail-delete-button"
-            >
-              Delete Task
-            </button>
-          )}
+          <motion.button
+            type="button"
+            onClick={handlePriorityToggle}
+            onMouseDown={(e) => e.preventDefault()}
+            whileTap={{ scale: 0.85 }}
+            className="flex-shrink-0 flex items-center justify-center pt-1"
+            style={{
+              width: 36,
+              height: 36,
+              color: isImportant ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+              opacity: isImportant ? 1 : 0.3,
+            }}
+            aria-label="Toggle important"
+            aria-pressed={isImportant}
+            data-testid="task-detail-priority-flag"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M3.5 1a.5.5 0 01.5.5v1h8.5a.5.5 0 01.4.8L10.5 6l2.4 2.7a.5.5 0 01-.4.8H4v5a.5.5 0 01-1 0V1.5a.5.5 0 01.5-.5z" />
+            </svg>
+          </motion.button>
         </div>
+
+        {/* Description — borderless, no label */}
+        <div className="pl-9">
+          <textarea
+            ref={notesRef}
+            value={body}
+            onChange={handleBodyChange}
+            placeholder="Add details..."
+            rows={2}
+            className="w-full resize-none overflow-hidden text-body"
+            style={{
+              ...borderlessStyle,
+              lineHeight: '1.5',
+              minHeight: '2.5rem',
+              opacity: task.isCompleted ? 0.6 : 1,
+            }}
+            aria-label="Task notes"
+            data-testid="task-detail-notes"
+          />
+        </div>
+
+        {/* More toggle */}
+        <div className="pl-9 pt-2">
+          <button
+            type="button"
+            onClick={() => setShowMore(!showMore)}
+            className="flex items-center gap-1 text-caption font-medium"
+            style={{ color: 'var(--color-text-secondary)' }}
+            data-testid="task-detail-more-toggle"
+          >
+            <motion.svg
+              animate={{ rotate: showMore ? 180 : 0 }}
+              transition={TRANSITION_FAST}
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z" />
+            </motion.svg>
+            {showMore ? 'Less' : 'More'}
+          </button>
+        </div>
+
+        {/* Collapsible details section */}
+        <AnimatePresence initial={false}>
+          {showMore && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-2 pt-3 pl-9">
+                {/* Sync status */}
+                <div className="flex items-center justify-between">
+                  <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                    Sync
+                  </span>
+                  <span
+                    className={`badge ${task.syncStatus === 'pending' ? 'badge-amber' : 'badge-green'}`}
+                    data-testid="task-detail-sync-status"
+                  >
+                    {task.syncStatus === 'pending' ? 'Pending' : 'Synced'}
+                  </span>
+                </div>
+
+                {/* Created */}
+                <div className="flex items-center justify-between">
+                  <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                    Created
+                  </span>
+                  <span className="text-caption" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-created">
+                    {formatRelativeTime(task.createdAt)}
+                  </span>
+                </div>
+
+                {/* Updated */}
+                {task.updatedAt && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                      Updated
+                    </span>
+                    <span className="text-caption" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-updated">
+                      {formatRelativeTime(task.updatedAt)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Completed */}
+                {task.isCompleted && task.completedAt && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                      Completed
+                    </span>
+                    <span className="text-caption" style={{ color: 'var(--color-success)' }} data-testid="task-detail-completed">
+                      {formatRelativeTime(task.completedAt)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Repository */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                    {task.repoFullName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onMoveToRepo(task.id)}
+                    className="text-caption font-medium"
+                    style={{ color: 'var(--color-accent)' }}
+                    aria-label="Move task to repository"
+                    data-testid="task-detail-move-repo"
+                  >
+                    Move to…
+                  </button>
+                </div>
+
+                {/* Delete */}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Delete this task?')) {
+                        onClose()
+                        setTimeout(() => onDelete(task.id), 150)
+                      }
+                    }}
+                    className="self-start text-caption font-medium mt-2 py-1"
+                    style={{ color: 'var(--color-danger)' }}
+                    aria-label="Delete task"
+                    data-testid="detail-delete-button"
+                  >
+                    Delete task
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </BottomSheet>
   )
 }

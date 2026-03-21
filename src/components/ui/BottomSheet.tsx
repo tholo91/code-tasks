@@ -59,7 +59,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
               onClose()
             }
           }}
-          className="relative z-10 w-full max-w-lg rounded-t-2xl p-6 pb-8"
+          className="relative z-10 w-full max-w-lg rounded-t-2xl px-5 pt-2 pb-6"
           style={{
             backgroundColor: 'var(--color-surface)',
             boxShadow: 'var(--shadow-sheet)',

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { TRANSITION_FAST, TRANSITION_SPRING } from '../../config/motion'
+import { TRANSITION_SPRING } from '../../config/motion'
 
 interface PullToRefreshIndicatorProps {
   pullDistance: number
@@ -7,6 +7,9 @@ interface PullToRefreshIndicatorProps {
   threshold: number
   result?: 'up-to-date' | null
 }
+
+const CIRCLE_RADIUS = 9
+const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
 
 export function PullToRefreshIndicator({
   pullDistance,
@@ -20,56 +23,54 @@ export function PullToRefreshIndicator({
   if (!isVisible) return null
 
   const progress = Math.min(pullDistance / threshold, 1)
-  // Arrow rotates from 0° (down) to 180° (up) as pull approaches threshold
-  const arrowRotation = progress * 180
-
-  const translateY = isRefreshing
-    ? threshold * 0.6
-    : result === 'up-to-date'
-      ? threshold * 0.4
-      : Math.min(pullDistance, threshold)
+  const strokeDashoffset = CIRCLE_CIRCUMFERENCE * (1 - progress)
 
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
           data-testid="pull-to-refresh-indicator"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, y: translateY }}
-          exit={{ opacity: 0, y: 0 }}
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
           transition={prefersReducedMotion ? { duration: 0 } : TRANSITION_SPRING}
-          className="pointer-events-none absolute left-0 right-0 top-0 z-40 flex items-center justify-center"
-          style={{ transform: `translateY(${prefersReducedMotion ? translateY : 0}px)` }}
+          className="w-full max-w-[640px] overflow-hidden px-2"
         >
-          <div
-            className="flex items-center gap-2 rounded-full px-4 py-2"
-            style={{
-              backgroundColor: 'rgba(45, 51, 59, 0.9)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            {/* Pulling state */}
+          <div className="flex items-center justify-center gap-2.5 py-2.5">
+            {/* Pulling state — circle that fills */}
             {!isRefreshing && result !== 'up-to-date' && (
               <>
-                <motion.svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  animate={{ rotate: arrowRotation }}
-                  transition={prefersReducedMotion ? { duration: 0 } : TRANSITION_FAST}
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  <path
-                    d="M8 3v10M4 9l4 4 4-4"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                <svg width="24" height="24" viewBox="0 0 24 24" className="flex-shrink-0">
+                  {/* Background track */}
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r={CIRCLE_RADIUS}
+                    fill="none"
+                    stroke="var(--color-border)"
+                    strokeWidth="2"
+                    opacity="0.3"
                   />
-                </motion.svg>
-                <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                  Check for updates
+                  {/* Progress arc */}
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r={CIRCLE_RADIUS}
+                    fill="none"
+                    stroke={progress >= 1 ? 'var(--color-accent)' : 'var(--color-text-secondary)'}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={CIRCLE_CIRCUMFERENCE}
+                    strokeDashoffset={strokeDashoffset}
+                    transform="rotate(-90 12 12)"
+                    style={{ transition: 'stroke-dashoffset 0.05s linear, stroke 0.15s ease' }}
+                  />
+                </svg>
+                <span
+                  className="text-label"
+                  style={{ color: progress >= 1 ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}
+                >
+                  {progress >= 1 ? 'Release to refresh' : 'Pull to refresh from main'}
                 </span>
               </>
             )}
@@ -78,23 +79,37 @@ export function PullToRefreshIndicator({
             {isRefreshing && (
               <>
                 <motion.svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  className="flex-shrink-0"
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                  style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  <path
-                    d="M8 1.5A6.5 6.5 0 1 0 14.5 8"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r={CIRCLE_RADIUS}
+                    fill="none"
+                    stroke="var(--color-border)"
+                    strokeWidth="2"
+                    opacity="0.3"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r={CIRCLE_RADIUS}
+                    fill="none"
+                    stroke="var(--color-accent)"
+                    strokeWidth="2"
                     strokeLinecap="round"
+                    strokeDasharray={CIRCLE_CIRCUMFERENCE}
+                    strokeDashoffset={CIRCLE_CIRCUMFERENCE * 0.7}
+                    transform="rotate(-90 12 12)"
                   />
                 </motion.svg>
                 <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                  Checking…
+                  Checking for updates…
                 </span>
               </>
             )}
@@ -102,19 +117,22 @@ export function PullToRefreshIndicator({
             {/* Up to date state */}
             {result === 'up-to-date' && !isRefreshing && (
               <>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  style={{ color: 'var(--color-success)' }}
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" className="flex-shrink-0">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r={CIRCLE_RADIUS}
+                    fill="none"
+                    stroke="var(--color-success)"
+                    strokeWidth="2"
+                  />
                   <path
-                    d="M3 8.5l3.5 3.5L13 4"
-                    stroke="currentColor"
+                    d="M8.5 12.5l2 2 5-5"
+                    stroke="var(--color-success)"
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    fill="none"
                   />
                 </svg>
                 <span className="text-label" style={{ color: 'var(--color-success)' }}>

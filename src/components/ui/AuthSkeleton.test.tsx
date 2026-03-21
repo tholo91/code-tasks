@@ -7,6 +7,7 @@ describe('AuthSkeleton', () => {
     render(<AuthSkeleton />)
 
     expect(screen.getByRole('status')).toBeInTheDocument()
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByText('Gitty')).toBeInTheDocument()
+    expect(screen.getByText('capture it. ship it.')).toBeInTheDocument()
   })
 })

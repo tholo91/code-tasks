@@ -112,6 +112,15 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
     e.target.style.height = `${e.target.scrollHeight}px`
   }
 
+  // Shared borderless input style
+  const borderlessStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+    padding: 0,
+    color: 'var(--color-text-primary)',
+  }
+
   return (
     <BottomSheet
       ref={sheetRef}
@@ -129,7 +138,7 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="flex items-center gap-2 mb-3"
+              className="flex items-center gap-2 mb-2"
               data-testid="captured-indicator"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-success)' }}>
@@ -141,9 +150,9 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
         </AnimatePresence>
 
         {/* Form */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           {/* Title row with priority flag */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             <textarea
               ref={titleRef}
               id="create-task-title"
@@ -157,8 +166,12 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
               }}
               placeholder="What's on your mind?"
               rows={1}
-              className="input-field flex-1 resize-none overflow-hidden"
-              style={{ minHeight: '2.5rem' }}
+              className="flex-1 resize-none overflow-hidden text-title font-semibold"
+              style={{
+                ...borderlessStyle,
+                lineHeight: '1.4',
+                minHeight: '2rem',
+              }}
               aria-label="Task title"
               data-testid="create-task-title"
             />
@@ -170,46 +183,63 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
                 triggerSelectionHaptic()
               }}
               whileTap={{ scale: 0.85 }}
-              className="flex-shrink-0 flex items-center justify-center"
+              className="flex-shrink-0 flex items-center justify-center pt-0.5"
               style={{
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 36,
                 color: isImportant ? 'var(--color-danger)' : 'var(--color-text-secondary)',
-                opacity: isImportant ? 1 : 0.4,
+                opacity: isImportant ? 1 : 0.3,
               }}
               aria-label="Toggle important"
               aria-pressed={isImportant}
               data-testid="create-task-priority-flag"
             >
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M3.5 1a.5.5 0 01.5.5v1h8.5a.5.5 0 01.4.8L10.5 6l2.4 2.7a.5.5 0 01-.4.8H4v5a.5.5 0 01-1 0V1.5a.5.5 0 01.5-.5z" />
               </svg>
             </motion.button>
           </div>
 
-          {/* Notes */}
+          {/* Notes — borderless */}
           <textarea
             ref={notesRef}
             id="create-task-notes"
             value={notes}
             onChange={handleNotesChange}
             placeholder="Add details..."
-            rows={3}
-            className="input-field w-full resize-none"
+            rows={2}
+            className="w-full resize-none overflow-hidden text-body"
+            style={{
+              ...borderlessStyle,
+              lineHeight: '1.5',
+              minHeight: '2rem',
+            }}
             aria-label="Task notes"
             data-testid="create-task-notes"
           />
 
-          {/* Submit */}
-          <button
-            ref={submitRef}
-            onClick={handleSubmit}
-            disabled={!title.trim()}
-            className="btn-primary w-full"
-            data-testid="create-task-submit"
-          >
-            Capture
-          </button>
+          {/* Action row: Cancel + Capture */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="text-body font-medium px-2 py-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+              data-testid="create-task-cancel"
+            >
+              Cancel
+            </button>
+            <button
+              ref={submitRef}
+              type="button"
+              onClick={handleSubmit}
+              disabled={!title.trim()}
+              className="btn-primary flex-1"
+              data-testid="create-task-submit"
+            >
+              Capture
+            </button>
+          </div>
         </div>
     </BottomSheet>
   )

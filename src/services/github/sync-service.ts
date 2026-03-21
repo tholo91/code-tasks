@@ -8,6 +8,26 @@ import { generateUUID } from '../../utils/uuid'
 
 const MAX_CONFLICT_RETRIES = 3
 const DEFAULT_MAX_RETRIES = 2
+
+/** Encode a UTF-8 string to base64 (handles non-ASCII like Umlauts correctly) */
+function utf8ToBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
+
+/** Decode a base64 string back to UTF-8 (handles non-ASCII like Umlauts correctly) */
+function base64ToUtf8(base64: string): string {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return new TextDecoder().decode(bytes)
+}
 const BASE_RETRY_DELAY_MS = 600
 
 /**
@@ -67,7 +87,7 @@ async function getFileContent(
     const { data } = await octokit.rest.repos.getContent(params)
 
     if ('content' in data && 'sha' in data) {
-      const content = atob(data.content.replace(/\n/g, ''))
+      const content = base64ToUtf8(data.content.replace(/\n/g, ''))
       return { content, sha: data.sha }
     }
 
@@ -119,7 +139,7 @@ async function commitTasks(
         repo,
         path: filePath,
         message: `sync: update ${pendingCount ?? tasks.length} task${(pendingCount ?? tasks.length) > 1 ? 's' : ''} via code-tasks`,
-        content: btoa(unescape(encodeURIComponent(updatedContent))),
+        content: utf8ToBase64(updatedContent),
       }
 
       if (sha) {
@@ -392,7 +412,7 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
         repo,
         path: filePath,
         message: commitMessage,
-        content: btoa(unescape(encodeURIComponent(content))),
+        content: utf8ToBase64(content),
       }
 
       if (currentExisting?.sha) {
