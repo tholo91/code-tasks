@@ -63,18 +63,23 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
   }, [title, notes, isImportant, addTask, onTaskCreated])
 
   // Auto-focus title on mount — triggers on-screen keyboard
+  // We use multiple strategies for maximum mobile compatibility:
+  // 1. autoFocus prop on the textarea (works within user gesture chain)
+  // 2. Programmatic focus after animation settles (fallback)
   useEffect(() => {
-    // Short delay for sheet animation + iOS keyboard reliability
+    // Immediate attempt — catches most browsers
+    titleRef.current?.focus({ preventScroll: true })
+
+    // Delayed attempt — handles sheet animation lag and iOS quirks
     const timer = setTimeout(() => {
       if (titleRef.current) {
         titleRef.current.focus({ preventScroll: true })
-        // On some mobile browsers, explicitly setting selection range helps trigger keyboard
         titleRef.current.setSelectionRange(
           titleRef.current.value.length,
           titleRef.current.value.length
         )
       }
-    }, 200)
+    }, 350)
     return () => clearTimeout(timer)
   }, [])
 
@@ -164,6 +169,7 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
             <textarea
               ref={titleRef}
               id="create-task-title"
+              autoFocus
               value={title}
               onChange={handleTitleChange}
               onKeyDown={(e) => {

@@ -226,33 +226,31 @@ describe('TaskDetailSheet', () => {
     expect(screen.getByText('testuser/my-project')).toBeInTheDocument()
   })
 
-  it('renders delete button when onDelete prop is provided after expanding More', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  it('renders delete button when onDelete prop is provided', () => {
     const onDelete = vi.fn()
     render(<TaskDetailSheet task={createTask()} {...defaultProps} onDelete={onDelete} />)
-
-    await expandMore(user)
 
     expect(screen.getByTestId('detail-delete-button')).toBeInTheDocument()
   })
 
-  it('does not render delete button when onDelete prop is absent', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  it('does not render delete button when onDelete prop is absent', () => {
     render(<TaskDetailSheet task={createTask()} {...defaultProps} />)
-
-    await expandMore(user)
 
     expect(screen.queryByTestId('detail-delete-button')).not.toBeInTheDocument()
   })
 
-  it('clicking delete button calls onClose immediately and onDelete after 150ms', async () => {
+  it('clicking delete shows confirmation, confirming calls onClose and onDelete', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const onDelete = vi.fn()
     render(<TaskDetailSheet task={createTask()} {...defaultProps} onDelete={onDelete} />)
 
-    await expandMore(user)
+    // First click shows confirmation
     await user.click(screen.getByTestId('detail-delete-button'))
+    expect(defaultProps.onClose).not.toHaveBeenCalled()
+    expect(screen.getByTestId('detail-delete-confirm')).toBeInTheDocument()
 
+    // Confirm delete
+    await user.click(screen.getByTestId('detail-delete-confirm'))
     expect(defaultProps.onClose).toHaveBeenCalled()
     expect(onDelete).not.toHaveBeenCalled()
 

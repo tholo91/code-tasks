@@ -33,6 +33,7 @@ export function usePullToRefresh({
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const startYRef = useRef<number | null>(null)
+  const scrollContainerRef = useRef<HTMLElement | null>(null)
   const lastRefreshAtRef = useRef<number>(0)
   const onRefreshRef = useRef(onRefresh)
   onRefreshRef.current = onRefresh
@@ -42,9 +43,12 @@ export function usePullToRefresh({
       if (disabled || isRefreshing) return
 
       // Only activate when at the top of the page
-      const scrollY = window.scrollY ?? document.documentElement.scrollTop
+      // Check scrollTop of the element the handler is attached to (the scrollable container)
+      const target = e.currentTarget as HTMLElement
+      const scrollY = target.scrollTop
       if (scrollY > 0) return
 
+      scrollContainerRef.current = e.currentTarget as HTMLElement
       startYRef.current = e.touches[0].clientY
     },
     [disabled, isRefreshing],
@@ -55,7 +59,7 @@ export function usePullToRefresh({
       if (disabled || isRefreshing) return
       if (startYRef.current === null) return
 
-      const scrollY = window.scrollY ?? document.documentElement.scrollTop
+      const scrollY = scrollContainerRef.current?.scrollTop ?? 0
       if (scrollY > 0) {
         // User scrolled away from top — cancel the pull gesture
         startYRef.current = null

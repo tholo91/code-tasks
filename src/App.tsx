@@ -260,6 +260,7 @@ function AppContent() {
   const [dragOrderedTasks, setDragOrderedTasks] = useState<Task[]>([])
   const dragStartOrderRef = useRef<string[] | null>(null)
   const dragPointerYRef = useRef<number | null>(null)
+  const mainScrollRef = useRef<HTMLElement>(null)
   const [idbLoaded, setIdbLoaded] = useState(false)
   const [importPrompt, setImportPrompt] = useState<{
     repoFullName: string
@@ -609,7 +610,7 @@ function AppContent() {
           delta = Math.min(16, Math.max(6, (y - (viewportHeight - threshold)) / 4))
         }
         if (delta !== 0) {
-          window.scrollBy({ top: delta, behavior: 'auto' })
+          mainScrollRef.current?.scrollBy({ top: delta, behavior: 'auto' })
         }
       }
       rafId = requestAnimationFrame(tick)
@@ -673,7 +674,8 @@ function AppContent() {
           initial="initial"
           animate="animate"
           exit="exit"
-          className="h-screen flex flex-col items-center overflow-hidden p-4"
+          className="h-full flex flex-col items-center overflow-hidden"
+          style={{ padding: '16px 16px 0' }}
         >
           <OfflineNotification
             visible={showOfflineNotification}
@@ -723,7 +725,7 @@ function AppContent() {
 
           <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} onOpenSettings={() => setShowSettings(true)} />
 
-          <main className="relative flex w-full flex-1 flex-col items-center overflow-y-auto overflow-x-hidden" {...pullHandlers}>
+          <main ref={mainScrollRef} className="relative flex w-full flex-1 flex-col items-center overflow-y-auto overflow-x-hidden" {...pullHandlers}>
 
             <div className="w-full max-w-[640px] px-4">
               <BranchProtectionBanner
