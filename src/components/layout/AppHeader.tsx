@@ -27,7 +27,7 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
         className="font-mono text-label font-semibold tracking-tight"
         style={{ color: 'var(--color-accent)' }}
       >
-        code-tasks
+        Gitty Tasks
       </span>
 
       {/* Repo chip + status badges */}

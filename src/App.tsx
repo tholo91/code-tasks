@@ -652,7 +652,7 @@ function AppContent() {
         >
           <header className="text-center mb-8">
             <h1 className="text-hero font-semibold" style={{ color: 'var(--color-accent)' }}>
-              code-tasks
+              Gitty Tasks
             </h1>
             <button onClick={() => clearAuth()} className="btn-ghost mt-2">
               Logout
@@ -673,7 +673,7 @@ function AppContent() {
           initial="initial"
           animate="animate"
           exit="exit"
-          className="min-h-screen flex flex-col items-center p-4"
+          className="h-screen flex flex-col items-center overflow-hidden p-4"
         >
           <OfflineNotification
             visible={showOfflineNotification}
@@ -723,7 +723,7 @@ function AppContent() {
 
           <AppHeader isOnline={isOnline} onChangeRepo={() => setShowRepoPicker(true)} onOpenSettings={() => setShowSettings(true)} />
 
-          <main className="relative flex w-full flex-1 flex-col items-center" {...pullHandlers}>
+          <main className="relative flex w-full flex-1 flex-col items-center overflow-y-auto overflow-x-hidden" {...pullHandlers}>
 
             <div className="w-full max-w-[640px] px-4">
               <BranchProtectionBanner
