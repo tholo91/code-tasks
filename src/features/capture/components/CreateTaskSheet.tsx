@@ -174,9 +174,10 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
               }}
               placeholder="Task name"
               rows={1}
-              className="flex-1 resize-none overflow-hidden text-body font-semibold"
+              className="flex-1 resize-none overflow-hidden font-semibold"
               style={{
                 ...borderlessStyle,
+                fontSize: '1rem',
                 lineHeight: '1.4',
                 minHeight: '2rem',
               }}
@@ -216,9 +217,10 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
             onChange={handleNotesChange}
             placeholder="Notes or context (optional)"
             rows={2}
-            className="w-full resize-none overflow-hidden text-body font-normal"
+            className="w-full resize-none overflow-hidden font-normal"
             style={{
               ...borderlessStyle,
+              fontSize: '1rem',
               lineHeight: '1.5',
               minHeight: '2rem',
             }}

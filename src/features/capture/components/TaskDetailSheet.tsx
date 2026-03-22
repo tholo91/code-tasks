@@ -175,9 +175,10 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
               }
             }}
             rows={1}
-            className="flex-1 resize-none overflow-hidden text-body font-semibold"
+            className="flex-1 resize-none overflow-hidden font-semibold"
             style={{
               ...borderlessStyle,
+              fontSize: '1rem',
               lineHeight: '1.4',
               textDecoration: task.isCompleted ? 'line-through' : 'none',
               opacity: task.isCompleted ? 0.6 : 1,
@@ -217,9 +218,10 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
             onChange={handleBodyChange}
             placeholder="Notes or context (optional)"
             rows={2}
-            className="w-full resize-none overflow-hidden text-body font-normal"
+            className="w-full resize-none overflow-hidden font-normal"
             style={{
               ...borderlessStyle,
+              fontSize: '1rem',
               lineHeight: '1.5',
               minHeight: '2.5rem',
               opacity: task.isCompleted ? 0.6 : 1,
