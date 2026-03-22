@@ -1,6 +1,6 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-03-20
-# Sprint 3: MVP Wrap-Up (Epic 8 + selected Epic 9 stories)
+# Updated: 2026-03-22
+# Sprint 4: Navigation & Power User (v1.1 features)
 
 status_definitions:
   backlog: "Story identified in epics but story file not yet created"
@@ -12,18 +12,39 @@ status_definitions:
   deferred-post-mvp: "Intentionally cut from MVP scope — revisit for v1.1"
 
 sprint_info:
-  current_sprint: "Sprint 3: MVP Wrap-Up"
-  start_date: "2026-03-17"
-  focus: "Close out MVP: finish Epic 8 core, cherry-pick Epic 9 sync-trust stories, defer non-essential"
-  previous_sprint: "Sprint 2: The Real App (2026-03-15, Epic 7 — all 9 stories done)"
-  mvp_target: "Tag v1.0-mvp after remaining items complete"
+  current_sprint: "Sprint 4: Navigation & Power User"
+  start_date: "2026-03-22"
+  focus: "v1.1 features: bottom tab navigation, archive tab, notification polish, undo sync, per-repo AI instructions, bulk selection"
+  previous_sprint: "Sprint 3: MVP Wrap-Up (2026-03-17 — Epic 8 + Epic 9 sync-trust, v1.0-mvp tagged)"
+  v1_1_target: "Tag v1.1 after Sprint 4 core stories complete (9-1, 9-2, 9-8, 9-9)"
 
 development_status:
   # ═══════════════════════════════════════════════════════
-  # Epic 8: The Polish (MVP WRAP-UP — Sprint 3)
-  # 10/12 stories done, 1 decision pending, 1 deferred
+  # Epic 9: The Safe Haven (IN PROGRESS — Sprint 4)
+  # Sprint 3 done: 9-3, 9-4. Sprint 4 activates deferred + new stories.
+  # Sequence: 9-1 → 9-2 (dependency), then 9-8, 9-9, 8-7, 9-7, 9-6 (independent)
   # ═══════════════════════════════════════════════════════
-  epic-8: "in-progress"
+  epic-9: "in-progress"
+
+  # --- Done (Sprint 3) ---
+  9-3-pull-to-refresh: "done"                            # Completed 2026-03-20
+  9-4-push-to-branch-fallback: "done"                    # Completed 2026-03-20
+
+  # --- Sprint 4 active (story files exist → ready-for-dev) ---
+  9-1-bottom-tab-navigation: "ready-for-dev"             # P0 — do first; 9-2 depends on it
+  9-2-archive-tab-and-data-model: "ready-for-dev"        # P0 — depends on 9-1
+  9-7-bulk-task-selection: "ready-for-dev"               # Productivity — story file exists
+  9-6-move-task-to-another-repo: "ready-for-dev"         # Edge case — lowest Sprint 4 priority
+
+  # --- Sprint 4 new stories (story files created 2026-03-22) ---
+  9-8-notification-simplification: "ready-for-dev"       # Toast dedup + reopen false-positive fix
+  9-9-undo-sync-changes: "ready-for-dev"                 # No-op detection + hold-to-cancel sync
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 8: The Polish (DONE — Sprint 3)
+  # 8-7 activated for Sprint 4 (power user, independent)
+  # ═══════════════════════════════════════════════════════
+  epic-8: "done"
   8-9-ai-agent-header-update: "done"
   8-2-completed-tasks-default-collapsed: "done"
   8-3-remove-swipe-to-delete: "done"
@@ -31,29 +52,18 @@ development_status:
   8-4-task-creation-flow-polish: "done"
   8-5-sorting-and-filtering: "done"
   8-11-two-way-sync-remote-import: "done"
-  8-12-additive-import-with-diff-summary: "done"       # Completed 2026-03-20 — additive merge with safe-vault guarantee
-  8-6-sync-result-feedback: "done"                      # Completed 2026-03-20 — post-sync toast wired in App.tsx
-  8-8-about-gitty-settings: "done"                      # Completed 2026-03-20 — About Gitty + Star + Report Issue
-
-  # --- Remaining Epic 8 ---
-  8-10-list-view-card-redesign: "review"                   # Completed 2026-03-20 — card redesign, empty state, stagger animation
-  8-7-per-repo-ai-instructions: "deferred-post-mvp"      # Power-user feature — default AI header is fine for MVP
+  8-12-additive-import-with-diff-summary: "done"
+  8-6-sync-result-feedback: "done"
+  8-8-about-gitty-settings: "done"
+  8-10-list-view-card-redesign: "done"                   # Completed 2026-03-22 — card redesign, stagger, empty state
+  8-7-per-repo-ai-instructions: "ready-for-dev"          # Activated for Sprint 4 — power user feature
 
   # ═══════════════════════════════════════════════════════
-  # Epic 9: The Safe Haven (CHERRY-PICKED for MVP)
-  # Only sync-trust stories pulled into Sprint 3
+  # Epic 10: The Smart List (BACKLOG — future sprint)
+  # Time-aware priority: Now / Later / Someday tagging
   # ═══════════════════════════════════════════════════════
-  epic-9: "in-progress"  # Partially addressed — sync-trust stories only
-
-  # --- Done ---
-  9-3-pull-to-refresh: "done"                            # Completed 2026-03-20 — hook + indicator built
-  9-4-push-to-branch-fallback: "done"                    # Completed 2026-03-20 — branch fallback prompt + auto-remember
-
-  # --- Deferred post-MVP ---
-  9-1-bottom-tab-navigation: "deferred-post-mvp"         # Structural UI overhaul — v1.1 navigation redesign
-  9-2-archive-tab-and-data-model: "deferred-post-mvp"    # Depends on 9-1 — proper archive UX
-  9-6-move-task-to-another-repo: "deferred-post-mvp"     # Edge case — users can recreate in target repo for now
-  9-7-bulk-task-selection: "deferred-post-mvp"            # Productivity feature — individual task management works for MVP
+  epic-10: "backlog"
+  10-1-urgency-score-now-later: "backlog"                # Urgency tagging — AI-parseable + UI selector
 
   # ═══════════════════════════════════════════════════════
   # Epic 7: The Real App (DONE)
@@ -70,7 +80,7 @@ development_status:
   7-9-sync-ux-polish: "done"
 
   # ═══════════════════════════════════════════════════════
-  # Completed Epics (backend retained, frontend replaced by Epic 7)
+  # Completed Epics (foundations)
   # ═══════════════════════════════════════════════════════
 
   # Epic 1: The Secure Vault
@@ -85,7 +95,7 @@ development_status:
   2-1-repository-discovery-selection: "done"
   2-2-persistent-last-used-repo: "done"
 
-  # Epic 3: The Pulse (frontend capture flow replaced by Epic 7)
+  # Epic 3: The Pulse (frontend replaced by Epic 7)
   epic-3: "done"
   3-1-the-pulse-ui-capture: "done"
   3-2-launch-gesture-feedback: "done"
@@ -105,10 +115,10 @@ development_status:
   # Paused Epics
   # ═══════════════════════════════════════════════════════
 
-  # Epic 5: The Village (PAUSED — resume post-MVP for community features)
+  # Epic 5: The Village (PAUSED — resume post v1.1)
   epic-5: "paused"
   5-1-roadmap-teaser-data-model: "done"
-  5-2-feature-voting: "paused"                           # Consider for v1.1 — let early users shape the roadmap
+  5-2-feature-voting: "paused"
   5-3-donation-prompt: "paused"
   5-4-github-sponsor-setup: "paused"
 

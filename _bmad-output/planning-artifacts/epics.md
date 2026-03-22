@@ -15,7 +15,7 @@ editHistory:
 
 This document provides the complete epic and story breakdown for code-tasks, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
 
-**Current Priority (as of 2026-03-17):** Epic 8 is the active focus. Epics 1–4, 6, 7 are done. Epic 5 is paused. All 9 Epic 8 story files are ready-for-dev.
+**Current Priority (as of 2026-03-22):** Sprint 4 active. Epics 1–4, 6, 7, 8 are done. Epic 9 in progress (Sprint 4). Epic 5 paused. Epic 10 backlog (future sprint).
 
 ## Requirements Inventory
 
@@ -1002,3 +1002,111 @@ I want to select multiple tasks and perform batch actions (complete, delete, mov
 So that I can manage groups of tasks efficiently.
 
 **Priority:** P2
+
+---
+
+### Story 9.8: Notification Simplification & Clustering
+
+As a User,
+I want sync and import notifications to be fewer, smarter, and non-repetitive,
+So that I don't see redundant toasts every time I reopen the app after a sync.
+
+**Captured Idea:** "Create a list of all notifications to simplify and cluster them — they feel repetitive. After syncing to main and reopening the app I get one — how/why?"
+
+**Acceptance Criteria:**
+
+**Given** I sync to GitHub and then reopen the app
+**When** the app checks for remote changes
+**Then** no toast appears if nothing has changed since my last sync (no "stale re-prompt")
+
+**Given** multiple sync-related events happen in quick succession
+**When** they would each trigger a toast
+**Then** they are clustered into a single summary notification
+
+**Given** a toast is shown
+**When** I have seen an identical toast within the last 30 minutes
+**Then** it is suppressed (deduplication by type + content hash)
+
+**Technical Notes:**
+- Audit all toast/notification trigger points in `App.tsx` and `useSyncStore.ts`
+- Add a notification dedup layer: store last-shown toast type + timestamp
+- Identify the "reopen after sync" false-positive and gate it on actual remote delta
+- Files: `App.tsx`, `useSyncStore.ts`, possibly new `useNotificationDedup.ts` hook
+
+**Priority:** P1 — Quick win, no dependencies
+
+---
+
+### Story 9.9: Undo Sync Changes (Hold-to-Cancel Sync)
+
+As a User,
+I want to be able to cancel or undo a sync before it completes,
+So that accidental no-op changes (e.g. toggling important twice) don't create unnecessary commits.
+
+**Captured Idea:** "If you open a task and click 'important' twice, nothing actually changed — you should be able to cancel the sync by holding the sync button (without triggering text selection)."
+
+**Acceptance Criteria:**
+
+**Given** I have made changes that result in no net difference from the last synced state
+**When** I tap the sync button
+**Then** the app detects a no-op and either skips the sync silently or shows "Nothing changed" feedback
+
+**Given** a sync is in progress
+**When** I long-press (hold) the sync FAB for 500ms
+**Then** the sync is cancelled if still in the pre-push phase, with a brief "Cancelled" toast
+
+**Given** I hold the sync button
+**When** it cancels
+**Then** no text selection occurs (suppress browser text-select behavior on long-press)
+
+**Technical Notes:**
+- No-op detection: diff current task state against `lastSyncedSnapshot` before pushing
+- Long-press cancel: add `onLongPress` handler to `SyncFAB` with 500ms threshold; add `user-select: none` to FAB
+- Only cancel if `syncEngineStatus === 'pending'` (pre-push) — can't cancel mid-network call
+- Files: `SyncFAB.tsx`, `App.tsx`, `sync-service.ts`, `useSyncStore.ts`
+
+**Priority:** P2
+
+---
+
+## Epic 10: The Smart List (Time-Aware Priority) — BACKLOG
+
+Theme: Help users understand not just *what* is important, but *when*. Introduces temporal urgency signals that make Gitty smarter for AI agents and more useful for planning-oriented users.
+
+**FRs covered (new):** FR16 (Urgency Score / Time Tags), FR17 (Now/Later/Someday classification)
+
+### Story 10.1: Urgency Score — Now / Later / Someday Tagging
+
+As a User,
+I want to tag tasks with a temporal urgency signal (Now, Later, Someday) in addition to the existing Important flag,
+So that AI agents and I can immediately understand not just priority but time-sensitivity.
+
+**Captured Idea:** "Feature: urgency score? Now, later? Weekend importance tags, important for AI agent."
+
+**Acceptance Criteria:**
+
+**Given** I am creating or editing a task
+**When** I open the task detail or creation sheet
+**Then** I see a temporal tag selector: Now / Later / Someday (default: none/unset)
+
+**Given** I tag a task as "Now"
+**When** I view the task list
+**Then** "Now" tasks have a distinct visual treatment (e.g. subtle warm accent) and optionally float to the top
+
+**Given** a task is synced to `captured-ideas-{username}.md`
+**When** the markdown is written
+**Then** the urgency tag is included in the task metadata: e.g. `(Urgency: Now)` — parseable by AI agents
+
+**Given** the AI instruction header
+**When** it reads the file
+**Then** it understands the Now/Later/Someday taxonomy and can re-tag tasks based on context
+
+**Technical Notes:**
+- Add `urgency: 'now' | 'later' | 'someday' | null` to `Task` interface in `types/task.ts`
+- Add urgency tag UI to `CreateTaskSheet.tsx` and `TaskDetailSheet.tsx` (3-segment control or pill trio)
+- Update `formatTaskAsMarkdown` in `markdown-templates.ts` to include urgency tag in task body metadata
+- Update AI-ready header instructions to explain the urgency taxonomy
+- Consider: does urgency interact with the sort modes? (e.g. "Now" tasks always float in Priority First sort)
+- Files: `types/task.ts`, `useSyncStore.ts`, `CreateTaskSheet.tsx`, `TaskDetailSheet.tsx`, `markdown-templates.ts`
+
+**Priority:** P1 (for Epic 10 sprint)

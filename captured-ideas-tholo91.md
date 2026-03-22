@@ -17,19 +17,19 @@
 
 <!-- code-tasks:managed-start -->
 
-- [ ] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal)
-  I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why?
+- [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Processed by: Claude]
+  I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
 
-- [ ] **Man kann Veränderungen seit dem letzten Mal rückgängig machen** ([Created: 2026-03-20]) (Priority: ⚪ Normal)
-  Wenn man bspw. Einen task aufmacht und zwei mal auf "important" klickt, ist ja eigentlich nichts verändert. Man soll nun also quasi durch hold des snc Buttons (ohne text select) den sync abbrechen
+- [x] **Man kann Veränderungen seit dem letzten Mal rückgängig machen** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Processed by: Claude]
+  Wenn man bspw. Einen task aufmacht und zwei mal auf "important" klickt, ist ja eigentlich nichts verändert. Man soll nun also quasi durch hold des snc Buttons (ohne text select) den sync abbrechen → Planned: Story 9-9 (Undo Sync Changes / Hold-to-Cancel)
 
-- [ ] **Feature: urgency score? Now, later?** ([Created: 2026-03-20]) (Priority: ⚪ Normal)
-  Wochenende importance tags, wichtig fÃ¼r ai agent
+- [x] **Feature: urgency score? Now, later?** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Processed by: Claude]
+  Wochenende importance tags, wichtig fÃ¼r ai agent → Planned: Story 10-1 (Urgency Score — Now / Later / Someday, Epic 10)
 
-- [ ] **Eventuell Claude.md erstellen / anweisen?** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20]
-  Captured-ideas-<username>.md soll darin erwÃ¤hnt werden, bzw. Claude.md erstellen, damit Claude automatisch nach neuen tasks sucht
+- [x] **Eventuell Claude.md erstellen / anweisen?** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20] [Processed by: Claude]
+  Captured-ideas-<username>.md soll darin erwÃ¤hnt werden, bzw. Claude.md erstellen, damit Claude automatisch nach neuen tasks sucht → Done: CLAUDE.md updated 2026-03-22
 
-- [ ] **Letzte Reviews machen** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20]
+- [x] **Letzte Reviews machen** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20]
   Sind die Stories alle durch? Ein redesign vom task Detail oder beim create scheint nicht verÃÂ¤ndert, der list view aber schon
 Icon ist nicht im Header 
 Umlaute klappen nicht? Aber dafür pull to refresh 

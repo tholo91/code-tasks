@@ -1,6 +1,6 @@
 # Story 8.10: List View Card Redesign & Empty State
 
-Status: review
+Status: done
 
 ## Story
 
