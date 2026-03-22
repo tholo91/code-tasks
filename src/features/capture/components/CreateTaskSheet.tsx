@@ -62,11 +62,19 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
     setTimeout(() => titleRef.current?.focus(), 100)
   }, [title, notes, isImportant, addTask, onTaskCreated])
 
-  // Auto-focus title on mount (150ms for iOS keyboard)
+  // Auto-focus title on mount — triggers on-screen keyboard
   useEffect(() => {
+    // Short delay for sheet animation + iOS keyboard reliability
     const timer = setTimeout(() => {
-      titleRef.current?.focus()
-    }, 150)
+      if (titleRef.current) {
+        titleRef.current.focus({ preventScroll: true })
+        // On some mobile browsers, explicitly setting selection range helps trigger keyboard
+        titleRef.current.setSelectionRange(
+          titleRef.current.value.length,
+          titleRef.current.value.length
+        )
+      }
+    }, 200)
     return () => clearTimeout(timer)
   }, [])
 
@@ -164,11 +172,12 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
                   notesRef.current?.focus()
                 }
               }}
-              placeholder="What's on your mind?"
+              placeholder="Task name"
               rows={1}
-              className="flex-1 resize-none overflow-hidden text-title font-semibold"
+              className="flex-1 resize-none overflow-hidden font-semibold"
               style={{
                 ...borderlessStyle,
+                fontSize: '1rem',
                 lineHeight: '1.4',
                 minHeight: '2rem',
               }}
@@ -206,11 +215,12 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
             id="create-task-notes"
             value={notes}
             onChange={handleNotesChange}
-            placeholder="Add details..."
+            placeholder="Notes or context (optional)"
             rows={2}
-            className="w-full resize-none overflow-hidden text-body"
+            className="w-full resize-none overflow-hidden font-normal"
             style={{
               ...borderlessStyle,
+              fontSize: '1rem',
               lineHeight: '1.5',
               minHeight: '2rem',
             }}

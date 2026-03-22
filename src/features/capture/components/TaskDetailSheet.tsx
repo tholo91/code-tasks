@@ -175,14 +175,15 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
               }
             }}
             rows={1}
-            className="flex-1 resize-none overflow-hidden text-title font-semibold"
+            className="flex-1 resize-none overflow-hidden font-semibold"
             style={{
               ...borderlessStyle,
+              fontSize: '1rem',
               lineHeight: '1.4',
               textDecoration: task.isCompleted ? 'line-through' : 'none',
               opacity: task.isCompleted ? 0.6 : 1,
             }}
-            placeholder="Task title"
+            placeholder="Task name"
             aria-label="Task title"
             data-testid="task-detail-title"
           />
@@ -215,11 +216,12 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
             ref={notesRef}
             value={body}
             onChange={handleBodyChange}
-            placeholder="Add details..."
+            placeholder="Notes or context (optional)"
             rows={2}
-            className="w-full resize-none overflow-hidden text-body"
+            className="w-full resize-none overflow-hidden font-normal"
             style={{
               ...borderlessStyle,
+              fontSize: '1rem',
               lineHeight: '1.5',
               minHeight: '2.5rem',
               opacity: task.isCompleted ? 0.6 : 1,
@@ -230,19 +232,20 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
         </div>
 
         {/* More toggle */}
-        <div className="pl-9 pt-2">
-          <button
+        <div className="pl-9 pt-3">
+          <motion.button
             type="button"
             onClick={() => setShowMore(!showMore)}
-            className="flex items-center gap-1 text-caption font-medium"
+            whileTap={{ opacity: 0.5 }}
+            className="flex items-center gap-1.5 text-body font-semibold py-1 transition-opacity"
             style={{ color: 'var(--color-text-secondary)' }}
             data-testid="task-detail-more-toggle"
           >
             <motion.svg
               animate={{ rotate: showMore ? 180 : 0 }}
               transition={TRANSITION_FAST}
-              width="12"
-              height="12"
+              width="14"
+              height="14"
               viewBox="0 0 16 16"
               fill="currentColor"
               aria-hidden="true"
@@ -250,7 +253,7 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
               <path d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z" />
             </motion.svg>
             {showMore ? 'Less' : 'More'}
-          </button>
+          </motion.button>
         </div>
 
         {/* Collapsible details section */}
@@ -263,10 +266,10 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
-              <div className="flex flex-col gap-2 pt-3 pl-9">
+              <div className="flex flex-col gap-2.5 pt-3 pl-9">
                 {/* Sync status */}
                 <div className="flex items-center justify-between">
-                  <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                  <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
                     Sync
                   </span>
                   <span
@@ -279,10 +282,10 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
 
                 {/* Created */}
                 <div className="flex items-center justify-between">
-                  <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                  <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
                     Created
                   </span>
-                  <span className="text-caption" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-created">
+                  <span className="text-label" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-created">
                     {formatRelativeTime(task.createdAt)}
                   </span>
                 </div>
@@ -290,10 +293,10 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
                 {/* Updated */}
                 {task.updatedAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                    <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
                       Updated
                     </span>
-                    <span className="text-caption" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-updated">
+                    <span className="text-label" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-updated">
                       {formatRelativeTime(task.updatedAt)}
                     </span>
                   </div>
@@ -302,10 +305,10 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
                 {/* Completed */}
                 {task.isCompleted && task.completedAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                    <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
                       Completed
                     </span>
-                    <span className="text-caption" style={{ color: 'var(--color-success)' }} data-testid="task-detail-completed">
+                    <span className="text-label" style={{ color: 'var(--color-success)' }} data-testid="task-detail-completed">
                       {formatRelativeTime(task.completedAt)}
                     </span>
                   </div>
@@ -313,13 +316,13 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
 
                 {/* Repository */}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                  <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
                     {task.repoFullName}
                   </span>
                   <button
                     type="button"
                     onClick={() => onMoveToRepo(task.id)}
-                    className="text-caption font-medium"
+                    className="text-label font-medium"
                     style={{ color: 'var(--color-accent)' }}
                     aria-label="Move task to repository"
                     data-testid="task-detail-move-repo"
@@ -338,7 +341,7 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
                         setTimeout(() => onDelete(task.id), 150)
                       }
                     }}
-                    className="self-start text-caption font-medium mt-2 py-1"
+                    className="self-start text-label font-medium mt-2 py-1"
                     style={{ color: 'var(--color-danger)' }}
                     aria-label="Delete task"
                     data-testid="detail-delete-button"
