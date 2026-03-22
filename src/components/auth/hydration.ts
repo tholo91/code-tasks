@@ -18,6 +18,8 @@ export function resetHydration() {
 }
 
 async function performHydration(): Promise<void> {
+  const minSplash = new Promise<void>((r) => setTimeout(r, 1800))
+
   await useSyncStore.persist.rehydrate()
 
   const { token: persistedToken, isAuthenticated } = useSyncStore.getState()
@@ -81,4 +83,6 @@ async function performHydration(): Promise<void> {
   } catch {
     useSyncStore.getState().clearAuth('Connection failed — please check GitHub access')
   }
+
+  await minSplash
 }

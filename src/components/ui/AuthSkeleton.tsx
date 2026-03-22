@@ -20,7 +20,7 @@ export function AuthSkeleton() {
 
       {/* Fox mascot icon */}
       <img
-        src="/pwa-192x192.png"
+        src={`${import.meta.env.BASE_URL}pwa-192x192.png`}
         alt=""
         width={80}
         height={80}
