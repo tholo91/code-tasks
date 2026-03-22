@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { usePullToRefresh } from './usePullToRefresh'
 
-function createTouchEvent(clientY: number): React.TouchEvent {
+function createTouchEvent(clientY: number, scrollTop = 0): React.TouchEvent {
   return {
     touches: [{ clientY }],
     preventDefault: vi.fn(),
+    currentTarget: { scrollTop },
   } as unknown as React.TouchEvent
 }
 
@@ -15,8 +16,6 @@ describe('usePullToRefresh', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    // Mock window.scrollY at 0 (top of page)
-    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true })
 
     onRefresh = vi.fn(() => new Promise<void>((resolve) => {
       resolveRefresh = resolve

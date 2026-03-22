@@ -19,7 +19,8 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
   const [title, setTitle] = useState(task.title)
   const [body, setBody] = useState(task.body)
   const [isImportant, setIsImportant] = useState(task.isImportant)
-  const [showMore, setShowMore] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const notesRef = useRef<HTMLTextAreaElement>(null)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -231,130 +232,194 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
           />
         </div>
 
-        {/* More toggle */}
-        <div className="pl-9 pt-3">
+        {/* Divider */}
+        <div className="mt-4 mb-1" style={{ borderTop: '1px solid var(--color-border)', opacity: 0.5 }} />
+
+        {/* Action buttons row — always visible */}
+        <div className="flex items-center gap-2 py-1">
+          {/* Move to repo */}
           <motion.button
             type="button"
-            onClick={() => setShowMore(!showMore)}
-            whileTap={{ opacity: 0.5 }}
-            className="flex items-center gap-1.5 text-body font-semibold py-1 transition-opacity"
-            style={{ color: 'var(--color-text-secondary)' }}
+            onClick={() => onMoveToRepo(task.id)}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-body font-medium"
+            style={{
+              color: 'var(--color-text-secondary)',
+              background: 'var(--color-surface-hover)',
+              border: 'none',
+              cursor: 'pointer',
+              minHeight: 40,
+            }}
+            aria-label="Move task to repository"
+            data-testid="task-detail-move-repo"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 010-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1h-6a1 1 0 00-1 1v6.708A2.486 2.486 0 017.5 9h5V1.5z" />
+            </svg>
+            Move
+          </motion.button>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Delete button with inline confirmation */}
+          {onDelete && !confirmingDelete && (
+            <motion.button
+              type="button"
+              onClick={() => {
+                setConfirmingDelete(true)
+                triggerSelectionHaptic()
+              }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-body font-medium"
+              style={{
+                color: 'var(--color-danger)',
+                background: 'var(--color-danger-subtle)',
+                border: 'none',
+                cursor: 'pointer',
+                minHeight: 40,
+              }}
+              aria-label="Delete task"
+              data-testid="detail-delete-button"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M11 1.75V3h2.25a.75.75 0 010 1.5H2.75a.75.75 0 010-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675a.75.75 0 10-1.492.15l.66 6.6A1.75 1.75 0 005.405 15h5.19a1.75 1.75 0 001.741-1.575l.66-6.6a.75.75 0 00-1.492-.15l-.66 6.6a.25.25 0 01-.249.225h-5.19a.25.25 0 01-.249-.225l-.66-6.6zM6.5 1.75V3h3V1.75a.25.25 0 00-.25-.25h-2.5a.25.25 0 00-.25.25z" />
+              </svg>
+              Delete
+            </motion.button>
+          )}
+          {onDelete && confirmingDelete && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                className="px-3 py-2 rounded-lg text-body font-medium"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  background: 'var(--color-surface-hover)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  minHeight: 40,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  setTimeout(() => onDelete(task.id), 150)
+                }}
+                className="px-4 py-2 rounded-lg text-body font-semibold"
+                style={{
+                  color: 'var(--color-on-accent)',
+                  background: 'var(--color-danger)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  minHeight: 40,
+                }}
+                data-testid="detail-delete-confirm"
+              >
+                Confirm delete
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Details disclosure — metadata */}
+        <div className="mt-1">
+          <motion.button
+            type="button"
+            onClick={() => setShowDetails(!showDetails)}
+            whileTap={{ opacity: 0.6 }}
+            className="flex items-center gap-2 py-2 text-body font-medium w-full"
+            style={{ color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
             data-testid="task-detail-more-toggle"
           >
             <motion.svg
-              animate={{ rotate: showMore ? 180 : 0 }}
+              animate={{ rotate: showDetails ? 90 : 0 }}
               transition={TRANSITION_FAST}
-              width="14"
-              height="14"
+              width="12"
+              height="12"
               viewBox="0 0 16 16"
               fill="currentColor"
               aria-hidden="true"
             >
-              <path d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z" />
+              <path d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z" />
             </motion.svg>
-            {showMore ? 'Less' : 'More'}
+            Details
           </motion.button>
+
+          <AnimatePresence initial={false}>
+            {showDetails && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="flex flex-col gap-3 py-3 px-3 rounded-lg mb-1"
+                  style={{ background: 'rgba(255, 255, 255, 0.02)' }}
+                >
+                  {/* Repository */}
+                  <DetailRow label="Repository" data-testid="task-detail-repo">
+                    <span className="text-body font-mono" style={{ color: 'var(--color-text-primary)', fontSize: '0.8125rem' }}>
+                      {task.repoFullName}
+                    </span>
+                  </DetailRow>
+
+                  {/* Sync status */}
+                  <DetailRow label="Sync">
+                    <span
+                      className={`badge ${task.syncStatus === 'pending' ? 'badge-amber' : 'badge-green'}`}
+                      data-testid="task-detail-sync-status"
+                    >
+                      {task.syncStatus === 'pending' ? 'Pending' : 'Synced'}
+                    </span>
+                  </DetailRow>
+
+                  {/* Created */}
+                  <DetailRow label="Created">
+                    <span className="text-body" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-created">
+                      {formatRelativeTime(task.createdAt)}
+                    </span>
+                  </DetailRow>
+
+                  {/* Updated */}
+                  {task.updatedAt && (
+                    <DetailRow label="Updated">
+                      <span className="text-body" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-updated">
+                        {formatRelativeTime(task.updatedAt)}
+                      </span>
+                    </DetailRow>
+                  )}
+
+                  {/* Completed */}
+                  {task.isCompleted && task.completedAt && (
+                    <DetailRow label="Completed">
+                      <span className="text-body" style={{ color: 'var(--color-success)' }} data-testid="task-detail-completed">
+                        {formatRelativeTime(task.completedAt)}
+                      </span>
+                    </DetailRow>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-
-        {/* Collapsible details section */}
-        <AnimatePresence initial={false}>
-          {showMore && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-col gap-2.5 pt-3 pl-9">
-                {/* Sync status */}
-                <div className="flex items-center justify-between">
-                  <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                    Sync
-                  </span>
-                  <span
-                    className={`badge ${task.syncStatus === 'pending' ? 'badge-amber' : 'badge-green'}`}
-                    data-testid="task-detail-sync-status"
-                  >
-                    {task.syncStatus === 'pending' ? 'Pending' : 'Synced'}
-                  </span>
-                </div>
-
-                {/* Created */}
-                <div className="flex items-center justify-between">
-                  <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                    Created
-                  </span>
-                  <span className="text-label" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-created">
-                    {formatRelativeTime(task.createdAt)}
-                  </span>
-                </div>
-
-                {/* Updated */}
-                {task.updatedAt && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                      Updated
-                    </span>
-                    <span className="text-label" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-updated">
-                      {formatRelativeTime(task.updatedAt)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Completed */}
-                {task.isCompleted && task.completedAt && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                      Completed
-                    </span>
-                    <span className="text-label" style={{ color: 'var(--color-success)' }} data-testid="task-detail-completed">
-                      {formatRelativeTime(task.completedAt)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Repository */}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                    {task.repoFullName}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onMoveToRepo(task.id)}
-                    className="text-label font-medium"
-                    style={{ color: 'var(--color-accent)' }}
-                    aria-label="Move task to repository"
-                    data-testid="task-detail-move-repo"
-                  >
-                    Move to…
-                  </button>
-                </div>
-
-                {/* Delete */}
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('Delete this task?')) {
-                        onClose()
-                        setTimeout(() => onDelete(task.id), 150)
-                      }
-                    }}
-                    className="self-start text-label font-medium mt-2 py-1"
-                    style={{ color: 'var(--color-danger)' }}
-                    aria-label="Delete task"
-                    data-testid="detail-delete-button"
-                  >
-                    Delete task
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </BottomSheet>
+  )
+}
+
+function DetailRow({ label, children, ...rest }: { label: string; children: React.ReactNode; [key: string]: unknown }) {
+  return (
+    <div className="flex items-center justify-between" {...rest}>
+      <span className="text-body" style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+      {children}
+    </div>
   )
 }
 
