@@ -650,7 +650,7 @@ function AppContent() {
           animate="animate"
           exit="exit"
           className="h-full flex flex-col items-center overflow-hidden"
-          style={{ padding: '16px 16px 0' }}
+          style={{ padding: '0 16px' }}
         >
           <OfflineNotification
             visible={showOfflineNotification}

@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { pageVariants, TRANSITION_NORMAL } from '../../../config/motion'
+import { APP_VERSION } from '../../../config/app'
 import type { Variants } from 'framer-motion'
 
 interface AboutGittyViewProps {
@@ -165,7 +166,7 @@ export function AboutGittyView({ onClose }: AboutGittyViewProps) {
             className="text-caption tracking-wide"
             style={{ color: 'var(--color-text-secondary)', opacity: 0.4 }}
           >
-            v0.0.1
+            v{APP_VERSION}
           </span>
         </motion.div>
       </motion.div>

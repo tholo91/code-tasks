@@ -58,6 +58,10 @@ development_status:
   8-10-list-view-card-redesign: "done"                   # Completed 2026-03-22 — card redesign, stagger, empty state
   8-7-per-repo-ai-instructions: "ready-for-dev"          # Activated for Sprint 4 — power user feature
 
+  # --- Quick specs (not yet assigned to stories) ---
+  qs-claude-md-integration: "ready-for-dev"              # After first sync, offer to inject Task Discovery into repo's CLAUDE.md
+  qs-repo-detail-view: "draft"                           # Repo overview screen (README, AI instructions, switch repo) — needs deeper investigation
+
   # ═══════════════════════════════════════════════════════
   # Epic 10: The Smart List (BACKLOG — future sprint)
   # Time-aware priority: Now / Later / Someday tagging

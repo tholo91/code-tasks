@@ -104,6 +104,13 @@ The live file for this repo is **`captured-ideas-tholo91.md`** in the root. It c
 - Mark items as done (`- [x]`) and append `[Processed by: Claude]` after they have been turned into a story or resolved
 - Do NOT manually edit tasks between `managed-start` and `managed-end` markers — the app owns that content
 
+## Versioning
+
+- **Single source of truth:** `package.json` → injected at build time via `__APP_VERSION__` in `vite.config.ts`
+- **Central config:** `src/config/app.ts` exports `APP_NAME` and `APP_VERSION` — use these everywhere in code, never hardcode
+- **Format:** `major.minor` (int.int, e.g. `1.12`) — no patch, no semver
+- **When to bump:** Increment minor version for each deployment with meaningful changes
+
 ## Git Practices
 
 - Commit messages in English, clear and descriptive

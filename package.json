@@ -1,7 +1,7 @@
 {
   "name": "code-tasks",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.12",
   "type": "module",
   "scripts": {
     "dev": "vite",
