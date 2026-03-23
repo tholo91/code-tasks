@@ -4,58 +4,65 @@ export const roadmapData: RoadmapItem[] = [
   {
     id: 'core-vision',
     title: 'Product Brief & Vision',
-    description: 'Definition der Grundvision und des Projekt-Umfangs für Gitty.',
+    description: 'Defining the core vision and project scope for Gitty.',
     status: 'shipped',
     category: 'Planning'
   },
   {
     id: 'quick-capture',
     title: 'The Pulse: Quick Capture',
-    description: 'Einzeilige Eingabe für schnelle Erfassung von Gedanken, optimiert für mobile Nutzung.',
+    description: 'Single-line input for quick thought capture, optimized for mobile use.',
     status: 'shipped',
     category: 'Frontend'
   },
   {
     id: 'offline-persistence',
     title: 'Offline Persistence',
-    description: 'Speicherung der Daten in IndexedDB, damit die App auch ohne Internetverbindung funktioniert.',
+    description: 'Local data storage in IndexedDB so the app works fully offline.',
     status: 'shipped',
     category: 'Core'
   },
   {
     id: 'fuzzy-search',
     title: 'Fuzzy Task Search',
-    description: 'Schnelles Finden von Aufgaben durch fehlertolerante Suche über Titel und Beschreibungen.',
+    description: 'Quickly find tasks with typo-tolerant search across titles and descriptions.',
     status: 'shipped',
     category: 'Frontend'
   },
   {
     id: 'background-sync',
     title: 'Background Sync Engine',
-    description: 'Automatischer Abgleich der lokalen Daten mit GitHub im Hintergrund.',
+    description: 'Automatic background sync of local data with GitHub.',
     status: 'shipped',
     category: 'Core'
   },
   {
     id: 'roadmap-teaser',
     title: 'Roadmap Teaser',
-    description: 'Einblick in geplante Funktionen und den aktuellen Entwicklungsstand direkt in der App.',
+    description: 'A peek at planned features and current development progress right inside the app.',
     status: 'in-progress',
     category: 'Community'
   },
   {
     id: 'feature-voting',
     title: 'Feature Voting',
-    description: 'Nutzer können über geplante Funktionen abstimmen, um die Priorisierung zu beeinflussen.',
+    description: 'Let users vote on planned features to influence prioritization.',
     status: 'planned',
     category: 'Community'
   },
   {
     id: 'speech-to-task',
     title: 'Speech to Task',
-    description: 'Diktier-Button für Brainstorming per Sprache — Ideen einsprechen und als Tasks ins gewünschte Repository pushen.',
+    description: 'Dictation button for voice brainstorming — speak your ideas and push them as tasks to any repository.',
     status: 'planned',
     category: 'Frontend'
+  },
+  {
+    id: 'multi-account',
+    title: 'Multi-Account Support',
+    description: 'Connect multiple GitHub accounts (e.g. personal + work) and switch between them seamlessly.',
+    status: 'planned',
+    category: 'Core'
   }
 ];
 

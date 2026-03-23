@@ -17,7 +17,7 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
 
   return (
     <header
-      className="sticky top-0 z-[40] w-full max-w-[640px]"
+      className="sticky top-0 z-[40] -mx-4 w-[calc(100%+32px)]"
       style={{
         backgroundColor: 'var(--color-canvas)',
         borderBottom: '1px solid var(--color-border)',
@@ -25,7 +25,7 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
       data-testid="app-header"
     >
       <div
-        className="grid items-center px-3"
+        className="mx-auto grid max-w-[640px] items-center px-3"
         style={{
           gridTemplateColumns: '1fr auto 1fr',
           minHeight: '48px',
@@ -39,7 +39,7 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
           aria-label="Settings"
           data-testid="settings-button"
         >
-          <img src="/icon_round.png" alt="Gitty" className="h-6 w-6 rounded-full" />
+          <img src={`${import.meta.env.BASE_URL}icon_round.png`} alt="Gitty" className="h-6 w-6 rounded-full" />
         </button>
 
         {/* ── Center: repo selector ── */}

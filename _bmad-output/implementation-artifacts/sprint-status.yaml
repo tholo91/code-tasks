@@ -115,6 +115,17 @@ development_status:
   # Paused Epics
   # ═══════════════════════════════════════════════════════
 
+  # ═══════════════════════════════════════════════════════
+  # Epic 11: Multi-Account (BACKLOG — future)
+  # Multiple GitHub accounts (personal + work) with token vault
+  # ═══════════════════════════════════════════════════════
+  epic-11: "backlog"
+  11-1-multi-github-account-support: "backlog"         # Multi-PAT storage, account switcher, scoped repos
+
+  # ═══════════════════════════════════════════════════════
+  # Paused Epics
+  # ═══════════════════════════════════════════════════════
+
   # Epic 5: The Village (PAUSED — resume post v1.1)
   epic-5: "paused"
   5-1-roadmap-teaser-data-model: "done"
