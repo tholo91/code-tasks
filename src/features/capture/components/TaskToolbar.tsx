@@ -340,9 +340,9 @@ export function TaskToolbar({
                       className="absolute right-0 top-full z-50 mt-1 overflow-hidden rounded-xl"
                       style={{
                         minWidth: 180,
-                        backgroundColor: 'var(--color-surface)',
+                        backgroundColor: '#1c2128',
                         border: '1px solid var(--color-border)',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
                       }}
                     >
                       {sortOptions.map(({ value, label }) => {
@@ -365,7 +365,7 @@ export function TaskToolbar({
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                              color: isActive ? 'var(--color-accent)' : 'var(--color-text-primary)',
                               fontWeight: isActive ? 600 : 400,
                               fontSize: 14,
                               WebkitTapHighlightColor: 'transparent',

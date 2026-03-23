@@ -253,8 +253,9 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
             aria-label="Move task to repository"
             data-testid="task-detail-move-repo"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" className="flex-shrink-0">
-              <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 010-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1h-6a1 1 0 00-1 1v6.708A2.486 2.486 0 017.5 9h5V1.5z" />
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-shrink-0">
+              <path d="M2.5 8h10" />
+              <path d="M9 4.5L12.5 8 9 11.5" />
             </svg>
             Move
           </motion.button>

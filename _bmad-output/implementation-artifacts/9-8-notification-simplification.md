@@ -6,7 +6,7 @@ Status: ready-for-dev
 
 As a User,
 I want sync and import notifications to be fewer, smarter, and non-repetitive,
-so that I don't see redundant toasts every time I reopen the app after a sync.
+so that I don't see redundant toasts or misleading import prompts when using the app.
 
 ## Acceptance Criteria
 
@@ -15,6 +15,10 @@ so that I don't see redundant toasts every time I reopen the app after a sync.
 2. Given multiple sync-related events happen in quick succession (e.g., import + sync result within 2 seconds), when they would each trigger a toast, then they are clustered into a single summary notification.
 
 3. Given a toast is shown, when I have seen an identical toast within the last 30 minutes, then it is suppressed (deduplication by type + content hash).
+
+4. Given I switch to a repo where a remote file exists but an agent has only completed/checked-off tasks (no new unchecked tasks vs. local), when the app checks for import, then no misleading "Import available — your local list is empty" banner is shown. Instead, the SHA is silently updated and the user sees their current task list (or an empty-state if truly no active tasks exist).
+
+5. Given I switch to a repo where I have local tasks AND a remote file has changes, when the import banner appears, then the banner copy clearly communicates whether the action will merge (preserving local ideas) or replace, so I can trust it won't overwrite my work.
 
 ## Tasks / Subtasks
 
@@ -34,6 +38,12 @@ so that I don't see redundant toasts every time I reopen the app after a sync.
   - [ ] 2.2: Fix in `useRemoteChangeDetection.ts`: After the `remoteSha === localSha` early-return (line 60), add a **content-level** diff check before calling `onRemoteChangesRef`. Compute `computeImportDiff(localTasks, remoteTasks)` and call `isAllZero(diff)` — if zero, silently update the local SHA to match remote (call `useSyncStore.getState().setRepoSyncMeta(repoKey, { lastSyncedSha: remoteSha })`) and skip the callback. **Note:** This logic partially exists in the `App.tsx` `useRemoteChangeDetection` callback (lines 370-377) but the detection hook itself does not perform this check — it delegates everything to the callback. Moving the `isAllZero` guard INTO the hook eliminates the false-positive at the source.
   - [ ] 2.3: Audit `SyncFAB.tsx` line 58-59: after a successful sync, `setSyncStatus('success')` and `updateLastSyncedAt()` are called, but the remote SHA returned by `syncAllRepoTasks` is NOT propagated back to `repoSyncMeta.lastSyncedSha`. Ensure `syncAllRepoTasks` returns the new SHA in its result, and call `setRepoSyncMeta(repoFullName, { lastSyncedSha: newSha })` in the SyncFAB success handler. This closes the SHA staleness gap that causes the phantom banner on reopen.
   - [ ] 2.4: Add a `lastPushCompletedAt` timestamp field to the detection hook (or track it via a ref). After a successful sync push, record the timestamp. In `handleVisibilityChange`, if the reopen happens within 5 seconds of a push completion, skip the remote check entirely (the data can't have changed yet).
+
+- [ ] Task 2B: Fix the repo-switch false-positive "Import available" banner (AC: #4, #5)
+  - [ ] 2B.1: In `App.tsx`, the repo-switch import check (lines 344-376) currently uses a simple `localRepoTasks.length === 0` to decide between auto-import and showing the import banner. **Problem:** When `localRepoTasks.length === 0` and the remote file only has completed/checked-off tasks, the app auto-imports them — but the task list still looks empty (all tasks are done). The user sees a brief "Import available: XY tasks found" flash or gets confused when the list remains empty after import. **Fix:** After fetching remote tasks, check if ALL remote tasks are completed (`every(t => t.isCompleted)`). If so AND local is empty, still import (for history), but do NOT show the "your local list is empty" banner. Instead, show the normal empty-state ("No active tasks") or a subtle toast ("Loaded N completed tasks from remote").
+  - [ ] 2B.2: When `localRepoTasks.length > 0` and a remote file has changes, run `computeImportDiff(localTasks, remoteTasks)` BEFORE showing the banner. If `isAllZero(diff)`, silently update the SHA and skip the banner entirely — same pattern as Task 2.2 but for the repo-switch path.
+  - [ ] 2B.3: Update `SyncImportBanner.tsx` copy for the `initial-import` variant: When there ARE meaningful remote tasks to import AND the user has local tasks, change copy from "Your local list is empty — this will load tasks from the remote file" to clearly state: "This will merge remote tasks with your local list. Your local ideas are preserved." For the `remote-update` variant, the existing copy already mentions safety ("Your N new ideas are safe") — verify this is always shown.
+  - [ ] 2B.4: Add a `variant` or `safetyNote` prop to `SyncImportBanner` so it can display "Merge (your local ideas stay)" vs "Replace (fresh load from remote)" based on which import path will be used. The `onImport` handler in `App.tsx` already branches on `source === 'remote-update'` vs initial — surface this distinction in the UI.
 
 - [ ] Task 3: Integrate `useNotificationDedup` into `App.tsx` (AC: #2, #3)
   - [ ] 3.1: Replace the three separate toast state variables in `AppContent`:
@@ -70,6 +80,10 @@ so that I don't see redundant toasts every time I reopen the app after a sync.
     - Add test: when SHA differs but `computeImportDiff` returns all-zero, `onRemoteChanges` is NOT called and local SHA is silently updated
     - Add test: when reopen happens within 5s of a sync push, remote check is skipped
   - [ ] 5.4: Verify existing `SyncImportBanner.test.tsx` and `SyncResultToast.test.tsx` still pass (SyncResultToast component may be deprecated; update or remove tests accordingly).
+  - [ ] 5.5: Add tests for repo-switch import path (AC: #4):
+    - When remote has only completed tasks and local is empty → auto-import silently, no misleading banner
+    - When remote has changes but `computeImportDiff` is all-zero on repo-switch → silent SHA update, no banner
+    - When local has tasks and remote has real changes → banner shows with correct merge/replace copy (AC: #5)
 
 - [ ] Task 6: Cleanup deprecated notification code (AC: #1, #2, #3)
   - [ ] 6.1: If `SyncResultToast` is fully replaced by `NotificationToast`, remove `src/features/sync/components/SyncResultToast.tsx` and its test file. Update imports in `App.tsx`.
@@ -157,8 +171,10 @@ No persistence needed — the dedup registry is in-memory (component state / ref
 **Modified files:**
 - `src/hooks/useRemoteChangeDetection.ts` — add content-diff guard, post-push skip window
 - `src/hooks/useRemoteChangeDetection.test.ts` — new test cases
-- `src/App.tsx` — integrate `useNotificationDedup`, replace three toast states with unified hook, replace three toast render blocks with single `NotificationToast`
+- `src/App.tsx` — integrate `useNotificationDedup`, replace three toast states with unified hook, replace three toast render blocks with single `NotificationToast`, add `computeImportDiff` to repo-switch path
 - `src/features/sync/components/SyncFAB.tsx` — propagate new SHA after successful sync push
+- `src/features/sync/components/SyncImportBanner.tsx` — updated copy for merge vs. replace clarity, handle all-completed-tasks case
+- `src/features/sync/components/SyncImportBanner.test.tsx` — new test cases for updated copy and variants
 - `src/services/github/sync-service.ts` — return new commit SHA from `syncAllRepoTasks`
 
 **Potentially removed files:**

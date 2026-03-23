@@ -39,7 +39,7 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
           aria-label="Settings"
           data-testid="settings-button"
         >
-          <img src="/pwa-64x64.png" alt="Gitty" className="h-6 w-6 rounded-full" />
+          <img src="/icon_round.png" alt="Gitty" className="h-6 w-6 rounded-full" />
         </button>
 
         {/* ── Center: repo selector ── */}
