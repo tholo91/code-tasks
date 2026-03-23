@@ -17,29 +17,28 @@
 
 <!-- code-tasks:managed-start -->
 
-- [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Processed by: Claude]
+## Completed
+
+- [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
   I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
 
-- [x] **Man kann Veränderungen seit dem letzten Mal rückgängig machen** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Processed by: Claude]
+- [x] **Man kann Veränderungen seit dem letzten Mal rückgängig machen** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
   Wenn man bspw. Einen task aufmacht und zwei mal auf "important" klickt, ist ja eigentlich nichts verändert. Man soll nun also quasi durch hold des snc Buttons (ohne text select) den sync abbrechen → Planned: Story 9-9 (Undo Sync Changes / Hold-to-Cancel)
 
-- [x] **Feature: urgency score? Now, later?** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Processed by: Claude]
-  Wochenende importance tags, wichtig fÃ¼r ai agent → Planned: Story 10-1 (Urgency Score — Now / Later / Someday, Epic 10)
+- [x] **Feature: urgency score? Now, later?** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Updated: 2026-03-23] [Completed: 2026-03-20] [Processed by: Claude]
+  Wochenende importance tags, wichtig fÃ¼r ai agent
 
-- [x] **Eventuell Claude.md erstellen / anweisen?** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20] [Processed by: Claude]
+- [x] **Eventuell Claude.md erstellen / anweisen?** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20] [Completed: 2026-03-20] [Processed by: Claude]
   Captured-ideas-<username>.md soll darin erwÃ¤hnt werden, bzw. Claude.md erstellen, damit Claude automatisch nach neuen tasks sucht → Done: CLAUDE.md updated 2026-03-22
 
-- [x] **Letzte Reviews machen** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20]
+- [x] **an edit in captured-ideas.md should not trigger a publish github site** ([Created: 2026-03-17]) (Priority: ⚪ Normal) [Updated: 2026-03-20] [Completed: 2026-03-20]
+  It seems as if every push actually triggers a rebuild of the page, is there a way to fix that? ÃÂ¢ÃÂÃÂ Planned: Story 9-5 (Skip CI on sync commits)
+
+- [x] **Letzte Reviews machen** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20] [Completed: 2026-03-20]
   Sind die Stories alle durch? Ein redesign vom task Detail oder beim create scheint nicht verÃÂ¤ndert, der list view aber schon
 Icon ist nicht im Header 
 Umlaute klappen nicht? Aber dafür pull to refresh 
 Pull to refresh müsste prominenter erscheinen und zwar direkt über dem list view (also würde das gepullte hinter der header leiste erscheinen)
-
-
-## Completed
-
-- [x] **an edit in captured-ideas.md should not trigger a publish github site** ([Created: 2026-03-17]) (Priority: ⚪ Normal) [Updated: 2026-03-20] [Completed: 2026-03-20]
-  It seems as if every push actually triggers a rebuild of the page, is there a way to fix that? ÃÂ¢ÃÂÃÂ Planned: Story 9-5 (Skip CI on sync commits)
 
 - [x] **Push to branch instead of main** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Completed: 2026-03-20]
   When a repo has branch protection, Gitty should ask the user once and then create a new branch and push there instead of showing "can't sync". Remember the preference per repo. ÃÂ¢ÃÂÃÂ Planned: Story 9-4
