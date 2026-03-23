@@ -17,18 +17,22 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
+  When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then?
+
 - [ ] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
   Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again
+
+- [ ] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
+  Should have more padding below.
+Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type.
+This seems to work fine when opening the detail view of an existing task
 
 
 ## Completed
 
 - [x] **Slight header redesign** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23]
   It uses a weird background color, which is separate from the background color of the main screen. Maybe use your Frontend-design skill to change that? But also make it prominent, that the header is separate? Maybe it has a weird margin to it while it may need padding instead?
-
-- [x] **Bottom sheet of tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Completed: 2026-03-23]
-  Should have more padding below.
-Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type. This does not happen, when I just press Enter to enter the description input 
 
 - [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
   I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
