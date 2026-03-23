@@ -17,6 +17,11 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Bottom sheet of tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
+  Should have more padding below.
+Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type. This does not happen, when I just press Enter to enter the description input 
+
+
 ## Completed
 
 - [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
@@ -36,9 +41,6 @@
 
 - [x] **Letzte Reviews machen** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20] [Completed: 2026-03-20]
   Sind die Stories alle durch? Ein redesign vom task Detail oder beim create scheint nicht verÃÂ¤ndert, der list view aber schon
-Icon ist nicht im Header 
-Umlaute klappen nicht? Aber dafür pull to refresh 
-Pull to refresh müsste prominenter erscheinen und zwar direkt über dem list view (also würde das gepullte hinter der header leiste erscheinen)
 
 - [x] **Push to branch instead of main** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Completed: 2026-03-20]
   When a repo has branch protection, Gitty should ask the user once and then create a new branch and push there instead of showing "can't sync". Remember the preference per repo. ÃÂ¢ÃÂÃÂ Planned: Story 9-4
