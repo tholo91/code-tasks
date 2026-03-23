@@ -149,6 +149,35 @@ export const selectPendingSyncCountAllRepos = (state: SyncState) => {
   return Object.values(counts).reduce((sum, count) => sum + count, 0)
 }
 
+let lastOpenCountsTasks: Task[] | null = null
+let lastOpenCountsUser: GitHubUser | null = null
+let lastOpenCountsResult: Record<string, number> = {}
+
+/**
+ * Selector for open (non-completed) task counts per repository.
+ * Memoized to avoid recomputation on unrelated state changes.
+ */
+export const selectOpenTaskCountsByRepo = (state: SyncState) => {
+  const { tasks, user } = state
+  if (tasks === lastOpenCountsTasks && user === lastOpenCountsUser) {
+    return lastOpenCountsResult
+  }
+
+  const counts: Record<string, number> = {}
+  if (user) {
+    for (const task of tasks) {
+      if (task.isCompleted || task.username !== user.login) continue
+      const repoKey = task.repoFullName.toLowerCase()
+      counts[repoKey] = (counts[repoKey] ?? 0) + 1
+    }
+  }
+
+  lastOpenCountsTasks = tasks
+  lastOpenCountsUser = user
+  lastOpenCountsResult = counts
+  return counts
+}
+
 export const useSyncStore = create<SyncState>()(
   persist(
     (set, get) => ({
