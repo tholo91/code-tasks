@@ -17,6 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Slight header redesign** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
+  It uses a weird background color, which is separate from the background color of the main screen. Maybe use your Frontend-design skill to change that? But also make it prominent, that the header is separate? Maybe it has a weird margin to it while it may need padding instead?
+
 - [ ] **Bottom sheet of tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
   Should have more padding below.
 Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type. This does not happen, when I just press Enter to enter the description input 
