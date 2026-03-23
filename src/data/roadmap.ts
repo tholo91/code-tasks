@@ -51,18 +51,11 @@ export const roadmapData: RoadmapItem[] = [
     category: 'Community'
   },
   {
-    id: 'donation-prompt',
-    title: 'Unterstütze Gitty',
-    description: 'Ein sanfter Hinweis auf Unterstützungsmöglichkeiten, um das Projekt nachhaltig zu betreiben.',
+    id: 'speech-to-task',
+    title: 'Speech to Task',
+    description: 'Diktier-Button für Brainstorming per Sprache — Ideen einsprechen und als Tasks ins gewünschte Repository pushen.',
     status: 'planned',
-    category: 'Sustainability'
-  },
-  {
-    id: 'github-sponsor',
-    title: 'GitHub Sponsor Integration',
-    description: 'Direkte Verknüpfung mit GitHub Sponsors für einfache Unterstützung durch die Community.',
-    status: 'planned',
-    category: 'Sustainability'
+    category: 'Frontend'
   }
 ];
 

@@ -37,7 +37,7 @@ development_status:
   9-6-move-task-to-another-repo: "ready-for-dev"         # Edge case — lowest Sprint 4 priority
 
   # --- Sprint 4 new stories (story files created 2026-03-22) ---
-  9-8-notification-simplification: "ready-for-dev"       # Toast dedup + reopen false-positive fix
+  9-8-notification-simplification: "review"                # Toast dedup + reopen false-positive fix
   9-9-undo-sync-changes: "ready-for-dev"                 # No-op detection + hold-to-cancel sync
 
   # ═══════════════════════════════════════════════════════

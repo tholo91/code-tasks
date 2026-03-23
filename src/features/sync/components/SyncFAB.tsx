@@ -7,7 +7,11 @@ import { TRANSITION_SPRING, TRANSITION_FAST, successFlash } from '../../../confi
 
 type FabState = 'pending' | 'syncing' | 'success' | 'error'
 
-export function SyncFAB() {
+interface SyncFABProps {
+  onSyncComplete?: () => void
+}
+
+export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
   const hasUnsyncedChanges = useSyncStore(selectHasUnsyncedChanges)
   const pendingSyncCount = useSyncStore(selectPendingSyncCount)
   const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
@@ -59,6 +63,7 @@ export function SyncFAB() {
         updateLastSyncedAt()
         setFabState('success')
         triggerSelectionHaptic()
+        onSyncComplete?.()
 
         // Hold checkmark for 2s, then let it fade
         successTimerRef.current = setTimeout(() => {

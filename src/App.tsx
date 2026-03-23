@@ -16,7 +16,8 @@ import { TaskToolbar } from './features/capture/components/TaskToolbar'
 import { RoadmapView } from './features/community/components/RoadmapView'
 import { AboutGittyView } from './features/community/components/AboutGittyView'
 import { SyncFAB } from './features/sync/components/SyncFAB'
-import { SyncResultToast } from './features/sync/components/SyncResultToast'
+import { NotificationToast } from './components/ui/NotificationToast'
+import { useNotificationDedup } from './hooks/useNotificationDedup'
 import { SyncConflictBanner } from './features/sync/components/SyncConflictBanner'
 import { BranchProtectionBanner } from './features/sync/components/BranchProtectionBanner'
 import { BranchFallbackPrompt } from './features/sync/components/BranchFallbackPrompt'
@@ -205,7 +206,7 @@ function AppContent() {
   const [showRepoPicker, setShowRepoPicker] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const { activeNotification, showNotification, dismissNotification } = useNotificationDedup()
   const [newestTaskId, setNewestTaskId] = useState<string | null>(null)
   const [showCreateSheet, setShowCreateSheet] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -225,8 +226,6 @@ function AppContent() {
   } | null>(null)
   const [diffSummary, setDiffSummary] = useState<ImportDiffSummary | null>(null)
   const [isImporting, setIsImporting] = useState(false)
-  const [syncResultMessage, setSyncResultMessage] = useState<string | null>(null)
-  const syncToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pullToRefreshResult, setPullToRefreshResult] = useState<'up-to-date' | null>(null)
   const importAttemptedRef = useRef<Set<string>>(new Set())
 
@@ -316,22 +315,15 @@ function AppContent() {
     }
   }, [selectedRepo, setRepoSyncBranch, setSyncStatus])
 
-  useRemoteChangeDetection((data) => {
+  const { lastPushCompletedRef } = useRemoteChangeDetection((data) => {
     if (!selectedRepo) return
-    const repoKey = selectedRepo.fullName.toLowerCase()
-    const localTasks = useSyncStore.getState().tasks.filter((t) => t.repoFullName.toLowerCase() === repoKey)
-    const diff = computeImportDiff(localTasks, data.tasks)
 
-    if (isAllZero(diff)) {
-      // SHA changed but no meaningful task differences — silently update SHA
-      setRepoSyncMeta(selectedRepo.fullName, {
-        lastSyncedSha: data.sha ?? null,
-        lastSyncAt: new Date().toISOString(),
-      })
-      return
-    }
-
-    setDiffSummary(diff)
+    setDiffSummary(computeImportDiff(
+      useSyncStore.getState().tasks.filter(
+        (t) => t.repoFullName.toLowerCase() === selectedRepo.fullName.toLowerCase(),
+      ),
+      data.tasks,
+    ))
     setImportPrompt({
       repoFullName: selectedRepo.fullName,
       tasks: data.tasks,
@@ -340,7 +332,8 @@ function AppContent() {
     })
   })
 
-  // Attempt remote import when switching repos and local is empty.
+  // Attempt remote import when switching repos.
+  // Runs content-level diff to avoid false-positive "Import available" banners.
   useEffect(() => {
     if (!idbLoaded || !selectedRepo || !user || !isOnline) return
 
@@ -353,12 +346,27 @@ function AppContent() {
       .getState()
       .tasks.filter((t) => t.repoFullName.toLowerCase() === repoKey)
 
-    const shouldAutoImport = localRepoTasks.length === 0
-
     fetchRemoteTasksForRepo(selectedRepo.fullName, user.login).then((result) => {
       if (result.error || result.tasks.length === 0) return
 
-      if (shouldAutoImport) {
+      // Content-level diff to catch no-op imports
+      const diff = computeImportDiff(localRepoTasks, result.tasks)
+
+      if (localRepoTasks.length === 0) {
+        // Local is empty — check if remote has any active (uncompleted) tasks
+        const hasActiveTasks = result.tasks.some((t) => !t.isCompleted)
+
+        if (!hasActiveTasks && isAllZero(diff)) {
+          // Remote only has completed tasks and no meaningful diff — silently update SHA
+          setRepoSyncMeta(selectedRepo.fullName, {
+            lastSyncedSha: result.sha ?? null,
+            lastSyncAt: new Date().toISOString(),
+            conflict: null,
+          })
+          return
+        }
+
+        // Real tasks to import — auto-import silently
         replaceTasksForRepo(selectedRepo.fullName, result.tasks)
         setRepoSyncMeta(selectedRepo.fullName, {
           lastSyncedSha: result.sha ?? null,
@@ -366,10 +374,23 @@ function AppContent() {
           conflict: null,
         })
       } else {
+        // Local has tasks — check if there are meaningful differences
+        if (isAllZero(diff)) {
+          // No real changes — silently update SHA, skip banner
+          setRepoSyncMeta(selectedRepo.fullName, {
+            lastSyncedSha: result.sha ?? null,
+            lastSyncAt: new Date().toISOString(),
+          })
+          return
+        }
+
+        // Real differences exist — show banner with diff summary
+        setDiffSummary(diff)
         setImportPrompt({
           repoFullName: selectedRepo.fullName,
           tasks: result.tasks,
           sha: result.sha ?? null,
+          source: 'remote-update',
         })
       }
     })
@@ -449,8 +470,7 @@ function AppContent() {
   const handleRepoSelectedForMove = (repoFullName: string) => {
     if (moveTaskId) {
       moveTaskToRepo(moveTaskId, repoFullName)
-      setToastMessage(`Task moved to ${repoFullName}`)
-      setTimeout(() => setToastMessage(null), 2500)
+      showNotification('task-moved', `Task moved to ${repoFullName}`)
       setMoveTaskId(null)
     }
   }
@@ -670,9 +690,7 @@ function AppContent() {
                 setIsImporting(false)
                 // Show post-import confirmation toast
                 if (feedbackMessage) {
-                  if (syncToastTimerRef.current) clearTimeout(syncToastTimerRef.current)
-                  setSyncResultMessage(feedbackMessage)
-                  syncToastTimerRef.current = setTimeout(() => setSyncResultMessage(null), 2500)
+                  showNotification('import-feedback', feedbackMessage)
                 }
               }}
             />
@@ -859,7 +877,7 @@ function AppContent() {
           </main>
 
           <CreateTaskFAB onClick={() => setShowCreateSheet(true)} />
-          <SyncFAB />
+          <SyncFAB onSyncComplete={() => { lastPushCompletedRef.current = Date.now() }} />
 
           {/* Branch fallback prompt */}
           <BranchFallbackPrompt
@@ -925,35 +943,14 @@ function AppContent() {
             )}
           </AnimatePresence>
 
-          {/* Sync result toast */}
+          {/* Unified notification toast */}
           <AnimatePresence>
-            {syncResultMessage && (
-              <SyncResultToast
-                key="sync-result-toast"
-                message={syncResultMessage}
-                onDismiss={() => setSyncResultMessage(null)}
+            {activeNotification && (
+              <NotificationToast
+                key="notification-toast"
+                notification={activeNotification}
+                onDismiss={dismissNotification}
               />
-            )}
-          </AnimatePresence>
-
-          {/* Toast for repo move feedback */}
-          <AnimatePresence>
-            {toastMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={TRANSITION_FAST}
-                className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-lg text-body"
-                style={{
-                  backgroundColor: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-primary)',
-                }}
-                data-testid="toast-message"
-              >
-                {toastMessage}
-              </motion.div>
             )}
           </AnimatePresence>
 

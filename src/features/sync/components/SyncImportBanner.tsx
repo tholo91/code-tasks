@@ -55,9 +55,13 @@ export function SyncImportBanner({ repoFullName, remoteCount, isImporting, varia
                 <span className="text-caption" style={{ color: 'var(--color-text-primary)' }}>
                   {diffSummary ? buildPrimaryLine(diffSummary) : 'New updates available from remote.'}
                 </span>
-                {diffSummary && diffSummary.localSafeCount > 0 && (
+                {diffSummary && diffSummary.localSafeCount > 0 ? (
                   <span className="text-caption" style={{ color: 'var(--color-success)' }}>
-                    {`Your ${diffSummary.localSafeCount} new idea${diffSummary.localSafeCount === 1 ? ' is' : 's are'} safe`}
+                    {`Your ${diffSummary.localSafeCount} local idea${diffSummary.localSafeCount === 1 ? ' is' : 's are'} safe — merging, not replacing.`}
+                  </span>
+                ) : (
+                  <span className="text-caption" style={{ color: 'var(--color-text-tertiary)' }}>
+                    Updates will be merged with your local list.
                   </span>
                 )}
               </>
@@ -67,7 +71,7 @@ export function SyncImportBanner({ repoFullName, remoteCount, isImporting, varia
                   {`${remoteCount} task${remoteCount === 1 ? '' : 's'} found in ${repoFullName}.`}
                 </span>
                 <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                  Your local list is empty — this will load tasks from the remote file.
+                  Fresh load from remote — no local tasks to overwrite.
                 </span>
               </>
             )}

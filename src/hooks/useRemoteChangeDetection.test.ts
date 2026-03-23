@@ -28,6 +28,7 @@ function makeStoreState(overrides: Record<string, unknown> = {}) {
     selectedRepo: { fullName: 'owner/repo', id: 1, owner: 'owner' },
     user: { login: 'testuser' },
     syncEngineStatus: 'idle',
+    tasks: [] as ReturnType<typeof makeRemoteTasks>,
     repoSyncMeta: {
       'owner/repo': { lastSyncedSha: 'abc123', lastSyncAt: null, localRevision: 0, lastSyncedRevision: 0, conflict: null },
     },
@@ -145,6 +146,26 @@ describe('useRemoteChangeDetection', () => {
     await new Promise((r) => setTimeout(r, 50))
     expect(mockFetchRemote).not.toHaveBeenCalled()
     expect(onRemoteChanges).not.toHaveBeenCalled()
+  })
+
+  it('silently updates SHA when diff is all-zero (no meaningful changes)', async () => {
+    // Local and remote have the exact same task — diff should be all-zero
+    const localTasks = makeRemoteTasks()
+    const storeState = makeStoreState({ tasks: localTasks })
+    mockUseSyncStore.mockImplementation((selector: (s: ReturnType<typeof makeStoreState>) => unknown) => selector(storeState))
+    ;(useSyncStore as unknown as { getState: () => ReturnType<typeof makeStoreState> }).getState = () => storeState
+    mockFetchRemote.mockResolvedValue({ tasks: makeRemoteTasks(), sha: 'def456' })
+
+    const onRemoteChanges = vi.fn()
+    renderHook(() => useRemoteChangeDetection(onRemoteChanges))
+
+    triggerVisibilityChange('visible')
+    await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Should NOT call onRemoteChanges — instead silently updates SHA
+    expect(onRemoteChanges).not.toHaveBeenCalled()
+    expect(storeState.setRepoSyncMeta).toHaveBeenCalledWith('owner/repo', expect.objectContaining({ lastSyncedSha: 'def456' }))
   })
 
   it('does not call onRemoteChanges when SHA matches', async () => {
