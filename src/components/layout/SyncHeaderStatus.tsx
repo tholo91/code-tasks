@@ -70,7 +70,7 @@ export function SyncHeaderStatus() {
         data-testid="sync-header-status"
       >
         <SyncStatusIcon state="pending" />
-        {pendingSyncCount} {pendingSyncCount === 1 ? 'item' : 'items'} pending
+        {pendingSyncCount} {pendingSyncCount === 1 ? 'item' : 'items'}
       </span>
     )
   }

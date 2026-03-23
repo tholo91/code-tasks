@@ -4,12 +4,12 @@ import { SyncHeaderStatus } from './SyncHeaderStatus'
 interface AppHeaderProps {
   isOnline: boolean
   onChangeRepo: () => void
-  onOpenSettings?: () => void
+  onOpenSettings: () => void
 }
 
 /**
  * Sticky nav-bar header — iOS-native feel.
- * Layout: [gitty brand] | [repo name ⇅] | [sync · settings]
+ * Layout: [app icon] | [repo name ⇅] | [sync status]
  * Three-column grid keeps the repo selector truly centered at all widths.
  */
 export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderProps) {
@@ -31,20 +31,27 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
           minHeight: '48px',
         }}
       >
-        {/* ── Left: brand watermark ── */}
-        <span
-          className="font-mono text-[10px] font-bold uppercase tracking-[0.16em]"
-          style={{ color: 'var(--color-accent)' }}
+        {/* ── Left: app icon → opens settings ── */}
+        <button
+          onClick={onOpenSettings}
+          className="flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-80 active:opacity-50"
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+          aria-label="Settings"
+          data-testid="settings-button"
         >
-          gitty
-        </span>
+          <img src="/pwa-64x64.png" alt="Gitty" className="h-6 w-6 rounded-full" />
+        </button>
 
         {/* ── Center: repo selector ── */}
         {selectedRepo ? (
           <button
             onClick={onChangeRepo}
-            className="flex min-w-0 max-w-[200px] items-center gap-1.5 rounded-lg px-2 py-1.5 transition-opacity active:opacity-50"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+            className="flex min-w-0 max-w-[200px] items-center gap-1.5 rounded-md border px-2 py-1 transition-opacity active:opacity-50"
+            style={{
+              WebkitTapHighlightColor: 'transparent',
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
+            }}
             data-testid="selected-repo"
             title="Change repository"
           >
@@ -52,7 +59,7 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
               className="truncate text-[13px] font-semibold leading-none"
               style={{ color: 'var(--color-text-primary)' }}
             >
-              {selectedRepo.fullName}
+              {selectedRepo.fullName.split('/').pop()}
             </span>
 
             {/* Stacked chevrons — signals "selector" without a pill border */}
@@ -75,7 +82,7 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
           <span />
         )}
 
-        {/* ── Right: status + settings ── */}
+        {/* ── Right: status ── */}
         <div className="flex items-center justify-end gap-1">
           {!isOnline && (
             <span
@@ -93,29 +100,6 @@ export function AppHeader({ isOnline, onChangeRepo, onOpenSettings }: AppHeaderP
 
           <SyncHeaderStatus />
 
-          {onOpenSettings && (
-            <button
-              onClick={onOpenSettings}
-              className="-mr-0.5 flex h-9 w-9 items-center justify-center rounded-full transition-opacity hover:opacity-80 active:opacity-50"
-              style={{ color: 'var(--color-text-secondary)' }}
-              aria-label="Settings"
-              data-testid="settings-button"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
     </header>

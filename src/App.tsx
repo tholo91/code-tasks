@@ -12,9 +12,7 @@ import { TaskDetailSheet } from './features/capture/components/TaskDetailSheet'
 import { DraggableTaskCard } from './features/capture/components/DraggableTaskCard'
 import { TaskCard } from './features/capture/components/TaskCard'
 import { UndoToast } from './features/capture/components/UndoToast'
-import { TaskSearchBar } from './features/capture/components/TaskSearchBar'
-import { PriorityFilterPills } from './features/capture/components/PriorityFilterPills'
-import { SortModeSelector } from './features/capture/components/SortModeSelector'
+import { TaskToolbar } from './features/capture/components/TaskToolbar'
 import { RoadmapView } from './features/community/components/RoadmapView'
 import { AboutGittyView } from './features/community/components/AboutGittyView'
 import { SyncFAB } from './features/sync/components/SyncFAB'
@@ -694,41 +692,20 @@ function AppContent() {
               />
             </div>
 
-            {/* Search bar */}
+            {/* Unified toolbar — search, filter tabs, sort */}
             {repoTasks.length > 0 && (
-              <div className="mt-4 w-full max-w-[640px] px-2">
-                <TaskSearchBar
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  taskCount={repoTasks.length}
+              <div className="mt-2 w-full max-w-[640px]">
+                <TaskToolbar
+                  priorityFilter={priorityFilter}
+                  onPriorityFilterChange={setPriorityFilter}
+                  searchQuery={searchQuery}
+                  onSearchQueryChange={setSearchQuery}
+                  sortMode={currentSortMode}
+                  onSortModeChange={(mode) => {
+                    if (selectedRepo) setRepoSortMode(selectedRepo.fullName, mode)
+                  }}
+                  hasImportantTasks={hasImportantTasks}
                 />
-              </div>
-            )}
-
-            {/* Filter/sort toolbar — show when 5+ tasks */}
-            {repoTasks.length > 4 && (
-              <div className="mt-2 w-full max-w-[640px] px-2">
-                <div className="flex items-center gap-2 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {hasImportantTasks && (
-                    <PriorityFilterPills
-                      currentFilter={priorityFilter}
-                      onChange={setPriorityFilter}
-                    />
-                  )}
-                  <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-                    {currentSortMode !== 'manual' && (
-                      <span className="text-label" style={{ color: 'var(--color-text-secondary)', opacity: 0.6 }}>
-                        Manual reorder disabled
-                      </span>
-                    )}
-                    <SortModeSelector
-                      currentMode={currentSortMode}
-                      onChange={(mode) => {
-                        if (selectedRepo) setRepoSortMode(selectedRepo.fullName, mode)
-                      }}
-                    />
-                  </div>
-                </div>
               </div>
             )}
 
