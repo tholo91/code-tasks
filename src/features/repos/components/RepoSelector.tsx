@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Octokit } from 'octokit'
 import { getMyRepos, searchUserRepos, type GitHubRepo } from '../../../services/github/repo-service'
-import { useSyncStore, selectPendingSyncCountsByRepo, selectPendingSyncCountAllRepos } from '../../../stores/useSyncStore'
+import { useSyncStore, selectPendingSyncCountsByRepo, selectPendingSyncCountAllRepos, selectOpenTaskCountsByRepo } from '../../../stores/useSyncStore'
 
 interface RepoSelectorProps {
   octokit: Octokit
@@ -13,11 +13,13 @@ function RepoList({
   onSelect,
   selectedRepoId,
   pendingByRepo,
+  openByRepo,
   repos,
 }: {
   onSelect: (repo: GitHubRepo) => void
   selectedRepoId: number | null
   pendingByRepo: Record<string, number>
+  openByRepo: Record<string, number>
   repos: GitHubRepo[]
 }) {
   if (repos.length === 0) {
@@ -33,6 +35,7 @@ function RepoList({
       {repos.map((repo) => {
         const isSelected = repo.id === selectedRepoId
         const pendingCount = pendingByRepo[repo.fullName.toLowerCase()] ?? 0
+        const openCount = openByRepo[repo.fullName.toLowerCase()] ?? 0
         return (
           <li
             key={repo.id}
@@ -48,19 +51,35 @@ function RepoList({
           >
             <div className="flex items-center gap-2">
               <span
-                className="text-body font-medium"
+                className="text-body font-medium flex-1 min-w-0 truncate"
                 style={{ color: isSelected ? 'var(--color-accent)' : 'var(--color-text-primary)' }}
               >
                 {repo.fullName}
               </span>
               {repo.isPrivate && (
-                <span className="badge" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                <span className="badge flex-shrink-0" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
                   Private
                 </span>
               )}
               {pendingCount > 0 && (
-                <span className="badge badge-amber" data-testid={`repo-pending-${repo.fullName}`}>
+                <span className="badge badge-amber flex-shrink-0" data-testid={`repo-pending-${repo.fullName}`}>
                   {pendingCount} pending
+                </span>
+              )}
+              {openCount > 0 && (
+                <span
+                  className="flex-shrink-0 flex items-center justify-center rounded-full text-xs font-semibold"
+                  style={{
+                    minWidth: 22,
+                    height: 22,
+                    padding: '0 6px',
+                    backgroundColor: isSelected ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                    color: 'var(--color-surface)',
+                    opacity: isSelected ? 1 : 0.7,
+                  }}
+                  data-testid={`repo-open-count-${repo.fullName}`}
+                >
+                  {openCount}
                 </span>
               )}
             </div>
@@ -85,6 +104,7 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
   const [error, setError] = useState<Error | null>(null)
   const pendingByRepo = useSyncStore(selectPendingSyncCountsByRepo)
   const pendingAll = useSyncStore(selectPendingSyncCountAllRepos)
+  const openByRepo = useSyncStore(selectOpenTaskCountsByRepo)
 
   useEffect(() => {
     if (!query.trim()) {
@@ -168,6 +188,7 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
             onSelect={onSelect}
             selectedRepoId={selectedRepoId}
             pendingByRepo={pendingByRepo}
+            openByRepo={openByRepo}
           />
         )}
       </ul>

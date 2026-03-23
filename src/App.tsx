@@ -27,8 +27,7 @@ import { useAutoSync } from './features/sync/hooks/useAutoSync'
 import { useRemoteChangeDetection } from './hooks/useRemoteChangeDetection'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { SettingsSheet } from './components/layout/SettingsSheet'
-import { TRANSITION_SHEET } from './config/motion'
-import { SheetHandle } from './components/ui/SheetHandle'
+import { BottomSheet } from './components/ui/BottomSheet'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import type { PriorityFilter, SortMode, Task } from './types/task'
 import { computeImportDiff, isAllZero, buildImportFeedbackMessage } from './utils/task-diff'
@@ -145,68 +144,26 @@ function OfflineNotification({
   )
 }
 
-/** Bottom sheet overlay for repo picker */
+/** Bottom sheet overlay for repo picker — uses shared BottomSheet for consistent UX */
 function RepoPickerSheet({ onClose, onRepoSelected }: { onClose: () => void; onRepoSelected?: (repoFullName: string) => void }) {
   const clearAuth = useSyncStore((s) => s.clearAuth)
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-end"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" />
-
-      {/* Sheet */}
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={TRANSITION_SHEET}
-        className="relative z-10 w-full max-w-lg rounded-t-2xl p-6 pb-8"
-        style={{ backgroundColor: 'var(--color-surface)' }}
-      >
-        <SheetHandle />
-
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 flex items-center justify-center rounded"
-          style={{
-            minWidth: '44px',
-            minHeight: '44px',
-            color: 'var(--color-text-secondary)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}
+    <BottomSheet onClose={onClose} ariaLabel="Select repository" testId="repo-picker-sheet">
+      <OctokitErrorBoundary onLogout={clearAuth}>
+        <Suspense
+          fallback={
+            <p className="text-body py-8 text-center" style={{ color: 'var(--color-text-secondary)' }}>
+              Loading repositories...
+            </p>
+          }
         >
-          <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M1.707.293A1 1 0 00.293 1.707L4.586 6 .293 10.293a1 1 0 101.414 1.414L6 7.414l4.293 4.293a1 1 0 001.414-1.414L7.414 6l4.293-4.293A1 1 0 0010.293.293L6 4.586 1.707.293z" />
-          </svg>
-        </button>
-
-        <OctokitErrorBoundary onLogout={clearAuth}>
-          <Suspense
-            fallback={
-              <p className="text-body py-8 text-center" style={{ color: 'var(--color-text-secondary)' }}>
-                Loading repositories...
-              </p>
-            }
-          >
-            <RepoSelectorContainer onSelect={() => {
-              onClose()
-            }} onRepoSelected={onRepoSelected} />
-          </Suspense>
-        </OctokitErrorBoundary>
-      </motion.div>
-    </motion.div>
+          <RepoSelectorContainer onSelect={() => {
+            onClose()
+          }} onRepoSelected={onRepoSelected} />
+        </Suspense>
+      </OctokitErrorBoundary>
+    </BottomSheet>
   )
 }
 
