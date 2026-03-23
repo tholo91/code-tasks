@@ -17,6 +17,10 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Option to not trigger a deployment** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
+  When we sync from mobile to main, is there an option that does not trigger an automatic deployment if the app if it is connected to Github actions/pages or some other hosting service? This could get annoying in a way. 
+Maybe we'd have to rethink our set up then or consider this gitty tasks rather an mvp task capture thing? Or later only push to a certain branch?
+
 - [ ] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
   When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then?
 
