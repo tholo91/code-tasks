@@ -17,6 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
+  Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again
+
 - [ ] **Slight header redesign** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
   It uses a weird background color, which is separate from the background color of the main screen. Maybe use your Frontend-design skill to change that? But also make it prominent, that the header is separate? Maybe it has a weird margin to it while it may need padding instead?
 
