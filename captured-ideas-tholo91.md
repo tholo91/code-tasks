@@ -17,6 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal)
+  Feature für version 2, statt narkdiwn file mit deployments zu haben
+
 - [ ] **Option to not trigger a deployment** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
   When we sync from mobile to main, is there an option that does not trigger an automatic deployment if the app if it is connected to Github actions/pages or some other hosting service? This could get annoying in a way. 
 Maybe we'd have to rethink our set up then or consider this gitty tasks rather an mvp task capture thing? Or later only push to a certain branch?
