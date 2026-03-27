@@ -17,8 +17,8 @@
 
 <!-- code-tasks:managed-start -->
 
-- [ ] **Sync failed** ([Created: 2026-03-27]) (Priority: ⚪ Normal)
-  When this happens, I feel like I need to click on the pill in the header and expect a popop that tells me the reason with maybe the chance to open a debug text
+- [x] **Sync failed** ([Created: 2026-03-27]) (Priority: ⚪ Normal) [Processed by: Claude]
+  When this happens, I feel like I need to click on the pill in the header and expect a popop that tells me the reason with maybe the chance to open a debug text → Done: SyncErrorSheet implemented — tapping the red error pill opens a bottom sheet with error details + "Copy debug info" button
 
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal)
   Feature für version 2, statt narkdiwn file mit deployments zu haben
@@ -30,8 +30,8 @@ Maybe we'd have to rethink our set up then or consider this gitty tasks rather a
 - [ ] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
   When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then?
 
-- [ ] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
-  Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again
+- [x] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Processed by: Claude]
+  Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again → Planned: Story 9-10 (Status Pill Redesign — auto-compact animation for synced/pending states)
 
 - [ ] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
   Should have more padding below.
