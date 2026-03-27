@@ -17,6 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Sync failed** ([Created: 2026-03-27]) (Priority: ⚪ Normal)
+  When this happens, I feel like I need to click on the pill in the header and expect a popop that tells me the reason with maybe the chance to open a debug text
+
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal)
   Feature für version 2, statt narkdiwn file mit deployments zu haben
 
