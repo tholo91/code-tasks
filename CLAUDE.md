@@ -4,13 +4,13 @@
 
 **code-tasks ("Gitty")** is a PWA for frictionless developer task capture, backed by GitHub repositories. Built with React 19, Vite 7, TypeScript, Zustand, and Octokit. Mobile-first, offline-capable, designed to feel native.
 
-## BMAD Framework — ALWAYS USE
+## BMAD Framework — Prefer for significant work
 
-This project uses the **BMAD (Business Maturity Agile Development)** framework for all planning, tracking, and implementation work. Claude Code MUST integrate with it.
+This project uses the **BMAD (Business Maturity Agile Development)** framework for planning, tracking, and implementation. Use BMAD for anything non-trivial.
 
 ### Core Principle
 
-Never work ad-hoc. All significant work flows through BMAD workflows and artifacts.
+Prefer BMAD workflows for new features, stories, and significant changes. Quick fixes, typos, minor UI tweaks, and small bug fixes can be done directly without BMAD overhead — use judgment.
 
 ### Key Paths
 
@@ -84,9 +84,6 @@ src/
 
 ## Communication
 
-- **User name:** Thomas
-- **Communication language:** German or English (Thomas switches between both — match his language)
-- **Document output language:** English
 - **Project spirit:** Community-first indie project. "Wir bauen das zusammen." Not a startup, not SaaS.
 
 ## Task Discovery — Check Before Starting Work

@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { useSyncStore, selectPendingSyncCount } from '../../stores/useSyncStore'
 import { formatTimeAgo } from '../../utils/format-time'
 import { SyncStatusIcon } from '../ui/SyncStatusIcon'
+import { SyncErrorSheet } from '../../features/sync/components/SyncErrorSheet'
 
 /**
  * Sync status indicator badge for the app header.
+ * Tapping the badge in error state opens a detail sheet.
  */
 export function SyncHeaderStatus() {
+  const [errorSheetOpen, setErrorSheetOpen] = useState(false)
   const pendingSyncCount = useSyncStore(selectPendingSyncCount)
   const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
   const syncError = useSyncStore((s) => s.syncError)
@@ -48,16 +52,22 @@ export function SyncHeaderStatus() {
   if (isError) {
     const errorLabel = syncErrorType === 'branch-protection' ? 'Sync blocked' : 'Sync failed'
     return (
-      <span
-        className="badge badge-red"
-        role="status"
-        aria-live="polite"
-        data-testid="sync-header-status"
-        title={syncError ?? 'Sync failed'}
-      >
-        <SyncStatusIcon state="error" />
-        {errorLabel}
-      </span>
+      <>
+        <button
+          type="button"
+          onClick={() => setErrorSheetOpen(true)}
+          className="badge badge-red cursor-pointer"
+          role="status"
+          aria-live="polite"
+          aria-haspopup="dialog"
+          data-testid="sync-header-status"
+          title={syncError ?? 'Tap for details'}
+        >
+          <SyncStatusIcon state="error" />
+          {errorLabel}
+        </button>
+        <SyncErrorSheet open={errorSheetOpen} onClose={() => setErrorSheetOpen(false)} />
+      </>
     )
   }
 
