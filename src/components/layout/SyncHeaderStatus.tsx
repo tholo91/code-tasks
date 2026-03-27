@@ -1,24 +1,38 @@
-import { useState } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useSyncStore, selectPendingSyncCount } from '../../stores/useSyncStore'
 import { formatTimeAgo } from '../../utils/format-time'
 import { SyncStatusIcon } from '../ui/SyncStatusIcon'
 import { SyncErrorSheet } from '../../features/sync/components/SyncErrorSheet'
+import { useAutoCompact } from '../../hooks/useAutoCompact'
+import { TRANSITION_NORMAL, TRANSITION_FAST } from '../../config/motion'
 
 /**
  * Sync status indicator badge for the app header.
- * Tapping the badge in error state opens a detail sheet.
+ * Auto-compacts to a colored dot after 5 seconds for synced/pending states.
+ * Tapping the compact dot re-expands it. Error states stay always extended.
  */
 export function SyncHeaderStatus() {
-  const [errorSheetOpen, setErrorSheetOpen] = useState(false)
+  const errorSheetOpen = useSyncStore((s) => s.errorSheetOpen)
+  const setErrorSheetOpen = useSyncStore((s) => s.setErrorSheetOpen)
   const pendingSyncCount = useSyncStore(selectPendingSyncCount)
   const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
   const syncError = useSyncStore((s) => s.syncError)
   const syncErrorType = useSyncStore((s) => s.syncErrorType)
   const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt)
+  const prefersReducedMotion = useReducedMotion()
+
+  const shouldAutoCompact =
+    syncEngineStatus !== 'error' &&
+    syncEngineStatus !== 'conflict' &&
+    syncEngineStatus !== 'syncing'
+
+  const { isExpanded, expand } = useAutoCompact(shouldAutoCompact)
 
   const isSyncing = syncEngineStatus === 'syncing'
   const isConflict = syncEngineStatus === 'conflict'
   const isError = syncEngineStatus === 'error'
+
+  const transition = prefersReducedMotion ? TRANSITION_FAST : TRANSITION_NORMAL
 
   if (isSyncing) {
     return (
@@ -72,16 +86,37 @@ export function SyncHeaderStatus() {
   }
 
   if (pendingSyncCount > 0) {
+    const label = `${pendingSyncCount} ${pendingSyncCount === 1 ? 'item' : 'items'}`
+
     return (
-      <span
-        className="badge badge-amber"
-        role="status"
-        aria-live="polite"
+      <motion.button
+        type="button"
+        className={`badge badge-amber cursor-pointer ${!isExpanded ? 'badge-compact' : ''}`}
+        role={isExpanded ? 'status' : 'button'}
+        aria-live={isExpanded ? 'polite' : undefined}
+        aria-label={isExpanded ? undefined : `${label} pending – tap to expand`}
         data-testid="sync-header-status"
+        onClick={() => !isExpanded && expand()}
+        style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
+        layout
+        transition={transition}
       >
         <SyncStatusIcon state="pending" />
-        {pendingSyncCount} {pendingSyncCount === 1 ? 'item' : 'items'}
-      </span>
+        <AnimatePresence mode="wait">
+          {isExpanded && (
+            <motion.span
+              key="pending-label"
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, width: 'auto' }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+              transition={transition}
+              style={{ overflow: 'hidden', display: 'inline-block' }}
+            >
+              {label}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
     )
   }
 
@@ -90,14 +125,33 @@ export function SyncHeaderStatus() {
   const timeAgo = formatTimeAgo(lastSyncedAt)
 
   return (
-    <span
-      className="badge badge-green"
-      role="status"
-      aria-live="polite"
+    <motion.button
+      type="button"
+      className={`badge badge-green cursor-pointer ${!isExpanded ? 'badge-compact' : ''}`}
+      role={isExpanded ? 'status' : 'button'}
+      aria-live={isExpanded ? 'polite' : undefined}
+      aria-label={isExpanded ? undefined : `Synced ${timeAgo} – tap to expand`}
       data-testid="sync-header-status"
+      onClick={() => !isExpanded && expand()}
+      style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
+      layout
+      transition={transition}
     >
       <SyncStatusIcon state="synced" size={12} />
-      {timeAgo}
-    </span>
+      <AnimatePresence mode="wait">
+        {isExpanded && (
+          <motion.span
+            key="synced-label"
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, width: 'auto' }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+            transition={transition}
+            style={{ overflow: 'hidden', display: 'inline-block' }}
+          >
+            {timeAgo}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.button>
   )
 }

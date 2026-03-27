@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { BottomSheet } from '../../../components/ui/BottomSheet'
 import { useSyncStore } from '../../../stores/useSyncStore'
@@ -20,8 +21,15 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
   const syncErrorType = useSyncStore((s) => s.syncErrorType)
   const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
+  const repoSyncErrors = useSyncStore((s) => s.repoSyncErrors)
+  const [copied, setCopied] = useState(false)
 
   const meta = errorMeta[syncErrorType ?? 'unknown']
+
+  // Get per-repo raw error if available
+  const repoKey = selectedRepo?.fullName.toLowerCase()
+  const repoError = repoKey ? repoSyncErrors[repoKey] : null
+  const rawError = repoError?.rawError
 
   const handleCopyDebug = async () => {
     const lines = [
@@ -30,9 +38,14 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
       `Message: ${syncError ?? 'No details available'}`,
       `Repo: ${selectedRepo?.fullName ?? 'none'}`,
       `Last successful sync: ${lastSyncedAt ?? 'never'}`,
-      `Time: ${new Date().toISOString()}`,
+      `Time: ${repoError?.timestamp ?? new Date().toISOString()}`,
+      `--- Raw API Error ---`,
+      `HTTP Status: ${rawError?.status ?? 'N/A'}`,
+      `API Message: ${rawError?.message ?? 'N/A'}`,
     ]
     await navigator.clipboard.writeText(lines.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -61,7 +74,7 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
 
             {/* Debug info box */}
             <div
-              className="rounded-lg p-3 text-xs font-mono"
+              className="rounded-lg p-3 text-xs font-mono space-y-0.5"
               style={{
                 backgroundColor: 'var(--color-canvas)',
                 color: 'var(--color-text-secondary)',
@@ -71,6 +84,13 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
               <div>Type: {syncErrorType ?? 'unknown'}</div>
               <div>Repo: {selectedRepo?.fullName ?? '—'}</div>
               <div>Last sync: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : 'never'}</div>
+              {rawError && (
+                <>
+                  <div className="pt-1 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+                    HTTP {rawError.status ?? '?'}: {rawError.message}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Actions */}
@@ -85,7 +105,7 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
                   border: '1px solid var(--color-border)',
                 }}
               >
-                Copy debug info
+                {copied ? 'Copied!' : 'Copy debug info'}
               </button>
               <button
                 type="button"

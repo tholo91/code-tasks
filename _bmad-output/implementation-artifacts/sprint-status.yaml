@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-03-27
+# Updated: 2026-03-27 (Story 9-10 moved to review)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -43,7 +43,7 @@ development_status:
   9-8-notification-simplification: "done"                # Completed 2026-03-23 — toast dedup, reopen fix
 
   # --- Ready for dev ---
-  9-10-status-pill-redesign: "ready-for-dev"             # Auto-compact pill animation (synced/pending → dot after 5s)
+  9-10-status-pill-redesign: "review"                     # Auto-compact pill animation (synced/pending → dot after 5s)
 
   # --- Paused (not needed now — app works well without tab bar) ---
   9-1-bottom-tab-navigation: "paused"                    # Single-screen overlay UX is sufficient

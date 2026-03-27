@@ -46,10 +46,16 @@ interface FileContent {
 
 export type SyncErrorType = 'branch-protection' | 'auth' | 'network' | 'unknown'
 
+export interface RawSyncError {
+  status: number | null
+  message: string
+}
+
 export interface SyncResult {
   syncedCount: number
   error?: string
   errorType?: SyncErrorType
+  rawError?: RawSyncError
   status?: 'conflict'
   remoteSha?: string | null
 }
@@ -257,14 +263,16 @@ async function ensureBranchExists(
 export function classifySyncError(err: unknown): {
   message: string
   errorType: SyncErrorType
+  rawError: RawSyncError
 } {
   if (!err || typeof err !== 'object') {
-    return { message: 'Sync failed', errorType: 'unknown' }
+    return { message: 'Sync failed', errorType: 'unknown', rawError: { status: null, message: 'Sync failed' } }
   }
 
   const status = getErrorStatus(err)
   const msg = getErrorMessage(err, 'Sync failed')
   const msgLower = msg.toLowerCase()
+  const rawError: RawSyncError = { status, message: msg }
 
   // Branch protection patterns
   if (
@@ -276,20 +284,21 @@ export function classifySyncError(err: unknown): {
     return {
       message: 'This repository has branch protection rules that prevent direct pushes.',
       errorType: 'branch-protection',
+      rawError,
     }
   }
 
   // Auth errors
   if (status === 401 || (status === 403 && msgLower.includes('token'))) {
-    return { message: 'Authentication failed. Please log in again.', errorType: 'auth' }
+    return { message: 'Authentication failed. Please log in again.', errorType: 'auth', rawError }
   }
 
   // Network errors (no status code)
   if (status === null || msgLower.includes('network') || msgLower.includes('fetch')) {
-    return { message: 'Network error. Please check your connection.', errorType: 'network' }
+    return { message: 'Network error. Please check your connection.', errorType: 'network', rawError }
   }
 
-  return { message: msg, errorType: 'unknown' }
+  return { message: msg, errorType: 'unknown', rawError }
 }
 
 /**
@@ -321,6 +330,7 @@ export async function syncAllRepoTasks(options: SyncOptions = {}): Promise<SyncR
         syncedCount: 0,
         error: classified.message,
         errorType: classified.errorType,
+        rawError: classified.rawError,
       }
     }
   }
@@ -494,6 +504,7 @@ export async function syncPendingTasks(options: SyncOptions = {}): Promise<SyncR
         syncedCount: 0,
         error: classified.message,
         errorType: classified.errorType,
+        rawError: classified.rawError,
       }
     }
   }

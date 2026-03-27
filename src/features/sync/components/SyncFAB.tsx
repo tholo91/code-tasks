@@ -56,7 +56,7 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
         setSyncStatus('conflict', result.error)
         setFabState('pending')
       } else if (result.error) {
-        setSyncStatus('error', result.error, result.errorType)
+        setSyncStatus('error', result.error, result.errorType, result.rawError)
         setFabState('error')
       } else {
         setSyncStatus('success')
@@ -72,7 +72,7 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
       }
     } catch (err) {
       const classified = classifySyncError(err)
-      setSyncStatus('error', classified.message, classified.errorType)
+      setSyncStatus('error', classified.message, classified.errorType, classified.rawError)
       setFabState('error')
     }
   }, [fabState])

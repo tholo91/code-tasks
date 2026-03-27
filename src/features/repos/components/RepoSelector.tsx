@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Octokit } from 'octokit'
 import { getMyRepos, searchUserRepos, type GitHubRepo } from '../../../services/github/repo-service'
-import { useSyncStore, selectPendingSyncCountsByRepo, selectPendingSyncCountAllRepos, selectOpenTaskCountsByRepo } from '../../../stores/useSyncStore'
+import { useSyncStore, selectPendingSyncCountsByRepo, selectPendingSyncCountAllRepos, selectOpenTaskCountsByRepo, selectRepoSyncErrors } from '../../../stores/useSyncStore'
+import type { RepoSyncError } from '../../../stores/useSyncStore'
 
 interface RepoSelectorProps {
   octokit: Octokit
@@ -20,12 +21,14 @@ function RepoList({
   selectedRepoId,
   pendingByRepo,
   openByRepo,
+  errorsByRepo,
   repos,
 }: {
   onSelect: (repo: GitHubRepo) => void
   selectedRepoId: number | null
   pendingByRepo: Record<string, number>
   openByRepo: Record<string, number>
+  errorsByRepo: Record<string, RepoSyncError>
   repos: GitHubRepo[]
 }) {
   if (repos.length === 0) {
@@ -43,8 +46,10 @@ function RepoList({
     <>
       {repos.map((repo) => {
         const isSelected = repo.id === selectedRepoId
-        const pendingCount = pendingByRepo[repo.fullName.toLowerCase()] ?? 0
-        const openCount = openByRepo[repo.fullName.toLowerCase()] ?? 0
+        const repoKey = repo.fullName.toLowerCase()
+        const pendingCount = pendingByRepo[repoKey] ?? 0
+        const openCount = openByRepo[repoKey] ?? 0
+        const hasError = !!errorsByRepo[repoKey]
         const { owner, name } = splitRepoName(repo.fullName)
 
         return (
@@ -102,14 +107,22 @@ function RepoList({
                   Private
                 </span>
               )}
-              {pendingCount > 0 && (
+              {hasError ? (
+                <span
+                  className="badge badge-red flex-shrink-0"
+                  data-testid={`repo-error-${repo.fullName}`}
+                  title="Sync error"
+                >
+                  !
+                </span>
+              ) : pendingCount > 0 ? (
                 <span
                   className="badge badge-amber flex-shrink-0"
                   data-testid={`repo-pending-${repo.fullName}`}
                 >
                   {pendingCount}
                 </span>
-              )}
+              ) : null}
               {openCount > 0 && (
                 <span
                   className="flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-semibold"
@@ -145,6 +158,7 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
   const pendingByRepo = useSyncStore(selectPendingSyncCountsByRepo)
   const pendingAll = useSyncStore(selectPendingSyncCountAllRepos)
   const openByRepo = useSyncStore(selectOpenTaskCountsByRepo)
+  const errorsByRepo = useSyncStore(selectRepoSyncErrors)
 
   useEffect(() => {
     if (!query.trim()) {
@@ -299,6 +313,7 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
               selectedRepoId={selectedRepoId}
               pendingByRepo={pendingByRepo}
               openByRepo={openByRepo}
+              errorsByRepo={errorsByRepo}
             />
           )}
         </ul>

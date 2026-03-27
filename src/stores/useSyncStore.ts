@@ -7,7 +7,7 @@ import { generateUUID } from '../utils/uuid'
 import { buildMergedTaskList } from '../utils/task-diff'
 import type { GitHubUser } from '../services/github/auth-service'
 import type { Task, SortMode } from '../types/task'
-import type { SyncErrorType } from '../services/github/sync-service'
+import type { SyncErrorType, RawSyncError } from '../services/github/sync-service'
 
 export interface SelectedRepo {
   id: number
@@ -26,6 +26,13 @@ export interface RepoSyncMeta {
     remoteSha: string | null
     detectedAt: string
   } | null
+}
+
+export interface RepoSyncError {
+  error: string
+  errorType: SyncErrorType
+  rawError: RawSyncError | null
+  timestamp: string
 }
 
 const normalizeRepoKey = (repoFullName: string) => repoFullName.toLowerCase()
@@ -55,6 +62,8 @@ interface SyncState {
   hasPendingDeletions: boolean
   repoSortModes: Record<string, SortMode>
   repoSyncBranches: Record<string, string>
+  repoSyncErrors: Record<string, RepoSyncError>
+  errorSheetOpen: boolean
 
   setAuth: (token: string, user: GitHubUser) => Promise<void>
   clearAuth: (error?: string) => void
@@ -69,7 +78,10 @@ interface SyncState {
   markTaskSynced: (taskId: string, githubIssueNumber: number | null) => void
   removeTask: (taskId: string) => void
   loadTasksFromIDB: () => Promise<void>
-  setSyncStatus: (status: SyncEngineStatus, error?: string, errorType?: SyncErrorType) => void
+  setSyncStatus: (status: SyncEngineStatus, error?: string, errorType?: SyncErrorType, rawError?: RawSyncError) => void
+  setRepoSyncError: (repoFullName: string, error: string, errorType: SyncErrorType, rawError?: RawSyncError) => void
+  clearRepoSyncError: (repoFullName: string) => void
+  setErrorSheetOpen: (open: boolean) => void
   updateLastSyncedAt: () => void
   setRepoSyncMeta: (repoFullName: string, updates: Partial<RepoSyncMeta>) => void
   clearRepoConflict: (repoFullName: string) => void
@@ -141,6 +153,8 @@ export const selectPendingSyncCountsByRepo = (state: SyncState) => {
   return counts
 }
 
+export const selectRepoSyncErrors = (state: SyncState) => state.repoSyncErrors
+
 export const selectSyncBranch = (repoFullName: string) => (state: SyncState) =>
   state.repoSyncBranches[repoFullName.toLowerCase()] ?? null
 
@@ -197,6 +211,8 @@ export const useSyncStore = create<SyncState>()(
       hasPendingDeletions: false,
       repoSortModes: {},
       repoSyncBranches: {},
+      repoSyncErrors: {},
+      errorSheetOpen: false,
 
       setAuth: async (token: string, user: GitHubUser) => {
         try {
@@ -237,7 +253,24 @@ export const useSyncStore = create<SyncState>()(
       },
 
       setSelectedRepo: (repo: SelectedRepo | null) => {
-        set({ selectedRepo: repo, syncErrorType: null, syncError: null })
+        if (repo) {
+          const repoKey = normalizeRepoKey(repo.fullName)
+          const repoError = get().repoSyncErrors[repoKey]
+          if (repoError) {
+            // Restore this repo's error state
+            set({
+              selectedRepo: repo,
+              syncEngineStatus: 'error',
+              syncError: repoError.error,
+              syncErrorType: repoError.errorType,
+            })
+          } else {
+            // No error for this repo — clear global error state
+            set({ selectedRepo: repo, syncEngineStatus: 'idle', syncErrorType: null, syncError: null })
+          }
+        } else {
+          set({ selectedRepo: repo, syncErrorType: null, syncError: null })
+        }
       },
 
       toggleImportant: () => {
@@ -556,7 +589,8 @@ export const useSyncStore = create<SyncState>()(
         }
       },
 
-      setSyncStatus: (status: SyncEngineStatus, error?: string, errorType?: SyncErrorType) => {
+      setSyncStatus: (status: SyncEngineStatus, error?: string, errorType?: SyncErrorType, rawError?: RawSyncError) => {
+        const selectedRepo = get().selectedRepo
         const updates: Partial<SyncState> = {
           syncEngineStatus: status,
           isSyncing: status === 'syncing',
@@ -565,8 +599,53 @@ export const useSyncStore = create<SyncState>()(
         }
         if (status === 'success') {
           updates.hasPendingDeletions = false
+          // Clear per-repo error on success
+          if (selectedRepo) {
+            const repoKey = normalizeRepoKey(selectedRepo.fullName)
+            const { [repoKey]: _, ...rest } = get().repoSyncErrors
+            updates.repoSyncErrors = rest
+          }
+        }
+        if (status === 'error' && selectedRepo && error) {
+          const repoKey = normalizeRepoKey(selectedRepo.fullName)
+          updates.repoSyncErrors = {
+            ...get().repoSyncErrors,
+            [repoKey]: {
+              error,
+              errorType: errorType ?? 'unknown',
+              rawError: rawError ?? null,
+              timestamp: new Date().toISOString(),
+            },
+          }
         }
         set(updates as SyncState)
+      },
+
+      setRepoSyncError: (repoFullName: string, error: string, errorType: SyncErrorType, rawError?: RawSyncError) => {
+        const repoKey = normalizeRepoKey(repoFullName)
+        set((state) => ({
+          repoSyncErrors: {
+            ...state.repoSyncErrors,
+            [repoKey]: {
+              error,
+              errorType,
+              rawError: rawError ?? null,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        }))
+      },
+
+      clearRepoSyncError: (repoFullName: string) => {
+        const repoKey = normalizeRepoKey(repoFullName)
+        set((state) => {
+          const { [repoKey]: _, ...rest } = state.repoSyncErrors
+          return { repoSyncErrors: rest }
+        })
+      },
+
+      setErrorSheetOpen: (open: boolean) => {
+        set({ errorSheetOpen: open })
       },
 
       updateLastSyncedAt: () => {
@@ -711,6 +790,7 @@ export const useSyncStore = create<SyncState>()(
         repoSyncMeta: state.repoSyncMeta,
         repoSortModes: state.repoSortModes,
         repoSyncBranches: state.repoSyncBranches,
+        repoSyncErrors: state.repoSyncErrors,
       }),
       skipHydration: true,
     },

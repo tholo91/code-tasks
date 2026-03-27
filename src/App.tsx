@@ -191,6 +191,7 @@ function AppContent() {
   )
 
   const syncErrorType = useSyncStore((s) => s.syncErrorType)
+  const errorSheetOpen = useSyncStore((s) => s.errorSheetOpen)
 
   const currentSortMode: SortMode = selectedRepo
     ? (repoSortModes[selectedRepo.fullName.toLowerCase()] ?? 'manual')
@@ -876,8 +877,12 @@ function AppContent() {
 
           </main>
 
-          <CreateTaskFAB onClick={() => setShowCreateSheet(true)} />
-          <SyncFAB onSyncComplete={() => { lastPushCompletedRef.current = Date.now() }} />
+          {!errorSheetOpen && (
+            <>
+              <CreateTaskFAB onClick={() => setShowCreateSheet(true)} />
+              <SyncFAB onSyncComplete={() => { lastPushCompletedRef.current = Date.now() }} />
+            </>
+          )}
 
           {/* Branch fallback prompt */}
           <BranchFallbackPrompt
