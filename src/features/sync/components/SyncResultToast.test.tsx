@@ -7,6 +7,7 @@ vi.mock('framer-motion', () => ({
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
   useReducedMotion: () => false,
+  useDragControls: () => ({ start: vi.fn() }),
 }))
 
 import { SyncResultToast } from './SyncResultToast'

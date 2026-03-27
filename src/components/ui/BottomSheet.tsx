@@ -1,5 +1,5 @@
-import { forwardRef } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { forwardRef, useCallback } from 'react'
+import { motion, useDragControls, useReducedMotion } from 'framer-motion'
 import { TRANSITION_SHEET } from '../../config/motion'
 import { SheetHandle } from './SheetHandle'
 
@@ -14,8 +14,29 @@ interface BottomSheetProps {
 }
 
 /**
+ * Checks whether an element or any ancestor up to `boundary` is scrollable
+ * and has room to scroll in the given vertical direction.
+ */
+function isInsideScrollableContent(target: EventTarget | null, boundary: HTMLElement | null): boolean {
+  let el = target as HTMLElement | null
+  while (el && el !== boundary) {
+    if (el.scrollHeight > el.clientHeight) {
+      const style = window.getComputedStyle(el)
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+        return true
+      }
+    }
+    el = el.parentElement
+  }
+  return false
+}
+
+/**
  * Reusable bottom sheet with backdrop, drag-to-close, and spring animation.
  * Wrap content in this instead of duplicating the motion.div pattern.
+ *
+ * Drag-to-dismiss is disabled when the touch starts inside a scrollable child
+ * to prevent the sheet from wobbling during list scrolling.
  *
  * Note: children are responsible for their own padding and scroll containers.
  * The sheet itself has p-6 pb-8 applied by default.
@@ -24,6 +45,17 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
   ({ onClose, children, backdropBlur = false, ariaLabel, testId }, ref) => {
     const prefersReducedMotion = useReducedMotion()
     const sheetTransition = prefersReducedMotion ? { duration: 0.15 } : TRANSITION_SHEET
+    const dragControls = useDragControls()
+
+    const handlePointerDown = useCallback(
+      (e: React.PointerEvent<HTMLDivElement>) => {
+        // Only start the drag when the touch is NOT inside a scrollable area
+        if (!isInsideScrollableContent(e.target, e.currentTarget)) {
+          dragControls.start(e)
+        }
+      },
+      [dragControls],
+    )
 
     return (
       <motion.div
@@ -52,6 +84,8 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
           exit={{ y: '100%' }}
           transition={sheetTransition}
           drag="y"
+          dragControls={dragControls}
+          dragListener={false}
           dragConstraints={{ top: 0 }}
           dragElastic={0.2}
           onDragEnd={(_, info) => {
@@ -59,6 +93,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
               onClose()
             }
           }}
+          onPointerDown={handlePointerDown}
           className="relative z-10 w-full max-w-lg rounded-t-2xl px-5 pt-2 pb-6"
           style={{
             backgroundColor: 'var(--color-surface)',

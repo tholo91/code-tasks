@@ -26,6 +26,7 @@ vi.mock('framer-motion', () => ({
     },
   },
   useReducedMotion: () => false,
+  useDragControls: () => ({ start: vi.fn() }),
 }))
 
 describe('TaskSearchBar', () => {

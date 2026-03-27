@@ -45,7 +45,10 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
     ]
     await navigator.clipboard.writeText(lines.join('\n'))
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setTimeout(() => {
+      setCopied(false)
+      onClose()
+    }, 800)
   }
 
   return (
@@ -93,32 +96,19 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
               )}
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleCopyDebug}
-                className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors active:opacity-70"
-                style={{
-                  backgroundColor: 'var(--color-canvas)',
-                  color: 'var(--color-text-primary)',
-                  border: '1px solid var(--color-border)',
-                }}
-              >
-                {copied ? 'Copied!' : 'Copy debug info'}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors active:opacity-70"
-                style={{
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'var(--color-canvas)',
-                }}
-              >
-                Dismiss
-              </button>
-            </div>
+            {/* Copy action */}
+            <button
+              type="button"
+              onClick={handleCopyDebug}
+              className="w-full rounded-xl py-2.5 text-sm font-medium transition-colors active:opacity-70"
+              style={{
+                backgroundColor: copied ? 'var(--color-success)' : 'var(--color-canvas)',
+                color: copied ? '#ffffff' : 'var(--color-text-primary)',
+                border: `1px solid ${copied ? 'var(--color-success)' : 'var(--color-border)'}`,
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy debug info'}
+            </button>
           </div>
         </BottomSheet>
       )}

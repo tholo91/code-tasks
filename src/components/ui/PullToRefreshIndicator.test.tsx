@@ -15,6 +15,7 @@ vi.mock('framer-motion', () => ({
   },
   AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
   useReducedMotion: () => false,
+  useDragControls: () => ({ start: vi.fn() }),
 }))
 
 describe('PullToRefreshIndicator', () => {
