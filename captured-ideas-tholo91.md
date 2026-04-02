@@ -17,8 +17,11 @@
 
 <!-- code-tasks:managed-start -->
 
-- [x] **Sync failed** ([Created: 2026-03-27]) (Priority: ⚪ Normal) [Processed by: Claude]
-  When this happens, I feel like I need to click on the pill in the header and expect a popop that tells me the reason with maybe the chance to open a debug text → Done: SyncErrorSheet implemented — tapping the red error pill opens a bottom sheet with error details + "Copy debug info" button
+- [ ] **When clicking "capture"** ([Created: 2026-04-02]) (Priority: ⚪ Normal)
+  The bottom sheet should disappear and not wait for a second taks to capture
+
+- [ ] **Share gitty with QR Code** ([Created: 2026-04-02]) (Priority: 🔴 Important)
+  When wanting to share gitty fast, let's share have the option to share the Github link and the actual page link with someone. There should be a button to show a QR Code. Please adhere to perfect ux standards and think where we can implement this best (maybe when clicking the app icon on the top left?)
 
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal)
   Feature für version 2, statt narkdiwn file mit deployments zu haben
@@ -30,9 +33,6 @@ Maybe we'd have to rethink our set up then or consider this gitty tasks rather a
 - [ ] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
   When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then?
 
-- [x] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Processed by: Claude]
-  Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again → Planned: Story 9-10 (Status Pill Redesign — auto-compact animation for synced/pending states)
-
 - [ ] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
   Should have more padding below.
 Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type.
@@ -41,8 +41,14 @@ This seems to work fine when opening the detail view of an existing task
 
 ## Completed
 
+- [x] **Sync failed** ([Created: 2026-03-27]) (Priority: ⚪ Normal) [Completed: 2026-03-27] [Processed by: Claude]
+  When this happens, I feel like I need to click on the pill in the header and expect a popop that tells me the reason with maybe the chance to open a debug text → Done: SyncErrorSheet implemented — tapping the red error pill opens a bottom sheet with error details + "Copy debug info" button
+
 - [x] **Slight header redesign** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23]
   It uses a weird background color, which is separate from the background color of the main screen. Maybe use your Frontend-design skill to change that? But also make it prominent, that the header is separate? Maybe it has a weird margin to it while it may need padding instead?
+
+- [x] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23] [Processed by: Claude]
+  Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again → Planned: Story 9-10 (Status Pill Redesign — auto-compact animation for synced/pending states)
 
 - [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
   I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
