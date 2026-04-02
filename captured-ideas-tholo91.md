@@ -17,6 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Branching** ([Created: 2026-04-02]) (Priority: 🔴 Important)
+  Our gitty deploys to main and might trigger deployments right away. Should we create an eternal branch? Ask the user per repository as a simple main/branch thing? Because the user might pull to main from the branch and the tasks will not get checked if an ai agent implements them..
+
 - [ ] **When clicking "capture"** ([Created: 2026-04-02]) (Priority: ⚪ Normal)
   The bottom sheet should disappear and not wait for a second taks to capture
 
