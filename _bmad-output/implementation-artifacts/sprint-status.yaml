@@ -46,7 +46,7 @@ development_status:
   # --- Ready for dev ---
   9-10-status-pill-redesign: "review"                     # Auto-compact pill animation (synced/pending → dot after 5s)
   9-11-branch-strategy-deployment-guard: "ready-for-dev"  # Per-repo branch choice + [skip ci] for sync commits
-  9-13-share-gitty-qr-code: "ready-for-dev"               # QR code sharing from About Gitty view
+  9-13-share-gitty-qr-code: "done"                        # Completed 2026-04-03 — QR code sharing from About Gitty
   qs-sort-button-fix: "done"                              # Completed 2026-04-03 — opacity fix in dropdownVariants
 
   # --- Paused (not needed now — app works well without tab bar) ---
