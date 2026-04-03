@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-04-03 (Stories 9-11, 9-12, 9-13, qs-sort-button-fix created from captured-ideas)
+# Updated: 2026-04-03 (Story 9-12 done, sort-fix done, 9-11/9-13 in progress)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -41,13 +41,13 @@ development_status:
   9-3-pull-to-refresh: "done"                            # Completed 2026-03-20
   9-4-push-to-branch-fallback: "done"                    # Completed 2026-03-20
   9-8-notification-simplification: "done"                # Completed 2026-03-23 — toast dedup, reopen fix
+  9-12-bottom-sheet-capture-ux-polish: "done"            # Completed 2026-04-03 — instant dismiss, safe-area padding, scroll-into-view
 
   # --- Ready for dev ---
   9-10-status-pill-redesign: "review"                     # Auto-compact pill animation (synced/pending → dot after 5s)
   9-11-branch-strategy-deployment-guard: "ready-for-dev"  # Per-repo branch choice + [skip ci] for sync commits
-  9-12-bottom-sheet-capture-ux-polish: "ready-for-dev"    # Instant dismiss on capture + padding/scroll fixes
   9-13-share-gitty-qr-code: "ready-for-dev"               # QR code sharing from About Gitty view
-  qs-sort-button-fix: "ready-for-dev"                     # Sort dropdown opacity bug when mode=manual
+  qs-sort-button-fix: "done"                              # Completed 2026-04-03 — opacity fix in dropdownVariants
 
   # --- Paused (not needed now — app works well without tab bar) ---
   9-1-bottom-tab-navigation: "paused"                    # Single-screen overlay UX is sufficient

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useSyncStore } from '../../../stores/useSyncStore'
 import { triggerLaunchHaptic, triggerSelectionHaptic } from '../../../services/native/haptic-service'
 import { BottomSheet } from '../../../components/ui/BottomSheet'
@@ -13,19 +13,11 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
   const [isImportant, setIsImportant] = useState(false)
-  const [captured, setCaptured] = useState(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const notesRef = useRef<HTMLTextAreaElement>(null)
   const submitRef = useRef<HTMLButtonElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const addTask = useSyncStore((s) => s.addTask)
-
-  // "Captured!" indicator auto-reset
-  useEffect(() => {
-    if (!captured) return
-    const timer = setTimeout(() => setCaptured(false), 800)
-    return () => clearTimeout(timer)
-  }, [captured])
 
   const handleClose = useCallback(() => {
     useSyncStore.setState({ isImportant: false })
@@ -43,24 +35,13 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
     triggerLaunchHaptic()
     onTaskCreated(newTask.id)
 
-    // Reset form for next capture — do NOT close
+    // Reset state and dismiss immediately — fast capture, no second task
     setIsImportant(false)
     useSyncStore.setState({ isImportant: false })
     setTitle('')
     setNotes('')
-    setCaptured(true)
-
-    // Reset textarea heights
-    if (titleRef.current) {
-      titleRef.current.style.height = ''
-    }
-    if (notesRef.current) {
-      notesRef.current.style.height = ''
-    }
-
-    // Re-focus title after brief delay for animation
-    setTimeout(() => titleRef.current?.focus(), 100)
-  }, [title, notes, isImportant, addTask, onTaskCreated])
+    onClose()
+  }, [title, notes, isImportant, addTask, onTaskCreated, onClose])
 
   // Auto-focus title on mount — triggers on-screen keyboard
   // We use multiple strategies for maximum mobile compatibility:
@@ -142,26 +123,6 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
       ariaLabel="Create new task"
       testId="create-task-sheet"
     >
-
-        {/* "Captured!" indicator */}
-        <AnimatePresence>
-          {captured && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center gap-2 mb-2"
-              data-testid="captured-indicator"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-success)' }}>
-                <path d="M2.5 8L6.5 12L13.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>Captured!</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Form */}
         <div className="flex flex-col gap-2">
           {/* Title row with priority flag */}
@@ -221,6 +182,13 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
             id="create-task-notes"
             value={notes}
             onChange={handleNotesChange}
+            onFocus={() => {
+              // Scroll the notes field into view when the keyboard opens
+              // so the user can see what they type on mobile
+              setTimeout(() => {
+                notesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }, 300)
+            }}
             placeholder="Notes or context (optional)"
             rows={2}
             className="w-full resize-none overflow-hidden font-normal"
