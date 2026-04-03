@@ -1,6 +1,6 @@
 # Quick Spec: Sort Button Fix (Manual Mode z-Index)
 
-Status: ready-for-dev
+Status: done
 
 ## Problem
 
