@@ -62,6 +62,7 @@ interface SyncState {
   hasPendingDeletions: boolean
   repoSortModes: Record<string, SortMode>
   repoSyncBranches: Record<string, string>
+  repoSkipCi: Record<string, boolean>
   repoSyncErrors: Record<string, RepoSyncError>
   errorSheetOpen: boolean
 
@@ -89,6 +90,7 @@ interface SyncState {
   mergeRemoteTasksForRepo: (repoFullName: string, remoteTasks: Task[]) => void
   setRepoSortMode: (repoFullName: string, mode: SortMode) => void
   setRepoSyncBranch: (repoFullName: string, branch: string | null) => void
+  setRepoSkipCi: (repoFullName: string, enabled: boolean) => void
 }
 
 /**
@@ -158,6 +160,9 @@ export const selectRepoSyncErrors = (state: SyncState) => state.repoSyncErrors
 export const selectSyncBranch = (repoFullName: string) => (state: SyncState) =>
   state.repoSyncBranches[repoFullName.toLowerCase()] ?? null
 
+export const selectRepoSkipCi = (repoFullName: string) => (state: SyncState) =>
+  state.repoSkipCi[repoFullName.toLowerCase()] ?? false
+
 export const selectPendingSyncCountAllRepos = (state: SyncState) => {
   const counts = selectPendingSyncCountsByRepo(state)
   return Object.values(counts).reduce((sum, count) => sum + count, 0)
@@ -211,6 +216,7 @@ export const useSyncStore = create<SyncState>()(
       hasPendingDeletions: false,
       repoSortModes: {},
       repoSyncBranches: {},
+      repoSkipCi: {},
       repoSyncErrors: {},
       errorSheetOpen: false,
 
@@ -776,6 +782,19 @@ export const useSyncStore = create<SyncState>()(
           return { repoSyncBranches: updated }
         })
       },
+
+      setRepoSkipCi: (repoFullName: string, enabled: boolean) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => {
+          const updated = { ...state.repoSkipCi }
+          if (enabled) {
+            updated[key] = true
+          } else {
+            delete updated[key]
+          }
+          return { repoSkipCi: updated }
+        })
+      },
     }),
     {
       name: 'code-tasks:store',
@@ -790,6 +809,7 @@ export const useSyncStore = create<SyncState>()(
         repoSyncMeta: state.repoSyncMeta,
         repoSortModes: state.repoSortModes,
         repoSyncBranches: state.repoSyncBranches,
+        repoSkipCi: state.repoSkipCi,
         repoSyncErrors: state.repoSyncErrors,
       }),
       skipHydration: true,

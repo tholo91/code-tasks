@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges } from '../../../stores/useSyncStore'
+import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges, selectRepoSkipCi } from '../../../stores/useSyncStore'
 import { syncAllRepoTasks, classifySyncError } from '../../../services/github/sync-service'
 import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
 import { TRANSITION_SPRING, TRANSITION_FAST, successFlash } from '../../../config/motion'
@@ -18,6 +18,7 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
   const repoSyncBranches = useSyncStore((s) => s.repoSyncBranches)
   const fallbackBranch = selectedRepo ? repoSyncBranches[selectedRepo.fullName.toLowerCase()] : null
+  const skipCi = useSyncStore(selectedRepo ? selectRepoSkipCi(selectedRepo.fullName) : () => false)
   const isConflict = syncEngineStatus === 'conflict'
 
   const [fabState, setFabState] = useState<FabState>('pending')
@@ -49,8 +50,9 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
     setSyncStatus('syncing')
 
     try {
-      const syncOptions: { maxRetries: number; branch?: string } = { maxRetries: 2 }
+      const syncOptions: { maxRetries: number; branch?: string; skipCi?: boolean } = { maxRetries: 2 }
       if (fallbackBranch) syncOptions.branch = fallbackBranch
+      if (skipCi) syncOptions.skipCi = true
       const result = await syncAllRepoTasks(syncOptions)
       if (result.status === 'conflict') {
         setSyncStatus('conflict', result.error)

@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-04-03 (Story 9-12 done, sort-fix done, 9-11/9-13 in progress)
+# Updated: 2026-04-03 (Stories 9-11, 9-12, 9-13 done + sort-fix done)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -45,7 +45,7 @@ development_status:
 
   # --- Ready for dev ---
   9-10-status-pill-redesign: "review"                     # Auto-compact pill animation (synced/pending → dot after 5s)
-  9-11-branch-strategy-deployment-guard: "ready-for-dev"  # Per-repo branch choice + [skip ci] for sync commits
+  9-11-branch-strategy-deployment-guard: "done"           # Completed 2026-04-03 — Per-repo branch choice + [skip ci]
   9-13-share-gitty-qr-code: "done"                        # Completed 2026-04-03 — QR code sharing from About Gitty
   qs-sort-button-fix: "done"                              # Completed 2026-04-03 — opacity fix in dropdownVariants
 
