@@ -70,6 +70,7 @@ export interface SyncOptions {
   allowConflict?: boolean
   maxRetries?: number
   branch?: string
+  skipCi?: boolean
 }
 
 /**
@@ -120,6 +121,7 @@ async function commitTasks(
   username: string,
   pendingCount?: number,
   branch?: string,
+  skipCi?: boolean,
 ): Promise<string | null> {
   for (let attempt = 0; attempt < MAX_CONFLICT_RETRIES; attempt++) {
     const existing = await getFileContent(octokit, owner, repo, filePath, branch)
@@ -144,7 +146,7 @@ async function commitTasks(
         owner,
         repo,
         path: filePath,
-        message: `sync: update ${pendingCount ?? tasks.length} task${(pendingCount ?? tasks.length) > 1 ? 's' : ''} via code-tasks`,
+        message: `sync: update ${pendingCount ?? tasks.length} task${(pendingCount ?? tasks.length) > 1 ? 's' : ''} via code-tasks${skipCi ? ' [skip ci]' : ''}`,
         content: utf8ToBase64(updatedContent),
       }
 
@@ -397,9 +399,10 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   const activeCount = repoTasks.filter(t => !t.isCompleted).length
   const completedCount = repoTasks.filter(t => t.isCompleted).length
   const total = repoTasks.length
+  const skipCiSuffix = options.skipCi ? ' [skip ci]' : ''
   const commitMessage = total > 0
-    ? `sync: ${total} tasks (${activeCount} active, ${completedCount} completed) via code-tasks`
-    : 'sync: clear tasks via code-tasks'
+    ? `sync: ${total} tasks (${activeCount} active, ${completedCount} completed) via code-tasks${skipCiSuffix}`
+    : `sync: clear tasks via code-tasks${skipCiSuffix}`
 
   // Push to GitHub with conflict retry loop
   let newSha: string | null = null
@@ -649,6 +652,7 @@ async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
     user.login,
     pendingTasks.length,
     targetBranch,
+    options.skipCi,
   )
 
   setRepoSyncMeta(selectedRepo.fullName, {

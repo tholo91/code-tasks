@@ -94,10 +94,11 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(
             }
           }}
           onPointerDown={handlePointerDown}
-          className="relative z-10 w-full max-w-lg rounded-t-2xl px-5 pt-2 pb-6"
+          className="relative z-10 w-full max-w-lg rounded-t-2xl px-5 pt-2"
           style={{
             backgroundColor: 'var(--color-surface)',
             boxShadow: 'var(--shadow-sheet)',
+            paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
           }}
         >
           <SheetHandle />

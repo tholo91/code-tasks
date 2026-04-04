@@ -37,6 +37,12 @@ describe('AboutGittyView', () => {
 
   it('renders version string', () => {
     render(<AboutGittyView onClose={vi.fn()} />)
-    expect(screen.getByText('code-tasks v0.0.1')).toBeInTheDocument()
+    expect(screen.getByText(/^v\d+\.\d+$/)).toBeInTheDocument()
+  })
+
+  it('renders "Share Gitty" button', () => {
+    render(<AboutGittyView onClose={vi.fn()} />)
+    expect(screen.getByTestId('about-share-button')).toBeInTheDocument()
+    expect(screen.getByText('Share Gitty')).toBeInTheDocument()
   })
 })

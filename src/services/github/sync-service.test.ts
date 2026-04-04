@@ -386,6 +386,55 @@ describe('sync-service', () => {
       expect(secondIdx).toBe(-1)
     })
 
+    it('adds [skip ci] to commit message when skipCi option is true', async () => {
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const task = createTask({ body: '' })
+      await commitTasks(
+        mockOctokit as any,
+        'testuser',
+        'my-repo',
+        'captured-ideas-testuser.md',
+        [task],
+        'testuser',
+        undefined,
+        undefined,
+        true,
+      )
+
+      const call =
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      expect(call.message).toBe(
+        'sync: update 1 task via code-tasks [skip ci]',
+      )
+    })
+
+    it('does not add [skip ci] when skipCi is false or undefined', async () => {
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const task = createTask({ body: '' })
+      await commitTasks(
+        mockOctokit as any,
+        'testuser',
+        'my-repo',
+        'captured-ideas-testuser.md',
+        [task],
+        'testuser',
+        undefined,
+        undefined,
+        false,
+      )
+
+      const call =
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      expect(call.message).toBe(
+        'sync: update 1 task via code-tasks',
+      )
+      expect(call.message).not.toContain('[skip ci]')
+    })
+
     it('uses plural in commit message for multiple tasks', async () => {
       mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
       mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
@@ -648,6 +697,20 @@ describe('sync-service', () => {
         ref: 'refs/heads/gitty/user',
         sha: 'main-sha',
       })
+    })
+
+    it('adds [skip ci] to commit message when skipCi option is passed', async () => {
+      const task = createTask()
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      const result = await syncPendingTasks({ skipCi: true })
+
+      expect(result.syncedCount).toBe(1)
+      const call = mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      expect(call.message).toContain('[skip ci]')
     })
 
     it('skips conflict detection when branch is provided', async () => {

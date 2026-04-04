@@ -91,9 +91,9 @@ export function TaskToolbar({
   const dropdownVariants: Variants = prefersReducedMotion
     ? { initial: {}, animate: {}, exit: {} }
     : {
-        initial: { scale: 0.95, y: -4 },
-        animate: { scale: 1, y: 0 },
-        exit: { scale: 0.95, y: -4 },
+        initial: { opacity: 0, scale: 0.95, y: -4 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.95, y: -4 },
       }
 
   return (

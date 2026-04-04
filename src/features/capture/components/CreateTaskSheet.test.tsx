@@ -143,8 +143,8 @@ describe('CreateTaskSheet', () => {
 
     // Callback should be called with new task id
     expect(onTaskCreated).toHaveBeenCalledWith(tasks[0].id)
-    // Sheet stays open after submit — onClose is NOT called
-    expect(onClose).not.toHaveBeenCalled()
+    // Sheet closes immediately after capture
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('triggers haptic feedback on submit', async () => {
@@ -217,13 +217,13 @@ describe('CreateTaskSheet', () => {
     expect(document.activeElement).toBe(notesField)
   })
 
-  it('sheet stays open after submit (onClose not called)', async () => {
+  it('sheet closes immediately after submit (instant dismiss)', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(<CreateTaskSheet {...defaultProps} onClose={onClose} />)
     await user.type(screen.getByTestId('create-task-title'), 'Task one')
     await user.click(screen.getByTestId('create-task-submit'))
-    expect(onClose).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('title field is empty after submit', async () => {

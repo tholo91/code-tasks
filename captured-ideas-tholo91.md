@@ -17,29 +17,29 @@
 
 <!-- code-tasks:managed-start -->
 
-- [ ] **Branching** ([Created: 2026-04-02]) (Priority: 🔴 Important)
-  Our gitty deploys to main and might trigger deployments right away. Should we create an eternal branch? Ask the user per repository as a simple main/branch thing? Because the user might pull to main from the branch and the tasks will not get checked if an ai agent implements them..
+- [x] **Branching** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Processed by: Claude]
+  Our gitty deploys to main and might trigger deployments right away. Should we create an eternal branch? Ask the user per repository as a simple main/branch thing? Because the user might pull to main from the branch and the tasks will not get checked if an ai agent implements them.. → Planned: Story 9-11 (Branch Strategy & Deployment Guard)
 
-- [ ] **Option to not trigger a deployment** ([Created: 2026-03-23]) (Priority: ⚪ Normal)
+- [x] **Option to not trigger a deployment** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Processed by: Claude]
   When we sync from mobile to main, is there an option that does not trigger an automatic deployment if the app if it is connected to Github actions/pages or some other hosting service? This could get annoying in a way. 
-Maybe we'd have to rethink our set up then or consider this gitty tasks rather an mvp task capture thing? Or later only push to a certain branch?
+Maybe we'd have to rethink our set up then or consider this gitty tasks rather an mvp task capture thing? Or later only push to a certain branch? → Planned: Story 9-11 (Branch Strategy & Deployment Guard)
 
-- [ ] **When clicking "capture"** ([Created: 2026-04-02]) (Priority: ⚪ Normal)
-  The bottom sheet should disappear and not wait for a second taks to capture
+- [x] **When clicking "capture"** ([Created: 2026-04-02]) (Priority: ⚪ Normal) [Processed by: Claude]
+  The bottom sheet should disappear and not wait for a second taks to capture → Planned: Story 9-12 (Bottom Sheet Capture UX Polish)
 
-- [ ] **Share gitty with QR Code** ([Created: 2026-04-02]) (Priority: 🔴 Important)
-  When wanting to share gitty fast, let's share have the option to share the Github link and the actual page link with someone. There should be a button to show a QR Code. Please adhere to perfect ux standards and think where we can implement this best (maybe when clicking the app icon on the top left?)
+- [x] **Share gitty with QR Code** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Processed by: Claude]
+  When wanting to share gitty fast, let's share have the option to share the Github link and the actual page link with someone. There should be a button to show a QR Code. Please adhere to perfect ux standards and think where we can implement this best (maybe when clicking the app icon on the top left?) → Planned: Story 9-13 (Share Gitty with QR Code)
 
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal)
   Feature für version 2, statt narkdiwn file mit deployments zu haben
 
-- [ ] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
-  When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then?
+- [x] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Processed by: Claude]
+  When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then? → Planned: Quick Spec (Sort Button Fix — missing opacity in dropdownVariants)
 
-- [ ] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23]
+- [x] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Processed by: Claude]
   Should have more padding below.
 Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type.
-This seems to work fine when opening the detail view of an existing task
+This seems to work fine when opening the detail view of an existing task → Planned: Story 9-12 (Bottom Sheet Capture UX Polish)
 
 
 ## Completed

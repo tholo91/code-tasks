@@ -1,6 +1,6 @@
 import { Suspense, use, useMemo, useState, useEffect, useRef, useCallback, Component, type ReactNode } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { useSyncStore, selectSyncBranch } from './stores/useSyncStore'
+import { useSyncStore, selectSyncBranch, selectRepoSkipCi } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AppHeader } from './components/layout/AppHeader'
@@ -26,6 +26,7 @@ import { useAutoSync } from './features/sync/hooks/useAutoSync'
 import { useRemoteChangeDetection } from './hooks/useRemoteChangeDetection'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { SettingsSheet } from './components/layout/SettingsSheet'
+import { RepoSettingsSheet } from './features/sync/components/RepoSettingsSheet'
 import { BottomSheet } from './components/ui/BottomSheet'
 import { createTaskFuse, searchTasks } from './features/capture/utils/fuzzy-search'
 import type { PriorityFilter, SortMode, Task } from './types/task'
@@ -211,6 +212,7 @@ function AppContent() {
   const [newestTaskId, setNewestTaskId] = useState<string | null>(null)
   const [showCreateSheet, setShowCreateSheet] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showRepoSettings, setShowRepoSettings] = useState(false)
   const [showCompleted, setShowCompleted] = useState(false)
   const [wasAutoExpanded, setWasAutoExpanded] = useState(false)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
@@ -304,7 +306,8 @@ function AppContent() {
     // Re-trigger sync with the new branch
     setSyncStatus('syncing')
     try {
-      const result = await syncAllRepoTasks({ branch: finalBranch, maxRetries: 2 })
+      const repoSkipCi = selectRepoSkipCi(selectedRepo.fullName)(useSyncStore.getState())
+      const result = await syncAllRepoTasks({ branch: finalBranch, maxRetries: 2, skipCi: repoSkipCi || undefined })
       if (result.error) {
         setSyncStatus('error', result.error, result.errorType)
       } else {
@@ -966,7 +969,15 @@ function AppContent() {
                 onClose={() => setShowSettings(false)}
                 onOpenRoadmap={() => setIsRoadmapOpen(true)}
                 onOpenAbout={() => setShowAbout(true)}
+                onOpenRepoSettings={selectedRepo ? () => setShowRepoSettings(true) : undefined}
               />
+            )}
+          </AnimatePresence>
+
+          {/* Repo settings sheet */}
+          <AnimatePresence>
+            {showRepoSettings && (
+              <RepoSettingsSheet onClose={() => setShowRepoSettings(false)} />
             )}
           </AnimatePresence>
 
