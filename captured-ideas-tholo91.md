@@ -17,32 +17,20 @@
 
 <!-- code-tasks:managed-start -->
 
-- [x] **Branching** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Processed by: Claude]
-  Our gitty deploys to main and might trigger deployments right away. Should we create an eternal branch? Ask the user per repository as a simple main/branch thing? Because the user might pull to main from the branch and the tasks will not get checked if an ai agent implements them.. → Planned: Story 9-11 (Branch Strategy & Deployment Guard)
-
-- [x] **Option to not trigger a deployment** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Processed by: Claude]
-  When we sync from mobile to main, is there an option that does not trigger an automatic deployment if the app if it is connected to Github actions/pages or some other hosting service? This could get annoying in a way. 
-Maybe we'd have to rethink our set up then or consider this gitty tasks rather an mvp task capture thing? Or later only push to a certain branch? → Planned: Story 9-11 (Branch Strategy & Deployment Guard)
-
-- [x] **When clicking "capture"** ([Created: 2026-04-02]) (Priority: ⚪ Normal) [Processed by: Claude]
-  The bottom sheet should disappear and not wait for a second taks to capture → Planned: Story 9-12 (Bottom Sheet Capture UX Polish)
-
-- [x] **Share gitty with QR Code** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Processed by: Claude]
-  When wanting to share gitty fast, let's share have the option to share the Github link and the actual page link with someone. There should be a button to show a QR Code. Please adhere to perfect ux standards and think where we can implement this best (maybe when clicking the app icon on the top left?) → Planned: Story 9-13 (Share Gitty with QR Code)
-
-- [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal)
-  Feature für version 2, statt narkdiwn file mit deployments zu haben
-
-- [x] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Processed by: Claude]
-  When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then? → Planned: Quick Spec (Sort Button Fix — missing opacity in dropdownVariants)
-
-- [x] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Processed by: Claude]
-  Should have more padding below.
-Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type.
-This seems to work fine when opening the detail view of an existing task → Planned: Story 9-12 (Bottom Sheet Capture UX Polish)
+- [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal) [Updated: 2026-04-07]
+  Feature für version 2, statt markdown file mit deployments zu haben
 
 
 ## Completed
+
+- [x] **Branching** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Completed: 2026-04-02] [Processed by: Claude]
+  Our gitty deploys to main and might trigger deployments right away. Should we create an eternal branch? Ask the user per repository as a simple main/branch thing? Because the user might pull to main from the branch and the tasks will not get checked if an ai agent implements them.. → Planned: Story 9-11 (Branch Strategy & Deployment Guard)
+
+- [x] **When clicking "capture"** ([Created: 2026-04-02]) (Priority: ⚪ Normal) [Completed: 2026-04-02] [Processed by: Claude]
+  The bottom sheet should disappear and not wait for a second taks to capture → Planned: Story 9-12 (Bottom Sheet Capture UX Polish)
+
+- [x] **Share gitty with QR Code** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Completed: 2026-04-02] [Processed by: Claude]
+  When wanting to share gitty fast, let's share have the option to share the Github link and the actual page link with someone. There should be a button to show a QR Code. Please adhere to perfect ux standards and think where we can implement this best (maybe when clicking the app icon on the top left?) → Planned: Story 9-13 (Share Gitty with QR Code)
 
 - [x] **Sync failed** ([Created: 2026-03-27]) (Priority: ⚪ Normal) [Completed: 2026-03-27] [Processed by: Claude]
   When this happens, I feel like I need to click on the pill in the header and expect a popop that tells me the reason with maybe the chance to open a debug text → Done: SyncErrorSheet implemented — tapping the red error pill opens a bottom sheet with error details + "Copy debug info" button
@@ -50,8 +38,20 @@ This seems to work fine when opening the detail view of an existing task → Pla
 - [x] **Slight header redesign** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23]
   It uses a weird background color, which is separate from the background color of the main screen. Maybe use your Frontend-design skill to change that? But also make it prominent, that the header is separate? Maybe it has a weird margin to it while it may need padding instead?
 
+- [x] **Option to not trigger a deployment** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23] [Processed by: Claude]
+  When we sync from mobile to main, is there an option that does not trigger an automatic deployment if the app if it is connected to Github actions/pages or some other hosting service? This could get annoying in a way. 
+Maybe we'd have to rethink our set up then or consider this gitty tasks rather an mvp task capture thing? Or later only push to a certain branch?
+
 - [x] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23] [Processed by: Claude]
   Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again → Planned: Story 9-10 (Status Pill Redesign — auto-compact animation for synced/pending states)
+
+- [x] **Sort Button fix** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Completed: 2026-03-23] [Processed by: Claude]
+  When clicking the sort button and the setting is "manual", this modal is transparent and I can not click anything else, maybe because of a wrong z index? Why does it work instead with other settings and it is not transparent then? → Planned: Quick Spec (Sort Button Fix — missing opacity in dropdownVariants)
+
+- [x] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Completed: 2026-03-23] [Processed by: Claude]
+  Should have more padding below.
+Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type.
+This seems to work fine when opening the detail view of an existing task
 
 - [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
   I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
