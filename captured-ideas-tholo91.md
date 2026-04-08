@@ -17,6 +17,10 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Repository switcher** ([Created: 2026-04-08]) (Priority: 🔴 Important) [Updated: 2026-04-08]
+  Show how many repositories one has as a number. Because the little scroll windows might hide that we have more until we scroll
+Also, it seems to reload/refetch every time I open it, but the repositories barely change. Can we check if we cache that list? Or what does it reload from scratch every time? 
+
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal) [Updated: 2026-04-07]
   Feature für version 2, statt markdown file mit deployments zu haben
 
