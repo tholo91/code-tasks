@@ -29,6 +29,7 @@ export function getAIReadyHeader(username: string): string {
 > - Priority: 🔴 Important or ⚪ Normal
 > - Mark tasks as done (\`- [x]\`) after processing, add \`[Processed by: YourAgentName]\` to the task line, and optionally append notes to the task body
 > - Do NOT delete or remove tasks from this file — only the mobile app manages task lifecycle
+> - **At the start of each session**, check for new open tasks (unchecked \`- [ ]\` items) and suggest which to tackle — develop into stories for larger work, or fix right away for small issues
 > - You may add notes or context below the \`managed-end\` marker — they will not be overwritten
 
 ---
