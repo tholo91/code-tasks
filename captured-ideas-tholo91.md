@@ -17,6 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Ai agent prompt on top of md file** ([Created: 2026-04-09]) (Priority: 🔴 Important)
+  Every time you pull from main/branch (depending on the setting), take a look in this file and let me know if I captured new ideas we should tackle (develop thorough stories or fix things right away). Please check them, if so!
+
 - [ ] **Repository switcher** ([Created: 2026-04-08]) (Priority: 🔴 Important) [Updated: 2026-04-08]
   Show how many repositories one has as a number. Because the little scroll windows might hide that we have more until we scroll
 Also, it seems to reload/refetch every time I open it, but the repositories barely change. Can we check if we cache that list? Or what does it reload from scratch every time? 
