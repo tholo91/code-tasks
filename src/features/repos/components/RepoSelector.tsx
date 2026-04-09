@@ -271,6 +271,16 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
         </div>
       )}
 
+      {/* Repo count */}
+      {!loading && !error && repos.length > 0 && (
+        <div
+          className="mx-1 mb-1.5 px-3 text-[11px]"
+          style={{ color: 'var(--color-text-secondary)', opacity: 0.45 }}
+        >
+          {repos.length} {repos.length === 1 ? 'repository' : 'repositories'}
+        </div>
+      )}
+
       {/* Repository list */}
       <div
         className="overflow-hidden rounded-xl"

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Octokit } from 'octokit'
-import { searchUserRepos, getMyRepos, validateRepoAccess, type GitHubRepo } from './repo-service'
+import { searchUserRepos, getMyRepos, validateRepoAccess, clearRepoCache, type GitHubRepo } from './repo-service'
 
 interface MockOctokit extends Octokit {
   rest: Octokit['rest'] & {
@@ -76,6 +76,7 @@ const sampleRepos: GitHubRepo[] = [
 describe('repo-service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearRepoCache()
   })
 
   describe('searchUserRepos', () => {
