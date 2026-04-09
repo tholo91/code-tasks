@@ -17,6 +17,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal)
+  So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take?
+
 - [ ] **Ai agent prompt on top of md file** ([Created: 2026-04-09]) (Priority: 🔴 Important)
   Every time you pull from main/branch (depending on the setting), take a look in this file and let me know if I captured new ideas we should tackle (develop thorough stories or fix things right away). Please check them, if so!
 
