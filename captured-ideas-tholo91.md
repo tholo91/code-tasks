@@ -11,6 +11,7 @@
 > - Priority: 🔴 Important or ⚪ Normal
 > - Mark tasks as done (`- [x]`) after processing, add `[Processed by: YourAgentName]` to the task line, and optionally append notes to the task body
 > - Do NOT delete or remove tasks from this file — only the mobile app manages task lifecycle
+> - **At the start of each session**, check for new open tasks (unchecked `- [ ]` items) and suggest which to tackle — develop into stories for larger work, or fix right away for small issues
 > - You may add notes or context below the `managed-end` marker — they will not be overwritten
 
 ---
@@ -23,15 +24,15 @@
 - [ ] **Ai agent prompt on top of md file** ([Created: 2026-04-09]) (Priority: 🔴 Important)
   Every time you pull from main/branch (depending on the setting), take a look in this file and let me know if I captured new ideas we should tackle (develop thorough stories or fix things right away). Please check them, if so!
 
-- [ ] **Repository switcher** ([Created: 2026-04-08]) (Priority: 🔴 Important) [Updated: 2026-04-08]
-  Show how many repositories one has as a number. Because the little scroll windows might hide that we have more until we scroll
-Also, it seems to reload/refetch every time I open it, but the repositories barely change. Can we check if we cache that list? Or what does it reload from scratch every time? 
-
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal) [Updated: 2026-04-07]
   Feature für version 2, statt markdown file mit deployments zu haben
 
 
 ## Completed
+
+- [x] **Repository switcher** ([Created: 2026-04-08]) (Priority: 🔴 Important) [Updated: 2026-04-08] [Completed: 2026-04-09]
+  Show how many repositories one has as a number. Because the little scroll windows might hide that we have more until we scroll
+Also, it seems to reload/refetch every time I open it, but the repositories barely change. Can we check if we cache that list? Or what does it reload from scratch every time? 
 
 - [x] **Branching** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Completed: 2026-04-02] [Processed by: Claude]
   Our gitty deploys to main and might trigger deployments right away. Should we create an eternal branch? Ask the user per repository as a simple main/branch thing? Because the user might pull to main from the branch and the tasks will not get checked if an ai agent implements them.. → Planned: Story 9-11 (Branch Strategy & Deployment Guard)
