@@ -47,14 +47,28 @@ export async function searchUserRepos(
   return data.items.map(mapRepo)
 }
 
-export async function getMyRepos(octokit: Octokit): Promise<GitHubRepo[]> {
+const REPO_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+let repoCache: { data: GitHubRepo[]; fetchedAt: number } | null = null
+
+export function clearRepoCache(): void {
+  repoCache = null
+}
+
+export async function getMyRepos(octokit: Octokit, forceRefresh = false): Promise<GitHubRepo[]> {
+  if (!forceRefresh && repoCache && Date.now() - repoCache.fetchedAt < REPO_CACHE_TTL_MS) {
+    return repoCache.data
+  }
+
   const { data } = await octokit.rest.repos.listForAuthenticatedUser({
     per_page: 100,
     sort: 'updated',
     direction: 'desc',
   })
 
-  return data.map(mapRepo)
+  const repos = data.map(mapRepo)
+  repoCache = { data: repos, fetchedAt: Date.now() }
+  return repos
 }
 
 /**

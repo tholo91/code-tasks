@@ -81,6 +81,12 @@ describe('markdown-templates', () => {
       expect(header).toContain('[Processed by: YourAgentName]')
     })
 
+    it('includes proactive task-check instruction for agents', () => {
+      const header = getAIReadyHeader('testuser')
+      expect(header).toContain('At the start of each session')
+      expect(header).toContain('check for new open tasks')
+    })
+
     it('includes note that content below managed-end is not overwritten', () => {
       const header = getAIReadyHeader('testuser')
       expect(header).toContain('You may add notes or context below the `managed-end` marker — they will not be overwritten')
