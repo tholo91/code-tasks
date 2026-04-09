@@ -21,18 +21,17 @@
 - [ ] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal)
   So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take?
 
-- [ ] **Ai agent prompt on top of md file** ([Created: 2026-04-09]) (Priority: 🔴 Important)
-  Every time you pull from main/branch (depending on the setting), take a look in this file and let me know if I captured new ideas we should tackle (develop thorough stories or fix things right away). Please check them, if so!
-
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal) [Updated: 2026-04-07]
   Feature für version 2, statt markdown file mit deployments zu haben
 
 
 ## Completed
 
+- [x] **Ai agent prompt on top of md file** ([Created: 2026-04-09]) (Priority: 🔴 Important) [Completed: 2026-04-09]
+  Every time you pull from main/branch (depending on the setting), take a look in this file and let me know if I captured new ideas we should tackle (develop thorough stories or fix things right away). Please check them, if so!
+
 - [x] **Repository switcher** ([Created: 2026-04-08]) (Priority: 🔴 Important) [Updated: 2026-04-08] [Completed: 2026-04-09]
   Show how many repositories one has as a number. Because the little scroll windows might hide that we have more until we scroll
-Also, it seems to reload/refetch every time I open it, but the repositories barely change. Can we check if we cache that list? Or what does it reload from scratch every time? 
 
 - [x] **Branching** ([Created: 2026-04-02]) (Priority: 🔴 Important) [Completed: 2026-04-02] [Processed by: Claude]
   Our gitty deploys to main and might trigger deployments right away. Should we create an eternal branch? Ask the user per repository as a simple main/branch thing? Because the user might pull to main from the branch and the tasks will not get checked if an ai agent implements them.. → Planned: Story 9-11 (Branch Strategy & Deployment Guard)
@@ -50,8 +49,7 @@ Also, it seems to reload/refetch every time I open it, but the repositories bare
   It uses a weird background color, which is separate from the background color of the main screen. Maybe use your Frontend-design skill to change that? But also make it prominent, that the header is separate? Maybe it has a weird margin to it while it may need padding instead?
 
 - [x] **Option to not trigger a deployment** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23] [Processed by: Claude]
-  When we sync from mobile to main, is there an option that does not trigger an automatic deployment if the app if it is connected to Github actions/pages or some other hosting service? This could get annoying in a way. 
-Maybe we'd have to rethink our set up then or consider this gitty tasks rather an mvp task capture thing? Or later only push to a certain branch?
+  When we sync from mobile to main, is there an option that does not trigger an automatic deployment if the app if it is connected to Github actions/pages or some other hosting service? This could get annoying in a way.
 
 - [x] **status pill redesign in the header** ([Created: 2026-03-23]) (Priority: ⚪ Normal) [Completed: 2026-03-23] [Processed by: Claude]
   Maybe in the beginning for 5 seconds, it should show the string "just now" or when it was last updated and then swipe-animate (left/right) to just show the checkmark or dot. When tapping it, it should slide to show its full length again for another 5 seconds before compacting again → Planned: Story 9-10 (Status Pill Redesign — auto-compact animation for synced/pending states)
@@ -61,8 +59,6 @@ Maybe we'd have to rethink our set up then or consider this gitty tasks rather a
 
 - [x] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Completed: 2026-03-23] [Processed by: Claude]
   Should have more padding below.
-Also when tapping into the description input, the view should scroll up a bit - right now I do not see what I type.
-This seems to work fine when opening the detail view of an existing task
 
 - [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
   I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
