@@ -167,6 +167,11 @@ function RepoPickerSheet({ onClose, onRepoSelected }: { onClose: () => void; onR
   )
 }
 
+// Completed-tasks cleanup thresholds — when more than THRESHOLD completed tasks
+// pile up, surface a quiet "Clean up oldest N" affordance to keep the markdown small.
+const COMPLETED_CLEANUP_THRESHOLD = 30
+const COMPLETED_CLEANUP_BATCH = 15
+
 function AppContent() {
   const isAuthenticated = useSyncStore((s) => s.isAuthenticated)
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
@@ -177,6 +182,7 @@ function AppContent() {
   const reorderTasks = useSyncStore((s) => s.reorderTasks)
   const updateTask = useSyncStore((s) => s.updateTask)
   const removeTask = useSyncStore((s) => s.removeTask)
+  const removeTasks = useSyncStore((s) => s.removeTasks)
   const moveTaskToRepo = useSyncStore((s) => s.moveTaskToRepo)
   const loadTasksFromIDB = useSyncStore((s) => s.loadTasksFromIDB)
   const replaceTasksForRepo = useSyncStore((s) => s.replaceTasksForRepo)
@@ -238,6 +244,15 @@ function AppContent() {
   // Soft-delete pipeline: task stays in store but hidden from UI during undo window
   const [pendingDelete, setPendingDelete] = useState<{
     task: Task
+    timeoutId: ReturnType<typeof setTimeout>
+  } | null>(null)
+
+  // Bulk soft-delete pipeline for "Clean up oldest" — same pattern as pendingDelete,
+  // but for a batch of completed tasks. Tasks stay in the store (so undo is just
+  // cancelling the timer) and are filtered out of the UI via visibleTasks below.
+  const [pendingBulkDelete, setPendingBulkDelete] = useState<{
+    taskIds: Set<string>
+    count: number
     timeoutId: ReturnType<typeof setTimeout>
   } | null>(null)
 
@@ -452,6 +467,52 @@ function AppContent() {
     setPendingDelete(null)
   }, [pendingDelete])
 
+  // Bulk-delete handlers — "Clean up oldest N completed tasks"
+  const handleCleanupOldestCompleted = useCallback(() => {
+    if (!selectedRepo) return
+
+    // Compute the oldest COMPLETED_CLEANUP_BATCH completed tasks for this repo,
+    // sorted by completedAt (with sane fallbacks) ascending.
+    const repoLower = selectedRepo.fullName.toLowerCase()
+    const oldestCompleted = tasks
+      .filter(
+        (t) =>
+          t.isCompleted &&
+          t.repoFullName.toLowerCase() === repoLower &&
+          (!user || t.username === user.login),
+      )
+      .sort((a, b) => {
+        const ta = a.completedAt ?? a.updatedAt ?? a.createdAt
+        const tb = b.completedAt ?? b.updatedAt ?? b.createdAt
+        return ta.localeCompare(tb)
+      })
+      .slice(0, COMPLETED_CLEANUP_BATCH)
+
+    if (oldestCompleted.length === 0) return
+
+    // If a prior bulk delete is still pending, finalise it first so we don't lose tasks.
+    if (pendingBulkDelete) {
+      clearTimeout(pendingBulkDelete.timeoutId)
+      removeTasks(Array.from(pendingBulkDelete.taskIds))
+    }
+
+    triggerSelectionHaptic()
+
+    const taskIds = new Set(oldestCompleted.map((t) => t.id))
+    const timeoutId = setTimeout(() => {
+      removeTasks(Array.from(taskIds))
+      setPendingBulkDelete(null)
+    }, 5000)
+
+    setPendingBulkDelete({ taskIds, count: oldestCompleted.length, timeoutId })
+  }, [selectedRepo, tasks, user, pendingBulkDelete, removeTasks])
+
+  const handleUndoBulk = useCallback(() => {
+    if (!pendingBulkDelete) return
+    clearTimeout(pendingBulkDelete.timeoutId)
+    setPendingBulkDelete(null)
+  }, [pendingBulkDelete])
+
   // Derive selected task for detail sheet
   const selectedTask = useMemo(() => {
     if (!selectedTaskId) return null
@@ -510,9 +571,13 @@ function AppContent() {
 
   // Filter out soft-deleted task (pending undo) from display
   const visibleTasks = useMemo(() => {
-    if (!pendingDelete) return displayedTasks
-    return displayedTasks.filter(t => t.id !== pendingDelete.task.id)
-  }, [displayedTasks, pendingDelete])
+    if (!pendingDelete && !pendingBulkDelete) return displayedTasks
+    return displayedTasks.filter(t => {
+      if (pendingDelete && t.id === pendingDelete.task.id) return false
+      if (pendingBulkDelete && pendingBulkDelete.taskIds.has(t.id)) return false
+      return true
+    })
+  }, [displayedTasks, pendingDelete, pendingBulkDelete])
 
   // AC 1: Tasks move to completed section after a brief delay
   // We keep tasks in their "original" section if they are in pendingToggleIds
@@ -808,32 +873,54 @@ function AppContent() {
                 {/* Completed section */}
                 {completedTasks.length > 0 && (
                   <div className="mt-4">
-                    <button
-                      onClick={() => {
-                        setShowCompleted(!showCompleted)
-                        setWasAutoExpanded(false)
-                      }}
-                      className="flex items-center gap-2 py-2 w-full"
-                      aria-expanded={showCompleted}
-                      aria-controls="completed-task-list"
-                      data-testid="completed-section-header"
-                    >
-                      <motion.svg
-                        animate={{ rotate: showCompleted ? 90 : 0 }}
-                        transition={TRANSITION_FAST}
-                        width="16"
-                        height="16"
-                        viewBox="0 0 12 12"
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => {
+                          setShowCompleted(!showCompleted)
+                          setWasAutoExpanded(false)
+                        }}
+                        className="flex items-center gap-2 py-2 flex-1 min-w-0"
+                        aria-expanded={showCompleted}
+                        aria-controls="completed-task-list"
+                        data-testid="completed-section-header"
                       >
-                        <path d="M4 2L8 6L4 10" stroke="var(--color-text-secondary)" strokeWidth="1.5" fill="none" />
-                      </motion.svg>
-                      <span
-                        className="text-label uppercase tracking-wider"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        Completed ({completedTasks.length})
-                      </span>
-                    </button>
+                        <motion.svg
+                          animate={{ rotate: showCompleted ? 90 : 0 }}
+                          transition={TRANSITION_FAST}
+                          width="16"
+                          height="16"
+                          viewBox="0 0 12 12"
+                        >
+                          <path d="M4 2L8 6L4 10" stroke="var(--color-text-secondary)" strokeWidth="1.5" fill="none" />
+                        </motion.svg>
+                        <span
+                          className="text-label uppercase tracking-wider"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Completed ({completedTasks.length})
+                        </span>
+                      </button>
+                      {/* Quiet utility: only when there are too many completed tasks AND
+                          the user isn't currently in a search context AND no bulk-delete
+                          is already mid-flight (would clash with the 5-second undo window). */}
+                      {completedTasks.length > COMPLETED_CLEANUP_THRESHOLD &&
+                        searchQuery.length === 0 &&
+                        !pendingBulkDelete && (
+                          <button
+                            type="button"
+                            onClick={handleCleanupOldestCompleted}
+                            className="text-label uppercase tracking-wider py-2 px-2 transition-opacity hover:opacity-100 active:opacity-100 flex-shrink-0"
+                            style={{
+                              color: 'var(--color-text-secondary)',
+                              opacity: 0.65,
+                            }}
+                            aria-label={`Clean up the ${COMPLETED_CLEANUP_BATCH} oldest completed tasks`}
+                            data-testid="cleanup-oldest-completed"
+                          >
+                            Clean up oldest {COMPLETED_CLEANUP_BATCH}
+                          </button>
+                        )}
+                    </div>
                     <AnimatePresence mode="popLayout" initial={false}>
                       {showCompleted && (
                         <motion.div
@@ -945,6 +1032,23 @@ function AppContent() {
                   if (pendingDelete) {
                     removeTask(pendingDelete.task.id)
                     setPendingDelete(null)
+                  }
+                }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Undo toast for bulk cleanup of oldest completed tasks */}
+          <AnimatePresence>
+            {pendingBulkDelete && (
+              <UndoToast
+                key="undo-toast-bulk"
+                message={`Cleaned up ${pendingBulkDelete.count} completed tasks`}
+                onUndo={handleUndoBulk}
+                onExpire={() => {
+                  if (pendingBulkDelete) {
+                    removeTasks(Array.from(pendingBulkDelete.taskIds))
+                    setPendingBulkDelete(null)
                   }
                 }}
               />

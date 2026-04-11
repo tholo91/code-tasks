@@ -35,6 +35,15 @@ export interface RepoSyncError {
   timestamp: string
 }
 
+export interface CaptureDraft {
+  title: string
+  notes: string
+  isImportant: boolean
+}
+
+const isEmptyDraft = (draft: CaptureDraft) =>
+  draft.title.length === 0 && draft.notes.length === 0 && !draft.isImportant
+
 const normalizeRepoKey = (repoFullName: string) => repoFullName.toLowerCase()
 
 const createDefaultRepoMeta = (): RepoSyncMeta => ({
@@ -65,6 +74,7 @@ interface SyncState {
   repoSkipCi: Record<string, boolean>
   repoSyncErrors: Record<string, RepoSyncError>
   errorSheetOpen: boolean
+  repoDrafts: Record<string, CaptureDraft>
 
   setAuth: (token: string, user: GitHubUser) => Promise<void>
   clearAuth: (error?: string) => void
@@ -78,6 +88,9 @@ interface SyncState {
   reorderTasks: (repoFullName: string, orderedTaskIds: string[]) => void
   markTaskSynced: (taskId: string, githubIssueNumber: number | null) => void
   removeTask: (taskId: string) => void
+  removeTasks: (taskIds: string[]) => void
+  setRepoDraft: (repoFullName: string, draft: CaptureDraft) => void
+  clearRepoDraft: (repoFullName: string) => void
   loadTasksFromIDB: () => Promise<void>
   setSyncStatus: (status: SyncEngineStatus, error?: string, errorType?: SyncErrorType, rawError?: RawSyncError) => void
   setRepoSyncError: (repoFullName: string, error: string, errorType: SyncErrorType, rawError?: RawSyncError) => void
@@ -163,6 +176,9 @@ export const selectSyncBranch = (repoFullName: string) => (state: SyncState) =>
 export const selectRepoSkipCi = (repoFullName: string) => (state: SyncState) =>
   state.repoSkipCi[repoFullName.toLowerCase()] ?? false
 
+export const selectRepoDraft = (repoFullName: string) => (state: SyncState) =>
+  state.repoDrafts[repoFullName.toLowerCase()] ?? null
+
 export const selectPendingSyncCountAllRepos = (state: SyncState) => {
   const counts = selectPendingSyncCountsByRepo(state)
   return Object.values(counts).reduce((sum, count) => sum + count, 0)
@@ -219,6 +235,7 @@ export const useSyncStore = create<SyncState>()(
       repoSkipCi: {},
       repoSyncErrors: {},
       errorSheetOpen: false,
+      repoDrafts: {},
 
       setAuth: async (token: string, user: GitHubUser) => {
         try {
@@ -494,6 +511,66 @@ export const useSyncStore = create<SyncState>()(
               },
             },
           }
+        })
+      },
+
+      removeTasks: (taskIds: string[]) => {
+        if (taskIds.length === 0) return
+        set((state) => {
+          const idSet = new Set(taskIds)
+          const targetTasks = state.tasks.filter((t) => idSet.has(t.id))
+          if (targetTasks.length === 0) return state
+          const remainingTasks = state.tasks.filter((t) => !idSet.has(t.id))
+
+          // Async: remove from IndexedDB
+          for (const t of targetTasks) {
+            StorageService.deleteTaskFromIDB(t.id)
+          }
+
+          // Bump localRevision for each affected repo
+          const nextMeta = { ...state.repoSyncMeta }
+          const affectedRepoKeys = new Set(
+            targetTasks.map((t) => normalizeRepoKey(t.repoFullName)),
+          )
+          for (const repoKey of affectedRepoKeys) {
+            const existingMeta = nextMeta[repoKey] ?? createDefaultRepoMeta()
+            nextMeta[repoKey] = {
+              ...existingMeta,
+              localRevision: existingMeta.localRevision + 1,
+            }
+          }
+
+          return {
+            tasks: remainingTasks,
+            hasPendingDeletions: true,
+            repoSyncMeta: nextMeta,
+          }
+        })
+      },
+
+      setRepoDraft: (repoFullName: string, draft: CaptureDraft) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => {
+          // Auto-clear empty drafts so the persisted store doesn't accumulate noise
+          if (isEmptyDraft(draft)) {
+            if (!(key in state.repoDrafts)) return state
+            const next = { ...state.repoDrafts }
+            delete next[key]
+            return { repoDrafts: next }
+          }
+          return {
+            repoDrafts: { ...state.repoDrafts, [key]: draft },
+          }
+        })
+      },
+
+      clearRepoDraft: (repoFullName: string) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => {
+          if (!(key in state.repoDrafts)) return state
+          const next = { ...state.repoDrafts }
+          delete next[key]
+          return { repoDrafts: next }
         })
       },
 
@@ -811,6 +888,7 @@ export const useSyncStore = create<SyncState>()(
         repoSyncBranches: state.repoSyncBranches,
         repoSkipCi: state.repoSkipCi,
         repoSyncErrors: state.repoSyncErrors,
+        repoDrafts: state.repoDrafts,
       }),
       skipHydration: true,
     },

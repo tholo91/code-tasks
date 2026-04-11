@@ -184,15 +184,56 @@ describe('CreateTaskSheet', () => {
     expect(useSyncStore.getState().isImportant).toBe(false)
   })
 
-  it('resets isImportant to false on cancel (outside click)', () => {
+  it('preserves isImportant flag on outside click so draft survives', () => {
     useSyncStore.setState({ isImportant: true })
     render(<CreateTaskSheet {...defaultProps} />)
 
-    // Click on backdrop overlay
+    // Click on backdrop overlay — accidental dismiss should NOT clear the global flag
     const backdrop = screen.getByTestId('create-task-sheet-backdrop')
     fireEvent.click(backdrop)
 
+    expect(useSyncStore.getState().isImportant).toBe(true)
+  })
+
+  it('resets isImportant to false on explicit Cancel button click', async () => {
+    useSyncStore.setState({ isImportant: true })
+    const user = userEvent.setup()
+    render(<CreateTaskSheet {...defaultProps} />)
+
+    await user.click(screen.getByTestId('create-task-cancel'))
+
     expect(useSyncStore.getState().isImportant).toBe(false)
+  })
+
+  it('persists draft on outside click and restores it on next mount', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<CreateTaskSheet {...defaultProps} />)
+
+    await user.type(screen.getByTestId('create-task-title'), 'Half-written idea')
+    await user.type(screen.getByTestId('create-task-notes'), 'with some context')
+
+    // Accidental backdrop dismiss
+    fireEvent.click(screen.getByTestId('create-task-sheet-backdrop'))
+    unmount()
+
+    // Reopen the sheet — the draft should be restored
+    render(<CreateTaskSheet {...defaultProps} />)
+    expect(screen.getByTestId('create-task-title')).toHaveValue('Half-written idea')
+    expect(screen.getByTestId('create-task-notes')).toHaveValue('with some context')
+  })
+
+  it('clears the persisted draft when Cancel is pressed', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<CreateTaskSheet {...defaultProps} />)
+
+    await user.type(screen.getByTestId('create-task-title'), 'Throwaway idea')
+    await user.click(screen.getByTestId('create-task-cancel'))
+    unmount()
+
+    // Reopen — fields should be empty
+    render(<CreateTaskSheet {...defaultProps} />)
+    expect(screen.getByTestId('create-task-title')).toHaveValue('')
+    expect(screen.getByTestId('create-task-notes')).toHaveValue('')
   })
 
   it('renders inline priority flag icon', () => {

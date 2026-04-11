@@ -228,7 +228,9 @@ export function RepoSelector({ octokit, onSelect, selectedRepoId }: RepoSelector
         <input
           ref={inputRef}
           type="text"
-          placeholder="Search repositories..."
+          placeholder={!loading && !debouncedQuery && repos.length > 0
+            ? `Search ${repos.length} repositories…`
+            : 'Search repositories…'}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full bg-transparent text-[13px] font-medium outline-none"
