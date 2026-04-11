@@ -18,6 +18,10 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **UI feedback zu Sync Disclaimer** ([Created: 2026-04-11]) (Priority: 🔴 Important)
+  Wir müssen hier nochmal reinschauen. Wenn ich I popup auf "keep local" clicke, haben wir kein UI feedback, dass etwas passiert. Nutze deine UI skills um das anzupassen 
+Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervorheben? Local ist für den User ja wichtiger als Tresor für die Ideen, die remote (auf Main) ja eigentlich nur abgehakt werden oder?
+
 - [ ] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal)
   So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take?
 
