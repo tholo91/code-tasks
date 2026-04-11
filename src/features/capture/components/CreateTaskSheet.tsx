@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { useSyncStore } from '../../../stores/useSyncStore'
+import { selectRepoDraft, useSyncStore } from '../../../stores/useSyncStore'
 import { triggerLaunchHaptic, triggerSelectionHaptic } from '../../../services/native/haptic-service'
 import { BottomSheet } from '../../../components/ui/BottomSheet'
 
@@ -10,21 +10,50 @@ interface CreateTaskSheetProps {
 }
 
 export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps) {
-  const [title, setTitle] = useState('')
-  const [notes, setNotes] = useState('')
-  const [isImportant, setIsImportant] = useState(false)
+  const addTask = useSyncStore((s) => s.addTask)
+  const selectedRepoFullName = useSyncStore((s) => s.selectedRepo?.fullName ?? null)
+  // Snapshot the draft once at mount via getState() so we don't subscribe to draft updates
+  // (the draft is *written* by this component, so re-reading it would be wasted work).
+  const [title, setTitle] = useState(() => {
+    if (!selectedRepoFullName) return ''
+    return selectRepoDraft(selectedRepoFullName)(useSyncStore.getState())?.title ?? ''
+  })
+  const [notes, setNotes] = useState(() => {
+    if (!selectedRepoFullName) return ''
+    return selectRepoDraft(selectedRepoFullName)(useSyncStore.getState())?.notes ?? ''
+  })
+  const [isImportant, setIsImportant] = useState(() => {
+    if (!selectedRepoFullName) return false
+    return selectRepoDraft(selectedRepoFullName)(useSyncStore.getState())?.isImportant ?? false
+  })
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const notesRef = useRef<HTMLTextAreaElement>(null)
   const submitRef = useRef<HTMLButtonElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
-  const addTask = useSyncStore((s) => s.addTask)
 
-  const handleClose = useCallback(() => {
+  // Persist draft to the store on every change so an accidental backdrop tap
+  // or drag-down won't lose the in-progress capture. Scoped per repo.
+  useEffect(() => {
+    if (!selectedRepoFullName) return
+    useSyncStore.getState().setRepoDraft(selectedRepoFullName, { title, notes, isImportant })
+  }, [title, notes, isImportant, selectedRepoFullName])
+
+  // Backdrop tap / drag-down → preserve draft so the user can keep editing on next open.
+  const handlePreserveClose = useCallback(() => {
+    onClose()
+  }, [onClose])
+
+  // Explicit Cancel button → discard draft.
+  const handleCancel = useCallback(() => {
+    if (selectedRepoFullName) {
+      useSyncStore.getState().clearRepoDraft(selectedRepoFullName)
+    }
     useSyncStore.setState({ isImportant: false })
     setTitle('')
     setNotes('')
+    setIsImportant(false)
     onClose()
-  }, [onClose])
+  }, [onClose, selectedRepoFullName])
 
   const handleSubmit = useCallback(() => {
     const trimmedTitle = title.trim()
@@ -36,12 +65,15 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
     onTaskCreated(newTask.id)
 
     // Reset state and dismiss immediately — fast capture, no second task
+    if (selectedRepoFullName) {
+      useSyncStore.getState().clearRepoDraft(selectedRepoFullName)
+    }
     setIsImportant(false)
     useSyncStore.setState({ isImportant: false })
     setTitle('')
     setNotes('')
     onClose()
-  }, [title, notes, isImportant, addTask, onTaskCreated, onClose])
+  }, [title, notes, isImportant, addTask, onTaskCreated, onClose, selectedRepoFullName])
 
   // Auto-focus title on mount — triggers on-screen keyboard
   // We use multiple strategies for maximum mobile compatibility:
@@ -50,6 +82,17 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
   useEffect(() => {
     // Immediate attempt — catches most browsers
     titleRef.current?.focus({ preventScroll: true })
+
+    // If a draft was restored, the textareas need their auto-grow re-applied
+    // since handleTitleChange / handleNotesChange only fire on user input.
+    if (titleRef.current) {
+      titleRef.current.style.height = 'auto'
+      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`
+    }
+    if (notesRef.current) {
+      notesRef.current.style.height = 'auto'
+      notesRef.current.style.height = `${notesRef.current.scrollHeight}px`
+    }
 
     // Delayed attempt — handles sheet animation lag and iOS quirks
     const timer = setTimeout(() => {
@@ -118,7 +161,7 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
   return (
     <BottomSheet
       ref={sheetRef}
-      onClose={handleClose}
+      onClose={handlePreserveClose}
       backdropBlur
       ariaLabel="Create new task"
       testId="create-task-sheet"
@@ -206,7 +249,7 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
           <div className="flex items-center gap-3 pt-2">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={handleCancel}
               className="text-body font-medium px-2 py-2"
               style={{ color: 'var(--color-text-secondary)' }}
               data-testid="create-task-cancel"
