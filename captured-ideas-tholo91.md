@@ -18,6 +18,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Swipe capture bottom sheet away** ([Created: 2026-04-11]) (Priority: ⚪ Normal)
+  Wenn ich eine neue Idee ausfülle und aus versehen aus dem bottom sheet herausklicke, wird es geleert. Besser ist ggf. due Texte  bestehen zu lassen beim nächsten Öffnen, bis (in diesem geöffneten repo zumindest) mal auf CANCEL oder CAPTURE geklickt wurde
+
 - [ ] **Anzahl von repositories im repo switcher** ([Created: 2026-04-11]) (Priority: 🔴 Important)
   Find Ich schonmal gut das dezente, aber vielleicht schreiben wir die Anzahl einfach mit in die search bar "Search 11 repositories"
 
