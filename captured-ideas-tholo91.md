@@ -18,6 +18,9 @@
 
 <!-- code-tasks:managed-start -->
 
+- [ ] **Anzahl von repositories im repo switcher** ([Created: 2026-04-11]) (Priority: 🔴 Important)
+  Find Ich schonmal gut das dezente, aber vielleicht schreiben wir die Anzahl einfach mit in die search bar "Search 11 repositories"
+
 - [ ] **UI feedback zu Sync Disclaimer** ([Created: 2026-04-11]) (Priority: 🔴 Important)
   Wir müssen hier nochmal reinschauen. Wenn ich I popup auf "keep local" clicke, haben wir kein UI feedback, dass etwas passiert. Nutze deine UI skills um das anzupassen 
 Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervorheben? Local ist für den User ja wichtiger als Tresor für die Ideen, die remote (auf Main) ja eigentlich nur abgehakt werden oder?
