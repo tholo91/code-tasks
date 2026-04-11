@@ -18,18 +18,18 @@
 
 <!-- code-tasks:managed-start -->
 
-- [ ] **Swipe capture bottom sheet away** ([Created: 2026-04-11]) (Priority: ⚪ Normal)
-  Wenn ich eine neue Idee ausfülle und aus versehen aus dem bottom sheet herausklicke, wird es geleert. Besser ist ggf. due Texte  bestehen zu lassen beim nächsten Öffnen, bis (in diesem geöffneten repo zumindest) mal auf CANCEL oder CAPTURE geklickt wurde
+- [x] **Swipe capture bottom sheet away** ([Created: 2026-04-11]) (Priority: ⚪ Normal) [Processed by: Claude]
+  Wenn ich eine neue Idee ausfülle und aus versehen aus dem bottom sheet herausklicke, wird es geleert. Besser ist ggf. due Texte  bestehen zu lassen beim nächsten Öffnen, bis (in diesem geöffneten repo zumindest) mal auf CANCEL oder CAPTURE geklickt wurde → Done: capture sheet now persists draft (title/notes/important) per repo via `repoDrafts` in `useSyncStore`. Backdrop tap & drag-down preserve the draft; only Cancel or Capture clear it.
 
-- [ ] **Anzahl von repositories im repo switcher** ([Created: 2026-04-11]) (Priority: 🔴 Important)
-  Find Ich schonmal gut das dezente, aber vielleicht schreiben wir die Anzahl einfach mit in die search bar "Search 11 repositories"
+- [x] **Anzahl von repositories im repo switcher** ([Created: 2026-04-11]) (Priority: 🔴 Important) [Processed by: Claude]
+  Find Ich schonmal gut das dezente, aber vielleicht schreiben wir die Anzahl einfach mit in die search bar "Search 11 repositories" → Done: `RepoSelector` placeholder now reads `Search N repositories…` once the repo list has loaded.
 
 - [ ] **UI feedback zu Sync Disclaimer** ([Created: 2026-04-11]) (Priority: 🔴 Important)
   Wir müssen hier nochmal reinschauen. Wenn ich I popup auf "keep local" clicke, haben wir kein UI feedback, dass etwas passiert. Nutze deine UI skills um das anzupassen 
 Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervorheben? Local ist für den User ja wichtiger als Tresor für die Ideen, die remote (auf Main) ja eigentlich nur abgehakt werden oder?
 
-- [ ] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal)
-  So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take?
+- [x] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal) [Processed by: Claude]
+  So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take? → Done: when a repo has more than 30 completed tasks, a quiet "Clean up oldest 15" button appears next to the Completed section header. Tapping it soft-deletes the oldest 15 completed tasks (sorted by `completedAt`) with the existing 5-second `UndoToast` for safety. Hidden during search and while another bulk delete is mid-flight.
 
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal) [Updated: 2026-04-07]
   Feature für version 2, statt markdown file mit deployments zu haben
