@@ -24,9 +24,9 @@
 - [x] **Anzahl von repositories im repo switcher** ([Created: 2026-04-11]) (Priority: 🔴 Important) [Processed by: Claude]
   Find Ich schonmal gut das dezente, aber vielleicht schreiben wir die Anzahl einfach mit in die search bar "Search 11 repositories" → Done: `RepoSelector` placeholder now reads `Search N repositories…` once the repo list has loaded.
 
-- [ ] **UI feedback zu Sync Disclaimer** ([Created: 2026-04-11]) (Priority: 🔴 Important)
+- [x] **UI feedback zu Sync Disclaimer** ([Created: 2026-04-11]) (Priority: 🔴 Important) [Processed by: Claude]
   Wir müssen hier nochmal reinschauen. Wenn ich I popup auf "keep local" clicke, haben wir kein UI feedback, dass etwas passiert. Nutze deine UI skills um das anzupassen 
-Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervorheben? Local ist für den User ja wichtiger als Tresor für die Ideen, die remote (auf Main) ja eigentlich nur abgehakt werden oder?
+Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervorheben? Local ist für den User ja wichtiger als Tresor für die Ideen, die remote (auf Main) ja eigentlich nur abgehakt werden oder? → Planned: Story 9-14 (Safe Sync — Auto-merge + Review Receipt + Undo Snapshot). Scope expanded after party mode review: kills SyncConflictSheet entirely (never blocks user), auto-merge on SHA divergence, task-level diff receipt view with colorblind-safe icons + labels, 5-snapshot encrypted undo history with 7-day expiry, typed-confirmation Danger Zone for destructive reset. Ship target: 2026-04-19.
 
 - [x] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal) [Processed by: Claude]
   So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take? → Done: when a repo has more than 30 completed tasks, a quiet "Clean up oldest 15" button appears next to the Completed section header. Tapping it soft-deletes the oldest 15 completed tasks (sorted by `completedAt`) with the existing 5-second `UndoToast` for safety. Hidden during search and while another bulk delete is mid-flight.

@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-04-03 (Stories 9-11, 9-12, 9-13 done + sort-fix done)
+# Updated: 2026-04-12 (Story 9-14 added — Safe Sync bundle, dealbreaker for trust)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -23,10 +23,11 @@ development_status:
 
   # ═══════════════════════════════════════════════════════
   # SPRINT 4 — ACTIVE WORK
-  # Three focused stories: sync safety, AI agent power
-  # Sequence: 9-9 → 8-7 → qs-claude-md (independent, any order)
+  # Four focused stories: sync trust, sync safety, AI agent power
+  # Sequence: 9-14 (critical, trust dealbreaker) → 9-9 → 8-7 → qs-claude-md
   # ═══════════════════════════════════════════════════════
 
+  9-14-safe-sync-auto-merge-undo-snapshot: "ready-for-dev"  # CRITICAL: Kill conflict sheet, auto-merge, receipt toast + undo snapshot. Ship target 2026-04-19.
   9-9-undo-sync-changes: "ready-for-dev"                 # No-op detection + hold-to-cancel sync
   8-7-per-repo-ai-instructions: "ready-for-dev"          # Power user: custom AI agent instructions per repo
   qs-claude-md-integration: "ready-for-dev"              # After first sync, offer to inject Task Discovery into repo's CLAUDE.md
