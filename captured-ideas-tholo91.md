@@ -18,18 +18,8 @@
 
 <!-- code-tasks:managed-start -->
 
-- [x] **Swipe capture bottom sheet away** ([Created: 2026-04-11]) (Priority: ⚪ Normal) [Processed by: Claude]
-  Wenn ich eine neue Idee ausfülle und aus versehen aus dem bottom sheet herausklicke, wird es geleert. Besser ist ggf. due Texte  bestehen zu lassen beim nächsten Öffnen, bis (in diesem geöffneten repo zumindest) mal auf CANCEL oder CAPTURE geklickt wurde → Done: capture sheet now persists draft (title/notes/important) per repo via `repoDrafts` in `useSyncStore`. Backdrop tap & drag-down preserve the draft; only Cancel or Capture clear it.
-
-- [x] **Anzahl von repositories im repo switcher** ([Created: 2026-04-11]) (Priority: 🔴 Important) [Processed by: Claude]
-  Find Ich schonmal gut das dezente, aber vielleicht schreiben wir die Anzahl einfach mit in die search bar "Search 11 repositories" → Done: `RepoSelector` placeholder now reads `Search N repositories…` once the repo list has loaded.
-
-- [x] **UI feedback zu Sync Disclaimer** ([Created: 2026-04-11]) (Priority: 🔴 Important) [Processed by: Claude]
-  Wir müssen hier nochmal reinschauen. Wenn ich I popup auf "keep local" clicke, haben wir kein UI feedback, dass etwas passiert. Nutze deine UI skills um das anzupassen 
-Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervorheben? Local ist für den User ja wichtiger als Tresor für die Ideen, die remote (auf Main) ja eigentlich nur abgehakt werden oder? → Planned: Story 9-14 (Safe Sync — Auto-merge + Review Receipt + Undo Snapshot). Scope expanded after party mode review: kills SyncConflictSheet entirely (never blocks user), auto-merge on SHA divergence, task-level diff receipt view with colorblind-safe icons + labels, 5-snapshot encrypted undo history with 7-day expiry, typed-confirmation Danger Zone for destructive reset. Ship target: 2026-04-19.
-
-- [x] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal) [Processed by: Claude]
-  So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take? → Done: when a repo has more than 30 completed tasks, a quiet "Clean up oldest 15" button appears next to the Completed section header. Tapping it soft-deletes the oldest 15 completed tasks (sorted by `completedAt`) with the existing 5-second `UndoToast` for safety. Hidden during search and while another bulk delete is mid-flight.
+- [ ] **Check usability critically** ([Created: 2026-04-14]) (Priority: 🔴 Important)
+  I want you to Investigates. What Would be best Practice for Capturing ideas like What what you Think Makes Most, Sense for This Repository sync?
 
 - [ ] **Github issues erstellen?** ([Created: 2026-03-25]) (Priority: ⚪ Normal) [Updated: 2026-04-07]
   Feature für version 2, statt markdown file mit deployments zu haben
@@ -37,8 +27,21 @@ Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervor
 
 ## Completed
 
+- [x] **Swipe capture bottom sheet away** ([Created: 2026-04-11]) (Priority: ⚪ Normal) [Completed: 2026-04-11] [Processed by: Claude]
+  Wenn ich eine neue Idee ausfülle und aus versehen aus dem bottom sheet herausklicke, wird es geleert. Besser ist ggf. due Texte  bestehen zu lassen beim nächsten Öffnen, bis (in diesem geöffneten repo zumindest) mal auf CANCEL oder CAPTURE geklickt wurde → Done: capture sheet now persists draft (title/notes/important) per repo via `repoDrafts` in `useSyncStore`. Backdrop tap & drag-down preserve the draft; only Cancel or Capture clear it.
+
+- [x] **Anzahl von repositories im repo switcher** ([Created: 2026-04-11]) (Priority: 🔴 Important) [Completed: 2026-04-11] [Processed by: Claude]
+  Find Ich schonmal gut das dezente, aber vielleicht schreiben wir die Anzahl einfach mit in die search bar "Search 11 repositories" → Done: `RepoSelector` placeholder now reads `Search N repositories…` once the repo list has loaded.
+
+- [x] **UI feedback zu Sync Disclaimer** ([Created: 2026-04-11]) (Priority: 🔴 Important) [Completed: 2026-04-11] [Processed by: Claude]
+  Wir müssen hier nochmal reinschauen. Wenn ich I popup auf "keep local" clicke, haben wir kein UI feedback, dass etwas passiert. Nutze deine UI skills um das anzupassen 
+Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervorheben? Local ist für den User ja wichtiger als Tresor für die Ideen, die remote (auf Main) ja eigentlich nur abgehakt werden oder?
+
 - [x] **Ai agent prompt on top of md file** ([Created: 2026-04-09]) (Priority: 🔴 Important) [Completed: 2026-04-09]
   Every time you pull from main/branch (depending on the setting), take a look in this file and let me know if I captured new ideas we should tackle (develop thorough stories or fix things right away). Please check them, if so!
+
+- [x] **Delete stale completed tasks** ([Created: 2026-04-09]) (Priority: ⚪ Normal) [Completed: 2026-04-09] [Processed by: Claude]
+  So the markdown doesn't get too long, we might show a delete option, if more than 30 tasks are completed? Or does it make sense to then only delete the oldest 15? What is your take? → Done: when a repo has more than 30 completed tasks, a quiet "Clean up oldest 15" button appears next to the Completed section header. Tapping it soft-deletes the oldest 15 completed tasks (sorted by `completedAt`) with the existing 5-second `UndoToast` for safety. Hidden during search and while another bulk delete is mid-flight.
 
 - [x] **Repository switcher** ([Created: 2026-04-08]) (Priority: 🔴 Important) [Updated: 2026-04-08] [Completed: 2026-04-09]
   Show how many repositories one has as a number. Because the little scroll windows might hide that we have more until we scroll
@@ -69,18 +72,6 @@ Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervor
 
 - [x] **Bottom sheet when creating tasks** ([Created: 2026-03-23]) (Priority: 🔴 Important) [Updated: 2026-03-23] [Completed: 2026-03-23] [Processed by: Claude]
   Should have more padding below.
-
-- [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
-  I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
-
-- [x] **Man kann Veränderungen seit dem letzten Mal rückgängig machen** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
-  Wenn man bspw. Einen task aufmacht und zwei mal auf "important" klickt, ist ja eigentlich nichts verändert. Man soll nun also quasi durch hold des snc Buttons (ohne text select) den sync abbrechen → Planned: Story 9-9 (Undo Sync Changes / Hold-to-Cancel)
-
-- [x] **Feature: urgency score? Now, later?** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Updated: 2026-03-23] [Completed: 2026-03-20] [Processed by: Claude]
-  Wochenende importance tags, wichtig fÃ¼r ai agent
-
-- [x] **Eventuell Claude.md erstellen / anweisen?** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20] [Completed: 2026-03-20] [Processed by: Claude]
-  Captured-ideas-<username>.md soll darin erwÃ¤hnt werden, bzw. Claude.md erstellen, damit Claude automatisch nach neuen tasks sucht → Done: CLAUDE.md updated 2026-03-22
 
 - [x] **an edit in captured-ideas.md should not trigger a publish github site** ([Created: 2026-03-17]) (Priority: ⚪ Normal) [Updated: 2026-03-20] [Completed: 2026-03-20]
   It seems as if every push actually triggers a rebuild of the page, is there a way to fix that? ÃÂ¢ÃÂÃÂ Planned: Story 9-5 (Skip CI on sync commits)
@@ -126,6 +117,18 @@ Sollten wir im Vergleich ggf. Parallel scrollen und Unterschiede farblich hervor
 
 - [x] **Report an Issue / Give Feedback link** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
   In Settings or About Gitty, add a button that redirects users to the Gitty GitHub issues page to report bugs or give feedback. ÃÂ¢ÃÂÃÂ Incorporated into Story 8-8 (About Gitty).
+
+- [x] **Create a list of all notifications to simplify  and cluster them** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
+  I feel like they are repetitive and in parts similar - maybe fewer notifications or logs when the last one came? After I sync to main and reopen the app I get one - how/why? → Planned: Story 9-8 (Notification Simplification & Clustering)
+
+- [x] **Man kann Veränderungen seit dem letzten Mal rückgängig machen** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Completed: 2026-03-20] [Processed by: Claude]
+  Wenn man bspw. Einen task aufmacht und zwei mal auf "important" klickt, ist ja eigentlich nichts verändert. Man soll nun also quasi durch hold des snc Buttons (ohne text select) den sync abbrechen → Planned: Story 9-9 (Undo Sync Changes / Hold-to-Cancel)
+
+- [x] **Feature: urgency score? Now, later?** ([Created: 2026-03-20]) (Priority: ⚪ Normal) [Updated: 2026-03-23] [Completed: 2026-03-20] [Processed by: Claude]
+  Wochenende importance tags, wichtig fÃ¼r ai agent
+
+- [x] **Eventuell Claude.md erstellen / anweisen?** ([Created: 2026-03-20]) (Priority: 🔴 Important) [Updated: 2026-03-20] [Completed: 2026-03-20] [Processed by: Claude]
+  Captured-ideas-<username>.md soll darin erwÃ¤hnt werden, bzw. Claude.md erstellen, damit Claude automatisch nach neuen tasks sucht → Done: CLAUDE.md updated 2026-03-22
 
 - [x] **Change the ai agent instruction** ([Created: 2026-03-17]) (Priority: ⚪ Normal) [Completed: 2026-03-17] [Processed by: Claude]
   The ai agent working with this captured-ideas.md should know that he can check off tasks that he has finished and add to their description "checked by Claude/Gemini) ÃÂ¢ÃÂÃÂ Done in Story 8-9 (AI agent header update) and Story 8-11 (added parseable `[Processed by: AgentName]` tag format to the header instructions).
