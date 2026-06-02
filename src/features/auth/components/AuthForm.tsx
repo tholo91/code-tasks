@@ -5,6 +5,7 @@ import { useSyncStore } from '../../../stores/useSyncStore'
 
 interface AuthFormProps {
   onSuccess: () => void
+  layout?: 'centered' | 'inline'
 }
 
 interface FormState {
@@ -14,7 +15,7 @@ interface FormState {
 
 const initialState: FormState = { error: null, pending: false }
 
-export function AuthForm({ onSuccess }: AuthFormProps) {
+export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
   const setAuth = useSyncStore((s) => s.setAuth)
   const authError = useSyncStore((s) => s.authError)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -52,7 +53,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   )
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className={layout === 'inline' ? 'w-full' : 'flex min-h-screen items-center justify-center px-4'}>
       <form action={formAction} className="card w-full max-w-md p-6">
         <h2 className="mb-2 text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           Authenticate

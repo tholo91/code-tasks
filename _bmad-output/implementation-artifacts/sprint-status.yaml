@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-04-12 (Story 9-14 added — Safe Sync bundle, dealbreaker for trust)
+# Updated: 2026-05-12 (Stories 9-15 + 9-16 added — Active AI Briefing Header + /captured-ideas slash command, draft pair)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -49,6 +49,10 @@ development_status:
   9-11-branch-strategy-deployment-guard: "done"           # Completed 2026-04-03 — Per-repo branch choice + [skip ci]
   9-13-share-gitty-qr-code: "done"                        # Completed 2026-04-03 — QR code sharing from About Gitty
   qs-sort-button-fix: "done"                              # Completed 2026-04-03 — opacity fix in dropdownVariants
+
+  # --- Draft (AI-coding-tool adoption pair — ship 9-15 first, then 9-16) ---
+  9-15-active-ai-briefing-header: "draft"                 # Rewrite getAIReadyHeader() to be directive + add branch awareness line. Composes with 9-16.
+  9-16-captured-ideas-slash-command: "draft"              # Ship .claude/commands/captured-ideas.md inside the repo — one-command pull + brief across branches. Composes with 9-15.
 
   # --- Paused (not needed now — app works well without tab bar) ---
   9-1-bottom-tab-navigation: "paused"                    # Single-screen overlay UX is sufficient
@@ -138,6 +142,14 @@ development_status:
   # Epic 11: Multi-Account — multiple GitHub accounts with token vault
   epic-11: "backlog"
   11-1-multi-github-account-support: "backlog"           # Multi-PAT storage, account switcher, scoped repos
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 12: Discovery — AI-Native Developer Workflows
+  # Research-driven validation of Gitty's strategic direction.
+  # Not blocked by — and not blocking — active sprint work. Runs alongside Thomas's parallel outreach.
+  # ═══════════════════════════════════════════════════════
+  epic-12: "draft"
+  12-1-ai-native-developer-research-plan: "draft"        # Research plan v1: 3 falsifiable hypotheses, Mom Test interview guide, 10-person recruitment list. Plan only — execution deferred to 12-2.
 
   # ═══════════════════════════════════════════════════════
   # Paused Epics

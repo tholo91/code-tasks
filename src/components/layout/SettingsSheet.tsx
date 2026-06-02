@@ -98,6 +98,30 @@ export function SettingsSheet({ onClose, onOpenRoadmap, onOpenAbout, onOpenRepoS
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+              style={{ color: 'var(--color-accent)' }}
+            >
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="23" />
+              <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+          }
+          label="Share feedback"
+          href="https://www.heyspeak.io/l/dPAgTYLhiBV_veeNE8Tq1w"
+          testId="settings-feedback"
+        />
+
+        <SettingsMenuItem
+          icon={
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               <circle cx="12" cy="12" r="10" />

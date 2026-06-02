@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-5a5d9309'], (function (workbox) { 'use strict';
+define(['./workbox-92c947ee'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -79,14 +79,19 @@ define(['./workbox-5a5d9309'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "registerSW.js",
-    "revision": "3ca0b8505b4bec776b69afdba2768812"
+    "revision": "ccd5244624303f0bf63c52573f7d1ce9"
   }, {
     "url": "index.html",
-    "revision": "0.ao4f0lebbpo"
+    "revision": "0.0o2jhb5bgus"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
     allowlist: [/^\/$/]
   }));
+  workbox.registerRoute(/^https:\/\/api\.github\.com\/.*/i, new workbox.NetworkOnly({
+    plugins: [new workbox.BackgroundSyncPlugin("github-sync-queue", {
+      maxRetentionTime: 1440
+    })]
+  }), 'GET');
 
 }));

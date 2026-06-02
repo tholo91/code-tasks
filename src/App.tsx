@@ -4,7 +4,7 @@ import { useSyncStore, selectSyncBranch, selectRepoSkipCi } from './stores/useSy
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AppHeader } from './components/layout/AppHeader'
-import { AuthForm } from './features/auth/components/AuthForm'
+import { LandingPage } from './components/landing/LandingPage'
 import { RepoSelector } from './features/repos/components/RepoSelector'
 import { CreateTaskFAB } from './features/capture/components/CreateTaskFAB'
 import { CreateTaskSheet } from './features/capture/components/CreateTaskSheet'
@@ -682,7 +682,7 @@ function AppContent() {
     <AnimatePresence mode="wait">
       {viewKey === 'auth' && (
         <motion.div key="auth" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-          <AuthForm onSuccess={() => {}} />
+          <LandingPage onSuccess={() => {}} />
         </motion.div>
       )}
 
