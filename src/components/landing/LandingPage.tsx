@@ -154,6 +154,75 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
 
+      {/* Screenshots */}
+      <section
+        style={{
+          padding: '5rem 1.5rem',
+          maxWidth: '480px',
+          margin: '0 auto',
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            width: '100%',
+            alignItems: 'flex-start',
+          }}
+        >
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <img
+              src={`${import.meta.env.BASE_URL}screenshot-tasks.webp`}
+              alt="Gitty task list"
+              width={220}
+              height={428}
+              style={{
+                borderRadius: '1.25rem',
+                width: '100%',
+                height: 'auto',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                border: '1px solid var(--color-border)',
+                display: 'block',
+              }}
+            />
+            <p style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-label)',
+              color: 'var(--color-text-secondary)',
+              margin: 0,
+              opacity: 0.7,
+            }}>Capture tasks on the go</p>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2.5rem' }}>
+            <img
+              src={`${import.meta.env.BASE_URL}screenshot-repos.webp`}
+              alt="Gitty repo selector"
+              width={220}
+              height={428}
+              style={{
+                borderRadius: '1.25rem',
+                width: '100%',
+                height: 'auto',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                border: '1px solid var(--color-border)',
+                display: 'block',
+              }}
+            />
+            <p style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-label)',
+              color: 'var(--color-text-secondary)',
+              margin: 0,
+              opacity: 0.7,
+            }}>Switch repos instantly</p>
+          </div>
+        </div>
+      </section>
+
+      <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
+
       {/* Roadmap teaser */}
       <section
         style={{
