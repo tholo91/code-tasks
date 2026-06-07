@@ -34,15 +34,15 @@ const TOOLBAR_SPRING = { type: 'spring' as const, stiffness: 420, damping: 34, m
 
 /* ── Animation variants ── */
 const tabsVariants: Variants = {
-  initial: { opacity: 0, scale: 0.92, filter: 'blur(4px)' },
-  animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
-  exit: { opacity: 0, scale: 0.92, filter: 'blur(4px)' },
+  initial: { opacity: 0, scale: 0.92 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.92 },
 }
 
 const searchVariants: Variants = {
-  initial: { opacity: 0, scale: 0.95, filter: 'blur(4px)' },
-  animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
-  exit: { opacity: 0, scale: 0.95, filter: 'blur(4px)' },
+  initial: { opacity: 0, scale: 0.95 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.95 },
 }
 
 export function TaskToolbar({
