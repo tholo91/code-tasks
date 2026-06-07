@@ -1,40 +1,90 @@
-# code-tasks
+# Gitty — code-tasks
 
-> **Frictionless "Quick Capture" for developers who work with AI agents in GitHub.**
+> **Frictionless task capture for developers who work with AI agents.**
 
-`code-tasks` is an offline-first, high-fidelity Progressive Web App (PWA) designed to bridge the gap between late-night inspiration and GitHub execution. Inspired by the sleek UX of "Things" and "Sorted 3," it provides a beautiful, stable interface for managing ideas directly in your GitHub repositories.
+Gitty is an offline-first PWA that bridges the gap between a quick idea and a GitHub issue. It writes to a plain markdown file (`captured-ideas-{username}.md`) in your repo — no database, no extra accounts, no merge conflicts.
 
----
-
-## 🚀 The Vision
-
-- **Quick Capture Focus:** One tap to create, one tap to sync. No friction, no extra accounts—just your GitHub.
-- **AI-Native & Ready:** Every `captured-ideas.md` list starts with a persistent, modifiable AI prompt, making your task list instantly actionable for agents like Gemini or Claude.
-- **Privacy-First Sync:** Secure, transparent backend using `captured-ideas-{username}.md` to enable collaborative repos without merge conflicts.
-- **Offline-First Stability:** Your ideas are safe even without a connection; sync happens when you're ready.
-
-For a deeper dive into our "Problem Statement" and "Key Differentiators," see the [**Product Vision**](./docs/vision.md).
+**Live app:** [code-tasks.vercel.app](https://code-tasks.vercel.app)
 
 ---
 
-## 📂 Project Structure
+## How it works
 
-- `/docs`: Detailed project knowledge, vision, and architectural decisions.
-- `/_bmad`: The project's "AI Brain"—BMM (Business Maturity Model) agents and workflows.
-- `/_bmad-output`: Planning artifacts, research reports, and technical specs.
+1. **Capture** — one tap to add an idea from any device
+2. **Sync** — pushes to `captured-ideas-{username}.md` in your GitHub repo
+3. **Hand off** — the file is pre-formatted for AI agents (Claude, Gemini, etc.) to pick up and execute
 
----
-
-## 🛠 For Developers
-
-We are currently in the **initial planning and research phase**. If you're looking to contribute or get an overview of the roadmap:
-
-1.  Read the [**Vision Document**](./docs/vision.md).
-2.  Check out the latest [**Product Brief**](./_bmad-output/planning-artifacts/product-brief-code-tasks-2026-03-10.md).
-3.  Explore the `_bmad` directory to see how we're using AI agents to scaffold this project.
-
-**Current Task:** Finalizing MVP scope and the `{username}` suffix file strategy.
+Every list starts with a persistent AI prompt so your task file is instantly actionable — no extra formatting needed.
 
 ---
 
-*Built with ❤️ for developers by developers.*
+## Key features
+
+- **Offline-first** — ideas are stored locally, synced when you're ready
+- **AI-native** — markdown format designed for agent ingestion
+- **Privacy-safe collaboration** — per-user files prevent merge conflicts in shared repos
+- **Magic Link auth** — no password, no account beyond your GitHub OAuth
+- **PWA + Capacitor** — installable on mobile and desktop
+
+---
+
+## Getting started (local dev)
+
+**Prerequisites:** Node 20+, a GitHub OAuth App
+
+```bash
+git clone https://github.com/tholo91/code-tasks
+cd code-tasks
+npm install
+cp .env.example .env.local   # add your GitHub OAuth credentials
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+---
+
+## Project structure
+
+```
+src/
+  components/    # Shared UI components
+  features/      # Feature modules: auth, repos, capture, community
+  services/      # GitHub API (Octokit) and storage layers
+  stores/        # Zustand state
+  types/         # TypeScript interfaces
+  hooks/         # Custom React hooks
+  utils/         # Utility functions
+  config/        # App-wide constants (APP_NAME, APP_VERSION)
+```
+
+Key directories:
+
+| Path | What's in there |
+|------|----------------|
+| `_bmad/` | AI agent workflows (BMAD framework) |
+| `_bmad-output/` | PRD, architecture, epics, sprint status |
+| `docs/` | Vision doc and architectural decisions |
+
+---
+
+## Contributing
+
+The project is open and community-driven — "Wir bauen das zusammen."
+
+1. Check [`_bmad-output/implementation-artifacts/sprint-status.yaml`](./_bmad-output/implementation-artifacts/sprint-status.yaml) for open stories
+2. Open a PR against `main`
+3. Keep commits in English, run `npm test` before pushing
+
+Have a feature idea or feedback? Drop a voice note — it takes 30 seconds:
+**[Leave feedback on heyspeak.io](https://www.heyspeak.io/l/dPAgTYLhiBV_veeNE8Tq1w)**
+
+---
+
+## Tech stack
+
+React 19 · Vite 7 · TypeScript · Zustand · TailwindCSS 4 · Octokit · Capacitor 8 · Vitest
+
+---
+
+*Built for developers, by a developer.*

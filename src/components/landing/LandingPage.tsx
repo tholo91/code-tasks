@@ -1,5 +1,6 @@
 import { AuthForm } from '../../features/auth/components/AuthForm'
 import { roadmapData } from '../../data/roadmap'
+import logoUrl from '/maskable-icon-512x512-light.png'
 
 interface LandingPageProps {
   onSuccess: () => void
@@ -37,18 +38,31 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
           position: 'relative',
         }}
       >
-        <p
+        <div
           style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--text-label)',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--color-accent)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
             marginBottom: '1.75rem',
           }}
         >
-          Gitty
-        </p>
+          <img
+            src={logoUrl}
+            alt="Gitty logo"
+            style={{ width: '28px', height: '28px', borderRadius: '6px' }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-label)',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--color-accent)',
+            }}
+          >
+            Gitty
+          </span>
+        </div>
 
         <h1
           style={{
