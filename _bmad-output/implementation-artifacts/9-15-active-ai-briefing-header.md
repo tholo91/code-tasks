@@ -1,6 +1,6 @@
 # Story 9.15: Active AI Briefing Header + Branch Awareness
 
-Status: draft
+Status: ready-for-dev
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -32,7 +32,9 @@ so that I never act on stale data and the AI behaves predictably across all my r
 - [ ] Task 2: Add `syncBranch` parameter and branch-awareness line (AC: #2, #6)
   - [ ] Add optional `syncBranch?: string` param to `getAIReadyHeader()`
   - [ ] Inject the 📍 branch line only when `syncBranch` is provided
-  - [ ] Update all call sites in `src/services/github/sync-service.ts` to pass the resolved branch (read from `repoSyncBranches[repoKey]` or fall back to repo default)
+  - [ ] Update all call sites to pass the resolved branch:
+    - `src/services/github/sync-service.ts` — read from `repoSyncBranches[repoKey]` or fall back to repo default
+    - `buildFullFileContent()` in `src/features/sync/utils/markdown-templates.ts:208` — add `syncBranch?: string` param and pass through to `getAIReadyHeader()`
 - [ ] Task 3: Update tests in `src/features/sync/utils/markdown-templates.test.ts` (AC: #5)
   - [ ] Replace old assertion strings with new header text
   - [ ] Add a new test case: `getAIReadyHeader('tholo91', 'gitty/tholo91')` contains the branch line
@@ -61,15 +63,19 @@ so that I never act on stale data and the AI behaves predictably across all my r
 > 4. Tasks use markdown checkboxes (`- [ ]` / `- [x]`). Priority: 🔴 Important or ⚪ Normal.
 > 5. Never delete or reorder tasks. Only the mobile app manages task lifecycle.
 > 6. You may add notes or context **below** the `managed-end` marker — they will not be overwritten.
+
+---
+
+<!-- code-tasks:managed-start -->
 ```
 
-When `syncBranch` is provided, append this line immediately after point 6 (before the closing `>`):
+When `syncBranch` is provided, insert it as **point 7** inside the blockquote, between point 6 and the `---` separator line:
 
 ```
-> 📍 This file is synced to branch `{branch}` in this repo. To get the latest captures from another branch, run: `git fetch && git show origin/{branch}:captured-ideas-{username}.md`.
+> 7. 📍 This file is synced to branch `{branch}` in this repo. To get the latest captures from another branch, run: `git fetch && git show origin/{branch}:captured-ideas-{username}.md`.
 ```
 
-When `syncBranch` is omitted, this line is not appended. The base 6-point block is identical regardless.
+When `syncBranch` is omitted, the `---` follows immediately after point 6. The `<!-- code-tasks:managed-start -->` marker always follows the `---` — do not remove or reorder these.
 
 - `HEADER_SIGNATURE` constant stays `<!-- code-tasks:ai-ready-header -->` — do NOT change. This keeps `hasAIReadyHeader()` detection working and makes Case 4 (markers rewrite) handle migration on the next full sync of any existing repo.
 - **First-sync diff noise:** every repo that already has a connected Gitty sync will get a one-time ~40-line header rewrite on the first sync after this story ships. This is expected and correct. The diff will look large in GitHub but contains no task content changes. Story 9-11's `[skip ci]` flag is already applied to all sync commits, so no deployments are triggered. Thomas should be aware of this before shipping to avoid confusion if he reviews the PR.

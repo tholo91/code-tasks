@@ -1,6 +1,6 @@
 # Story 9.16: /captured-ideas Slash Command for Claude Code Devs
 
-Status: draft
+Status: ready-for-dev
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -12,7 +12,7 @@ so that I never have to remember which branch, run `git fetch` manually, or trus
 
 ## Acceptance Criteria
 
-1. Given a repo managed by Gitty, when it is cloned fresh by any dev, then the repo includes a `.claude/commands/captured-ideas.md` slash-command file that ships with the codebase. Additionally, if `qs-claude-md-integration` has shipped, the repo's `CLAUDE.md` Task Discovery section mentions that `/captured-ideas` exists — ensuring the first Claude Code session in a freshly cloned repo surfaces the command automatically.
+1. Given the code-tasks repo (Gitty's own codebase), when it is cloned fresh, then it includes a `.claude/commands/captured-ideas.md` slash-command file. The README "Using Gitty with Claude Code" section explains how to copy the command into any other Gitty-managed repo with a single file copy (manual install — auto-distribution to managed repos is a future story). Additionally, if `qs-claude-md-integration` has shipped, the repo's `CLAUDE.md` Task Discovery section mentions that `/captured-ideas` exists — ensuring the first Claude Code session in a freshly cloned repo surfaces the command automatically.
 
 2. Given a dev in Claude Code runs `/captured-ideas`, when the command executes, then it: (a) runs `git fetch --all --quiet`, (b) locates the freshest version of `captured-ideas-{username}.md` across `origin/main` and `origin/gitty/*` branches, (c) parses unchecked `- [ ]` items, (d) prints them grouped by priority (🔴 first) with the task title, body, and a one-line suggested approach per item.
 
@@ -37,12 +37,12 @@ so that I never have to remember which branch, run `git fetch` manually, or trus
   - [ ] Description: "List unprocessed captures from this repo's captured-ideas-*.md file across all branches, grouped by priority"
 - [ ] Task 2: Implement the command body (AC: #2, #3, #4)
   - [ ] Step 1: `git fetch --all --quiet`
-  - [ ] Step 2: List `captured-ideas-*.md` files across `origin/main` and `origin/gitty/*` using `git ls-tree`
+  - [ ] Step 2: Enumerate candidate branches with `git branch -r | grep -E 'origin/(main|gitty/)'`, then for each branch run `git ls-tree --name-only {branch} | grep 'captured-ideas-'` to discover files
   - [ ] Step 3: For each candidate, get last commit timestamp; pick freshest per user
   - [ ] Step 4: Read file content via `git show origin/{branch}:{path}`
   - [ ] Step 5: Parse unchecked items between `<!-- code-tasks:managed-start -->` and `<!-- code-tasks:managed-end -->`
   - [ ] Step 6: Group by priority emoji (🔴 then ⚪), preserve order within group
-  - [ ] Step 7: For each item, generate a one-line suggested approach (uses Claude's reasoning, not a template)
+  - [ ] Step 7: For each item, generate a one-line suggested approach (uses Claude's reasoning, not a template). **Token guard:** if unchecked count > 10, generate suggestions only for the first 5 and append `"… and {N} more. Ask me to expand on any of them."`
 - [ ] Task 3: Empty / missing / multi-user handling (AC: #3, #5, #6)
   - [ ] Argument parsing: optional username
   - [ ] Empty-list case copy
@@ -50,7 +50,7 @@ so that I never have to remember which branch, run `git fetch` manually, or trus
 - [ ] Task 4: Add a README section documenting `/captured-ideas` for dev users (AC: #1)
   - [ ] Add to existing README under a new heading "Using Gitty with Claude Code"
   - [ ] Include one-line install instruction for Cursor/Codex users (manual: copy command file or use alias)
-  - [ ] Ship a minimal `.cursorrules` snippet in the README (not as a separate file — just as a copy-pasteable block) that gives Cursor users equivalent session-start behavior: on session open, `git fetch && git show origin/$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's|origin/||'):captured-ideas-*.md` piped to a brief of unchecked items. One fenced code block, labeled `# .cursorrules snippet for Gitty users`.
+  - [ ] Ship a minimal `.cursorrules` snippet in the README (not as a separate file — just as a copy-pasteable block) that gives Cursor users equivalent session-start behavior: on session open, `git fetch && git show origin/$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's|origin/||'):captured-ideas-*.md` piped to a brief of unchecked items. Use the `captured-ideas-*.md` glob — do **not** use `$USER` (OS username ≠ GitHub username). One fenced code block, labeled `# .cursorrules snippet for Gitty users`.
 - [ ] Task 5: Test against a live repo
   - [ ] Repo with only `main` branch — captures present, unchecked items, command outputs correctly
   - [ ] Repo with `gitty/{user}` fallback branch — command finds it
@@ -63,7 +63,7 @@ so that I never have to remember which branch, run `git fetch` manually, or trus
 
 - Slash commands in Claude Code are markdown files with a frontmatter and body. The body is the prompt Claude executes. This command's body should instruct Claude to invoke the `Bash` tool for `git fetch` / `git show` / `git ls-tree` operations and then format output.
 - **Why ship inside the repo, not in `~/.claude/commands/`:** Living in the repo means every dev who clones a Gitty-managed repo gets the command for free — no install step. It travels with the codebase. This is what makes the feature *real* rather than a Thomas-only convenience.
-- **Cursor / Codex users:** out of scope for this story, but document the manual command in the README so they can copy-paste: `git fetch && git show origin/$(git remote show origin | grep 'HEAD branch' | cut -d: -f2 | xargs):captured-ideas-$USER.md`. A future story could ship a `.cursorrules` snippet or shell alias.
+- **Cursor / Codex users:** out of scope for this story, but document the manual command in the README so they can copy-paste: `git fetch && git show origin/$(git remote show origin | grep 'HEAD branch' | cut -d: -f2 | xargs):captured-ideas-*.md`. Use the `captured-ideas-*.md` glob — `$USER` is the OS username, not the GitHub username, and would silently find nothing. A future story could ship a `.cursorrules` snippet or shell alias.
 - **Why pull all `gitty/*` branches and not just `gitty/{username}`:** in a multi-user repo, each user has their own branch. The command should handle the team case correctly even though Thomas's use today is single-user.
 - **Suggested-approach generation (Step 7):** keep this lightweight — one sentence per task. Don't pre-implement, don't propose specs. The header in Story 9-15 handles the trivial-vs-non-trivial decision when the user picks a task. **Token-cost guard:** if unchecked count > 10, generate a suggested approach only for the first 5 tasks and end with `"… and N more. Ask me to expand on any of them."` Avoids a token cliff on repos with large backlog queues.
 - **Multi-user disambiguation — namespace alignment:** the candidate set is built by union of (a) filenames matching `captured-ideas-*.md` found via `git ls-tree` on `origin/main` and all `origin/gitty/*` branches, then (b) grouped by the `{username}` portion of the filename. One user = one entry in the disambiguation prompt, regardless of how many branches their file appears on. The branch selection (AC4 — pick the freshest) happens *after* the user is determined, not before.

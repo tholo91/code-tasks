@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-05-12 (Stories 9-15 + 9-16 added — Active AI Briefing Header + /captured-ideas slash command, draft pair)
+# Updated: 2026-06-08 (Stories 9-15 + 9-16 enriched — blockers fixed, scoped, set to ready-for-dev)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -50,9 +50,9 @@ development_status:
   9-13-share-gitty-qr-code: "done"                        # Completed 2026-04-03 — QR code sharing from About Gitty
   qs-sort-button-fix: "done"                              # Completed 2026-04-03 — opacity fix in dropdownVariants
 
-  # --- Draft (AI-coding-tool adoption pair — ship 9-15 first, then 9-16) ---
-  9-15-active-ai-briefing-header: "draft"                 # Rewrite getAIReadyHeader() to be directive + add branch awareness line. Composes with 9-16.
-  9-16-captured-ideas-slash-command: "draft"              # Ship .claude/commands/captured-ideas.md inside the repo — one-command pull + brief across branches. Composes with 9-15.
+  # --- Ready for dev (AI-coding-tool adoption pair — ship 9-15 first, then 9-16) ---
+  9-15-active-ai-briefing-header: "ready-for-dev"         # Rewrite getAIReadyHeader() to be directive + add branch awareness line. Composes with 9-16.
+  9-16-captured-ideas-slash-command: "ready-for-dev"      # Ship .claude/commands/captured-ideas.md inside the repo — one-command pull + brief across branches. Composes with 9-15.
 
   # --- Paused (not needed now — app works well without tab bar) ---
   9-1-bottom-tab-navigation: "paused"                    # Single-screen overlay UX is sufficient
