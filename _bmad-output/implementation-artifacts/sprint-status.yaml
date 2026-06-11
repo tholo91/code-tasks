@@ -52,7 +52,7 @@ development_status:
 
   # --- Ready for dev (AI-coding-tool adoption pair — ship 9-15 first, then 9-16) ---
   9-15-active-ai-briefing-header: "done"                  # Implemented 2026-06-11 — directive header rewrite + 📍 branch-awareness line; F1 (buildFileContent/commitTasks/SyncConflictSheet made branch-aware) + F2 (no-extra-API branch resolution). 550 tests green.
-  9-16-captured-ideas-slash-command: "ready-for-dev"      # Ship .claude/commands/captured-ideas.md inside the repo — one-command pull + brief across branches. Composes with 9-15.
+  9-16-captured-ideas-slash-command: "done"               # Implemented 2026-06-11 — .claude/commands/captured-ideas.md slash command (read-only, F3 union-by-filename-then-group-by-username multi-user discovery, F7 fetch exit-code fallback, token guard) + README "Using Gitty with Claude Code" section + CLAUDE.md one-liner. .cursorrules dropped per decision 4/5. 550 tests green, build passes. Manual verification.
 
   # --- Paused (not needed now — app works well without tab bar) ---
   9-1-bottom-tab-navigation: "paused"                    # Single-screen overlay UX is sufficient

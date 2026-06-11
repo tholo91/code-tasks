@@ -68,6 +68,16 @@ Key directories:
 
 ---
 
+## Using Gitty with Claude Code
+
+This repo ships a `/captured-ideas` slash command in `.claude/commands/captured-ideas.md`. Run `/captured-ideas` in Claude Code to fetch the freshest `captured-ideas-*.md` across all branches and print your open captures grouped by priority. No manual `git fetch`, no branch hunting.
+
+To use it in another Gitty-managed repo, copy that one file into that repo's `.claude/commands/` directory (manual install, auto-distribution is a future story).
+
+Broader agent support (Cursor, Codex, Gemini CLI) is planned via an AGENTS.md convention.
+
+---
+
 ## Contributing
 
 The project is open and community-driven — "Wir bauen das zusammen."

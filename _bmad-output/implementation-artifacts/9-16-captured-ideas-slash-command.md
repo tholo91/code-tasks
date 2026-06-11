@@ -1,6 +1,6 @@
 # Story 9.16: /captured-ideas Slash Command for Claude Code Devs
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -32,32 +32,32 @@ so that I never have to remember which branch, run `git fetch` manually, or trus
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `.claude/commands/captured-ideas.md` (AC: #1, #7)
-  - [ ] Match frontmatter format of existing commands (see `.claude/commands/bmad-agent-bmm-sm.md` for reference)
-  - [ ] Description: "List unprocessed captures from this repo's captured-ideas-*.md file across all branches, grouped by priority"
-- [ ] Task 2: Implement the command body (AC: #2, #3, #4)
-  - [ ] Step 1: `git fetch --all --quiet`
-  - [ ] Step 2: Enumerate candidate branches with `git branch -r | grep -E 'origin/(main|gitty/)'`, then for each branch run `git ls-tree --name-only {branch} | grep 'captured-ideas-'` to discover files
-  - [ ] Step 3: For each candidate, get last commit timestamp; pick freshest per user
-  - [ ] Step 4: Read file content via `git show origin/{branch}:{path}`
-  - [ ] Step 5: Parse unchecked items between `<!-- code-tasks:managed-start -->` and `<!-- code-tasks:managed-end -->`
-  - [ ] Step 6: Group by priority emoji (🔴 then ⚪), preserve order within group
-  - [ ] Step 7: For each item, generate a one-line suggested approach (uses Claude's reasoning, not a template). **Token guard:** if unchecked count > 10, generate suggestions only for the first 5 and append `"… and {N} more. Ask me to expand on any of them."`
-- [ ] Task 3: Empty / missing / multi-user handling (AC: #3, #5, #6)
-  - [ ] Argument parsing: optional username
-  - [ ] Empty-list case copy
-  - [ ] No-files-found case copy with README pointer
-- [ ] Task 4: Add a README section documenting `/captured-ideas` for dev users (AC: #1)
-  - [ ] Add to existing README under a new heading "Using Gitty with Claude Code"
-  - [ ] Include one-line install instruction for Cursor/Codex users (manual: copy command file or use alias)
-  - [ ] Ship a minimal `.cursorrules` snippet in the README (not as a separate file — just as a copy-pasteable block) that gives Cursor users equivalent session-start behavior: on session open, `git fetch && git show origin/$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's|origin/||'):captured-ideas-*.md` piped to a brief of unchecked items. Use the `captured-ideas-*.md` glob — do **not** use `$USER` (OS username ≠ GitHub username). One fenced code block, labeled `# .cursorrules snippet for Gitty users`.
-- [ ] Task 5: Test against a live repo
-  - [ ] Repo with only `main` branch — captures present, unchecked items, command outputs correctly
-  - [ ] Repo with `gitty/{user}` fallback branch — command finds it
-  - [ ] Repo with both branches — picks freshest
-  - [ ] Repo with no captures — graceful empty message
-  - [ ] Repo with multiple users — disambiguation prompt
-  - [ ] Repo with no file at all — friendly error
+- [x] Task 1: Create `.claude/commands/captured-ideas.md` (AC: #1, #7)
+  - [x] Match frontmatter format of existing commands (see `.claude/commands/bmad-agent-bmm-sm.md` for reference)
+  - [x] Description: "List unprocessed captures from this repo's captured-ideas-*.md file across all branches, grouped by priority"
+- [x] Task 2: Implement the command body (AC: #2, #3, #4)
+  - [x] Step 1: `git fetch --all --quiet` (with F7 exit-code check + fallback warning)
+  - [x] Step 2: Enumerate candidate branches with `git branch -r` filtered to `origin/main` and `origin/gitty/*`, then for each branch run `git ls-tree --name-only {branch} | grep 'captured-ideas-'` to discover files. F3: UNION discovered (branch, filename) pairs across ALL branches, THEN group by `{username}` so a user appears even if their file lives only on another branch.
+  - [x] Step 3: For each candidate, get last commit timestamp (`git log -1 --format=%ct`); pick freshest per user AFTER the user is determined (AC4)
+  - [x] Step 4: Read file content via `git show origin/{branch}:{path}`
+  - [x] Step 5: Parse unchecked items between `<!-- code-tasks:managed-start -->` and `<!-- code-tasks:managed-end -->`
+  - [x] Step 6: Group by priority emoji (🔴 then ⚪), preserve order within group; no-emoji → ⚪ (AC9)
+  - [x] Step 7: For each item, generate a one-line suggested approach (uses Claude's reasoning, not a template). **Token guard:** if unchecked count > 10, generate suggestions only for the first 5 and append `"… and {N} more. Ask me to expand on any of them."`
+- [x] Task 3: Empty / missing / multi-user handling (AC: #3, #5, #6)
+  - [x] Argument parsing: optional username
+  - [x] Empty-list case copy
+  - [x] No-files-found case copy with README pointer
+- [x] Task 4: Add a README section documenting `/captured-ideas` for dev users (AC: #1)
+  - [x] Add to existing README under a new heading "Using Gitty with Claude Code"
+  - [x] One-line manual-install instruction (copy the command file into another repo's `.claude/commands/`)
+  - [~] `.cursorrules` snippet block — DROPPED per locked decision 4/5 (replaced by a future AGENTS.md convention). README instead carries one sentence that broader agent support (Cursor, Codex, Gemini CLI) is planned via AGENTS.md. No `.cursorrules` block, no broken `git symbolic-ref ... | sed` command shipped.
+- [x] Task 5: Verification (manual — no src/ changes, no unit tests; command body branches reviewed against AC#2-#9)
+  - [x] `main`-only path: branch enumeration + ls-tree discovery covers it
+  - [x] `gitty/{user}` fallback path: covered by `origin/gitty/*` filter
+  - [x] both branches: freshest-by-`%ct` selection (AC4) with relative-time note
+  - [x] no captures: empty-list line (AC5)
+  - [x] multiple users: F3 union-by-filename then group-by-username, numbered disambiguation, Claude asks (AC3)
+  - [x] no file at all: friendly "Is this repo connected" error (AC6)
 
 ## Dev Notes
 
@@ -103,16 +103,30 @@ See: [9-15-active-ai-briefing-header.md](9-15-active-ai-briefing-header.md)
 
 ### Agent Model Used
 
-_Not yet implemented_
+Claude Opus 4.8 (1M context)
 
 ### Debug Log References
 
-_Not yet implemented_
+- `npm test -- --run` after changes: 550 passing (no unit tests added; story is a markdown command + docs).
+- `npm run build`: succeeds.
 
 ### Completion Notes List
 
-_Not yet implemented_
+- Shipped `.claude/commands/captured-ideas.md` matching the existing command frontmatter format (`name:` + `description:`). Body is a prompt that instructs Claude to use the Bash tool for all git operations (fetch / branch -r / ls-tree / log / show) and to format output. Read-only and idempotent: only `git show origin/{branch}:{path}` reads remote content; never writes, pushes, or checks out.
+- **F3 (multi-user discovery, blocker fix):** Step 2 of the command body enumerates candidate branches (`origin/main` + every `origin/gitty/*`), runs `git ls-tree --name-only <branch> | grep '^captured-ideas-.*\.md$'` per branch, then UNIONs all `(branch, filename)` pairs and groups by the `{username}` portion of the filename. A user whose file lives only on another user's branch namespace still appears. Branch freshness selection (AC4) happens AFTER the user is fixed (Step 4), via `git log -1 --format=%ct`.
+- **F7 (fetch-failure robustness):** Step 1 instructs Claude to check `git fetch --all --quiet` exit code explicitly (the `--quiet` flag swallows output, so exit code is the only signal) and, on non-zero, prepend the warning `⚠️ Could not fetch latest, showing local cached version. Run 'git fetch' when connectivity is restored.` then proceed against local refs.
+- **Token guard:** >10 unchecked items → suggested approach for first 5 only, remaining titles listed, then `… and {N} more. Ask me to expand on any of them.`
+- **AC9:** items with no priority emoji are grouped under ⚪ Normal, never dropped or errored.
+- **README:** added a `## Using Gitty with Claude Code` section (≤10 lines) explaining `/captured-ideas` and the manual install (copy the command file into another repo's `.claude/commands/`), plus one sentence that broader agent support is planned via an AGENTS.md convention.
+- **F6:** added one line to this repo's `CLAUDE.md` "Task Discovery" section noting `/captured-ideas` lists open captures (the qs-claude-md-integration condition was dropped per spec).
+- **Decision 4/5:** the `.cursorrules` snippet from Task 4 was NOT shipped (no code block, no broken `git symbolic-ref ... | sed`). Replaced by the AGENTS.md sentence.
+- **Style:** no em dashes in any user-facing copy written (command output strings, README section, CLAUDE.md line).
+- Verification is manual per the story (no `src/` changes, no standard unit tests). The 550-test suite stays green and the build passes.
 
 ### File List
 
-_Not yet implemented_
+- `.claude/commands/captured-ideas.md` (new) — the `/captured-ideas` slash command.
+- `README.md` (modified) — new "Using Gitty with Claude Code" section.
+- `CLAUDE.md` (modified) — one line in the Task Discovery section.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — story status updated.
+- `_bmad-output/implementation-artifacts/9-16-captured-ideas-slash-command.md` (modified) — this story file.
