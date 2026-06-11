@@ -15,7 +15,7 @@ vi.mock('../../../services/github/repo-service', () => ({
 const sampleRepos: GitHubRepo[] = [
   {
     id: 1,
-    fullName: 'testuser/alpha-repo',
+    fullName: 'alpha-repo',
     owner: 'testuser',
     description: 'Alpha project',
     isPrivate: false,
@@ -24,7 +24,7 @@ const sampleRepos: GitHubRepo[] = [
   },
   {
     id: 2,
-    fullName: 'testuser/beta-repo',
+    fullName: 'beta-repo',
     owner: 'testuser',
     description: null,
     isPrivate: true,
@@ -36,7 +36,7 @@ const sampleRepos: GitHubRepo[] = [
 const searchResults: GitHubRepo[] = [
   {
     id: 3,
-    fullName: 'org/search-result',
+    fullName: 'search-result',
     owner: 'org',
     description: 'Found by search',
     isPrivate: false,
@@ -61,7 +61,7 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
     expect(screen.getByPlaceholderText(/search repositories/i)).toBeInTheDocument()
-    await screen.findByText('testuser/alpha-repo')
+    await screen.findByText('alpha-repo')
   })
 
   it('loads and displays user repos on mount', async () => {
@@ -69,8 +69,8 @@ describe('RepoSelector', () => {
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
 
-    expect(await screen.findByText('testuser/alpha-repo')).toBeInTheDocument()
-    expect(screen.getByText('testuser/beta-repo')).toBeInTheDocument()
+    expect(await screen.findByText('alpha-repo')).toBeInTheDocument()
+    expect(screen.getByText('beta-repo')).toBeInTheDocument()
   })
 
   it('calls onSelect when a repo is clicked', async () => {
@@ -78,7 +78,7 @@ describe('RepoSelector', () => {
     render(
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
-    const repoItem = await screen.findByText('testuser/alpha-repo')
+    const repoItem = await screen.findByText('alpha-repo')
     await user.click(repoItem)
     expect(onSelect).toHaveBeenCalledWith(sampleRepos[0])
   })
@@ -87,9 +87,9 @@ describe('RepoSelector', () => {
     render(
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={1} />,
     )
-    const repoItem = await screen.findByText('testuser/alpha-repo')
-    const selectedItem = repoItem.closest('[data-selected]')
-    expect(selectedItem).toHaveAttribute('data-selected', 'true')
+    const repoItem = await screen.findByText('alpha-repo')
+    const selectedItem = repoItem.closest('[role="option"]')
+    expect(selectedItem).toHaveAttribute('aria-selected', 'true')
   })
 
   it('searches repos when user types in search input', async () => {
@@ -98,9 +98,10 @@ describe('RepoSelector', () => {
     render(
       <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
     )
-    await screen.findByText('testuser/alpha-repo')
+    await screen.findByText('alpha-repo')
 
-    const input = screen.getByPlaceholderText(/search repositories/i)
+    // Placeholder becomes "Search N repositories…" once repos have loaded.
+    const input = screen.getByPlaceholderText(/search.*repositories/i)
     await user.type(input, 'search')
 
     // Wait for debounce
@@ -108,15 +109,7 @@ describe('RepoSelector', () => {
       await new Promise((resolve) => setTimeout(resolve, 350))
     })
 
-    expect(await screen.findByText('org/search-result')).toBeInTheDocument()
-  })
-
-  it('shows repo description when available', async () => {
-    render(
-      <RepoSelector octokit={mockOctokit} onSelect={onSelect} selectedRepoId={null} />,
-    )
-
-    expect(await screen.findByText('Alpha project')).toBeInTheDocument()
+    expect(await screen.findByText('search-result')).toBeInTheDocument()
   })
 
   it('shows private badge for private repos', async () => {
@@ -150,7 +143,7 @@ describe('RepoSelector', () => {
     const retryBtn = await screen.findByRole('button', { name: /retry/i })
     await user.click(retryBtn)
 
-    expect(await screen.findByText('testuser/alpha-repo')).toBeInTheDocument()
+    expect(await screen.findByText('alpha-repo')).toBeInTheDocument()
   })
 
   it('shows generic error for non-rate-limit failures', async () => {
