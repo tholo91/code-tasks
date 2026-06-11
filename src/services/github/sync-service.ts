@@ -374,8 +374,9 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   const existing = await getFileContent(octokit, owner, repo, filePath, targetBranch)
   const remoteSha = existing?.sha ?? null
 
-  // Conflict detection (skip for branch fallback — branch is append-only for Gitty)
-  if (!targetBranch && !options.allowConflict && syncMeta?.lastSyncedSha) {
+  // Conflict detection — applies to branch syncs too, since desktop AI agents
+  // may write check-offs back to the fallback branch.
+  if (!options.allowConflict && syncMeta?.lastSyncedSha) {
     if (remoteSha !== syncMeta.lastSyncedSha) {
       setRepoSyncMeta(selectedRepo.fullName, {
         conflict: {
@@ -624,7 +625,9 @@ async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
   const existing = await getFileContent(octokit, owner, repo, filePath, targetBranch)
   const remoteSha = existing?.sha ?? null
 
-  if (!targetBranch && !options.allowConflict && syncMeta?.lastSyncedSha) {
+  // Conflict detection — applies to branch syncs too, since desktop AI agents
+  // may write check-offs back to the fallback branch.
+  if (!options.allowConflict && syncMeta?.lastSyncedSha) {
     if (remoteSha !== syncMeta.lastSyncedSha) {
       setRepoSyncMeta(selectedRepo.fullName, {
         conflict: {

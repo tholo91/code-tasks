@@ -174,7 +174,7 @@ export const selectSyncBranch = (repoFullName: string) => (state: SyncState) =>
   state.repoSyncBranches[repoFullName.toLowerCase()] ?? null
 
 export const selectRepoSkipCi = (repoFullName: string) => (state: SyncState) =>
-  state.repoSkipCi[repoFullName.toLowerCase()] ?? false
+  state.repoSkipCi[repoFullName.toLowerCase()] ?? true
 
 export const selectRepoDraft = (repoFullName: string) => (state: SyncState) =>
   state.repoDrafts[repoFullName.toLowerCase()] ?? null
@@ -863,12 +863,9 @@ export const useSyncStore = create<SyncState>()(
       setRepoSkipCi: (repoFullName: string, enabled: boolean) => {
         const key = normalizeRepoKey(repoFullName)
         set((state) => {
-          const updated = { ...state.repoSkipCi }
-          if (enabled) {
-            updated[key] = true
-          } else {
-            delete updated[key]
-          }
+          // Persist `false` explicitly: with the selector default now `true`,
+          // an absent key reads as ON, so an explicit OFF must be stored.
+          const updated = { ...state.repoSkipCi, [key]: enabled }
           return { repoSkipCi: updated }
         })
       },

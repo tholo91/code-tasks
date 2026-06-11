@@ -734,7 +734,17 @@ function AppContent() {
               isImporting={isImporting}
               variant={importPrompt.source === 'remote-update' ? 'remote-update' : 'initial-import'}
               diffSummary={diffSummary}
-              onDismiss={() => { setImportPrompt(null); setDiffSummary(null) }}
+              onDismiss={() => {
+                // Adopt the dismissed remote state as the new sync baseline so the
+                // next push does not bypass the conflict gate and silently overwrite it.
+                setRepoSyncMeta(importPrompt.repoFullName, {
+                  lastSyncedSha: importPrompt.sha ?? null,
+                  lastSyncAt: new Date().toISOString(),
+                  conflict: null,
+                })
+                setImportPrompt(null)
+                setDiffSummary(null)
+              }}
               onImport={() => {
                 if (isImporting || !importPrompt) return
                 setIsImporting(true)

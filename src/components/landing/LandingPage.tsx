@@ -11,7 +11,7 @@ const plannedItems = roadmapData.filter((item) => item.status === 'planned')
 const steps = [
   { num: '01', text: 'Capture a task from your phone, mid-thought, in seconds.' },
   { num: '02', text: 'It lands in your GitHub repo as a markdown file.' },
-  { num: '03', text: 'Your AI agent reads it on the next run.' },
+  { num: '03', text: "Claude Code, Cursor, or Codex reads it on next startup and can report back when it's done." },
 ]
 
 export function LandingPage({ onSuccess }: LandingPageProps) {
@@ -75,8 +75,8 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             marginBottom: '1.25rem',
           }}
         >
-          The task layer for<br />
-          AI&#8209;native workflows.
+          Capture on your phone.<br />
+          Ship in your agent's next run.
         </h1>
 
         <p
@@ -88,7 +88,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             maxWidth: '34ch',
           }}
         >
-          Your ideas, straight into GitHub. Ready for your agents on the next run.
+          Tap a task on your phone. It lands as markdown in your repo, pre-formatted so Claude Code, Cursor, or Codex picks it up automatically.
         </p>
 
         <AuthForm onSuccess={onSuccess} layout="inline" />
@@ -207,7 +207,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
               color: 'var(--color-text-secondary)',
               margin: 0,
               opacity: 0.7,
-            }}>Capture tasks on the go</p>
+            }}>Capture anywhere. Syncs straight to your repo.</p>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2.5rem' }}>
             <img
@@ -303,7 +303,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             opacity: 0.6,
           }}
         >
-          Built in public
+          Built in public. Wir bauen das zusammen.
         </span>
         <a
           href="https://github.com/tholo91/code-tasks"

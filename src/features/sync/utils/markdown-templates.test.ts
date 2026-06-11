@@ -560,5 +560,26 @@ ${MANAGED_END}
       const parsed = parseTasksFromMarkdown(markdown)
       expect(parsed[0].processedBy).toBe('Gemini')
     })
+
+    it('round-trip: title containing ** is stable and not truncated', () => {
+      const task = createTask({ title: 'Add **bold** emphasis to docs', body: '' })
+      const markdown = formatTaskAsMarkdown(task)
+      const parsed = parseTasksFromMarkdown(markdown)
+      // Title is non-empty, displayable, and not truncated at the inner **
+      expect(parsed[0].title).toBe('Add *bold* emphasis to docs')
+
+      // Second round-trip is stable (idempotent)
+      const markdown2 = formatTaskAsMarkdown({ ...task, title: parsed[0].title })
+      const parsed2 = parseTasksFromMarkdown(markdown2)
+      expect(parsed2[0].title).toBe(parsed[0].title)
+    })
+
+    it('round-trip: 3-line body preserves all lines', () => {
+      const body = 'Line one\nLine two\nLine three'
+      const task = createTask({ body })
+      const markdown = formatTaskAsMarkdown(task)
+      const parsed = parseTasksFromMarkdown(markdown)
+      expect(parsed[0].body).toBe(body)
+    })
   })
 })

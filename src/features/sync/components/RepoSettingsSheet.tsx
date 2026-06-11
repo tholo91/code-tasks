@@ -110,11 +110,22 @@ export function RepoSettingsSheet({ onClose }: RepoSettingsSheetProps) {
           >
             <RadioDot selected={branchMode === 'custom'} />
             <div className="flex flex-col">
-              <span className="text-body font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                Dedicated branch
+              <span className="flex items-center gap-2">
+                <span className="text-body font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  Dedicated branch
+                </span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-label font-semibold uppercase tracking-wider"
+                  style={{
+                    backgroundColor: 'rgba(56, 139, 253, 0.15)',
+                    color: 'var(--color-info)',
+                  }}
+                >
+                  Recommended
+                </span>
               </span>
               <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>
-                Push to a separate branch (e.g. for protected repos)
+                Keeps task syncs off main, so they do not trigger deploys or CI
               </span>
             </div>
           </button>

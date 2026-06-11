@@ -85,7 +85,12 @@ export function formatTaskAsMarkdown(task: Task): string {
   const createdDate = task.createdAt.split('T')[0]
   const checkbox = task.isCompleted ? '- [x]' : '- [ ]'
   
-  let line = `${checkbox} **${task.title}** ([Created: ${createdDate}]) (Priority: ${priority})`
+  // Collapse any literal `**` in the title to a single `*` so the `**...**`
+  // wrapper stays the only bold marker on the line. Without this, a title
+  // containing `**` truncates on the non-greedy parser regex round-trip.
+  const safeTitle = task.title.replace(/\*\*/g, '*')
+
+  let line = `${checkbox} **${safeTitle}** ([Created: ${createdDate}]) (Priority: ${priority})`
 
   if (task.updatedAt) {
     const updatedDate = task.updatedAt.split('T')[0]
@@ -102,7 +107,14 @@ export function formatTaskAsMarkdown(task: Task): string {
   }
 
   if (task.body) {
-    line += `\n  ${task.body}`
+    // Indent EVERY line of a multiline body with 2 spaces so the parser
+    // (which strips a 2-space prefix per line) round-trips all lines, not
+    // just the first.
+    const indentedBody = task.body
+      .split('\n')
+      .map((bodyLine) => `  ${bodyLine}`)
+      .join('\n')
+    line += `\n${indentedBody}`
   }
   return line
 }
