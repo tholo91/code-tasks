@@ -288,7 +288,19 @@ export function buildFileContent(
     const managedContent = tasksMarkdown.length > 0
       ? '\n\n' + tasksMarkdown + '\n\n'
       : '\n\n'
-    return before + MANAGED_START + managedContent + MANAGED_END + after
+    // When a branch is provided, regenerate the header so the branch-awareness
+    // line (point 7) reflects the current sync branch. Without this, switching
+    // the branch override leaves a stale branch line in every incremental sync
+    // until the next full rebuild. `before` is always just the header — agent
+    // notes live after `managed-end` (header instruction #6) — so replacing it
+    // is safe. When syncBranch is omitted (common main-branch path), the header
+    // is preserved verbatim to avoid any latency regression.
+    const freshHeader = getAIReadyHeader(username, syncBranch)
+    const headerPrefix = freshHeader.slice(0, freshHeader.indexOf(MANAGED_START))
+    const newBefore = syncBranch && before.includes(HEADER_SIGNATURE)
+      ? headerPrefix
+      : before
+    return newBefore + MANAGED_START + managedContent + MANAGED_END + after
   }
 
   // Case 2: Existing file without header — prepend header, preserve original content after managed-end

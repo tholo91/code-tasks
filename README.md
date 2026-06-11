@@ -72,6 +72,8 @@ Key directories:
 
 This repo ships a `/captured-ideas` slash command in `.claude/commands/captured-ideas.md`. Run `/captured-ideas` in Claude Code to fetch the freshest `captured-ideas-*.md` across all branches and print your open captures grouped by priority. No manual `git fetch`, no branch hunting.
 
+> **Where are the captures?** Gitty syncs each user's task file to a dedicated branch (by default `gitty/<username>`), not to `main`. If you don't see a `captured-ideas-*.md` on the branch you're on, that's expected — run `/captured-ideas` (it scans all branches), or `git fetch && git branch -r | grep gitty/` to find it.
+
 To use it in another Gitty-managed repo, copy that one file into that repo's `.claude/commands/` directory (manual install, auto-distribution is a future story).
 
 Broader agent support (Cursor, Codex, Gemini CLI) is planned via an AGENTS.md convention.

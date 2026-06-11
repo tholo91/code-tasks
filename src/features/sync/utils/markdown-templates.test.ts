@@ -448,6 +448,28 @@ Some content without a separator line
       const result = buildFileContent(null, tasks, username)
       expect(result).not.toContain('📍')
     })
+
+    it('refreshes a stale branch line on incremental sync when the branch changes (Case 4)', () => {
+      const tasks = [createTask({ body: '' })]
+      // First sync writes the file pointing at the old branch.
+      const firstSync = buildFileContent(null, tasks, username, 'gitty/old-branch')
+      expect(firstSync).toContain('synced to branch `gitty/old-branch`')
+      // User changes the branch override; an incremental sync (Case 4 — file
+      // already has markers) must rewrite the branch line, not preserve it.
+      const secondSync = buildFileContent(firstSync, tasks, username, 'gitty/new-branch')
+      expect(secondSync).toContain('synced to branch `gitty/new-branch`')
+      expect(secondSync).not.toContain('gitty/old-branch')
+      // Header signature stays present exactly once (no duplication).
+      expect(secondSync.split(HEADER_SIGNATURE).length - 1).toBe(1)
+    })
+
+    it('preserves the existing header on incremental sync when no syncBranch is passed (Case 4)', () => {
+      const tasks = [createTask({ body: '' })]
+      const firstSync = buildFileContent(null, tasks, username, 'gitty/main')
+      const secondSync = buildFileContent(firstSync, tasks, username)
+      // Common main-branch path: header untouched, stale-or-not, to avoid latency churn.
+      expect(secondSync).toContain('synced to branch `gitty/main`')
+    })
   })
 
   describe('buildFullFileContent', () => {
