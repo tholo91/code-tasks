@@ -4,7 +4,7 @@
 
 Gitty is an offline-first PWA that bridges the gap between a quick idea and a GitHub issue. It writes to a plain markdown file (`captured-ideas-{username}.md`) in your repo — no database, no extra accounts, no merge conflicts.
 
-**Live app:** [code-tasks.vercel.app](https://code-tasks.vercel.app)
+**Live app:** [tholo91.github.io/code-tasks](https://tholo91.github.io/code-tasks/)
 
 ---
 
