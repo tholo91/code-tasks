@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-06-08 (Stories 9-15 + 9-16 enriched — blockers fixed, scoped, set to ready-for-dev)
+# Updated: 2026-06-11 (qs-sync-data-loss-and-defaults implemented — 4 sync data-loss fixes + 2 default flips)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -80,6 +80,7 @@ development_status:
   # Quick Specs & Ideas (drafts, not yet in sprint)
   # ═══════════════════════════════════════════════════════
   qs-repo-detail-view: "draft"                           # Repo overview screen (README, AI instructions, switch repo) — needs investigation
+  qs-sync-data-loss-and-defaults: "done"                 # Completed 2026-06-11 — 4 sync data-loss fixes (** title, multiline body, banner-dismiss SHA baseline, branch conflict gate) + 2 default flips ([skip ci] on, gitty branch recommended)
 
   # ═══════════════════════════════════════════════════════
   # Epic 7: The Real App (DONE)
