@@ -323,7 +323,7 @@ describe('sync-service', () => {
         mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
       const content = decodeURIComponent(escape(atob(call.content)))
       expect(content).toContain(HEADER_SIGNATURE)
-      expect(content).toContain('# Captured Ideas — testuser')
+      expect(content).toContain('# Captured Ideas - testuser')
       expect(content).toContain(MANAGED_START)
       expect(content).toContain(MANAGED_END)
       expect(content).toContain('**Fix the login bug**')

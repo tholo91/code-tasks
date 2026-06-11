@@ -122,6 +122,7 @@ async function commitTasks(
   pendingCount?: number,
   branch?: string,
   skipCi?: boolean,
+  syncBranch?: string,
 ): Promise<string | null> {
   for (let attempt = 0; attempt < MAX_CONFLICT_RETRIES; attempt++) {
     const existing = await getFileContent(octokit, owner, repo, filePath, branch)
@@ -130,6 +131,7 @@ async function commitTasks(
       existing?.content ?? null,
       tasks,
       username,
+      syncBranch,
     )
     const sha = existing?.sha
 
@@ -341,7 +343,7 @@ export async function syncAllRepoTasks(options: SyncOptions = {}): Promise<SyncR
 }
 
 async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
-  const { tasks, selectedRepo, user, repoSyncMeta, setRepoSyncMeta } = useSyncStore.getState()
+  const { tasks, selectedRepo, user, repoSyncMeta, repoSyncBranches, setRepoSyncMeta } = useSyncStore.getState()
 
   if (!selectedRepo || !user) {
     return { syncedCount: 0, error: 'No repo or user selected' }
@@ -364,10 +366,20 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   const syncMeta = repoSyncMeta[repoKey]
   const targetBranch = options.branch
 
+  // Resolve the branch that briefs the AI agent in the header (Story 9-15, F2).
+  // Priority: per-repo override → explicit targetBranch → already-fetched default
+  // branch (only when we fetched it for the fallback-branch path). We never add a
+  // network round-trip just to learn the default branch. If none is available
+  // without one and there is no override, syncBranch stays undefined and the
+  // header omits the 📍 line (no latency regression on the common main path).
+  const branchOverride = repoSyncBranches[repoKey]
+  let syncBranch: string | undefined = branchOverride ?? targetBranch
+
   // If pushing to a fallback branch, ensure it exists
   if (targetBranch) {
     const defaultBranch = await getDefaultBranch(octokit, owner, repo)
     await ensureBranchExists(octokit, owner, repo, targetBranch, defaultBranch)
+    syncBranch = branchOverride ?? targetBranch ?? defaultBranch
   }
 
   // Get existing file for SHA — use branch ref if targeting a fallback branch
@@ -394,7 +406,7 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   }
 
   // Full rebuild from all current tasks
-  const content = buildFullFileContent(repoTasks, user.login)
+  const content = buildFullFileContent(repoTasks, user.login, syncBranch)
 
   // Descriptive commit message with task counts
   const activeCount = repoTasks.filter(t => !t.isCompleted).length
@@ -585,7 +597,7 @@ export async function fetchRemoteFileContent(
 }
 
 async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
-  const { tasks, selectedRepo, user, repoSyncMeta, setRepoSyncMeta } = useSyncStore.getState()
+  const { tasks, selectedRepo, user, repoSyncMeta, repoSyncBranches, setRepoSyncMeta } = useSyncStore.getState()
 
   if (!selectedRepo || !user) {
     return { syncedCount: 0, error: 'No repo or user selected' }
@@ -616,10 +628,18 @@ async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
   const syncMeta = repoSyncMeta[repoKey]
   const targetBranch = options.branch
 
+  // Resolve the branch that briefs the AI agent in the header (Story 9-15, F2).
+  // Same strategy as syncAllRepoTasksOnce: per-repo override → explicit
+  // targetBranch → already-fetched default branch (fallback-branch path only).
+  // No extra network round-trip on the common no-override path.
+  const branchOverride = repoSyncBranches[repoKey]
+  let syncBranch: string | undefined = branchOverride ?? targetBranch
+
   // If pushing to a fallback branch, ensure it exists
   if (targetBranch) {
     const defaultBranch = await getDefaultBranch(octokit, owner, repo)
     await ensureBranchExists(octokit, owner, repo, targetBranch, defaultBranch)
+    syncBranch = branchOverride ?? targetBranch ?? defaultBranch
   }
 
   const existing = await getFileContent(octokit, owner, repo, filePath, targetBranch)
@@ -656,6 +676,7 @@ async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
     pendingTasks.length,
     targetBranch,
     options.skipCi,
+    syncBranch,
   )
 
   setRepoSyncMeta(selectedRepo.fullName, {

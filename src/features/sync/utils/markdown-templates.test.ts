@@ -55,7 +55,7 @@ describe('markdown-templates', () => {
 
     it('includes the username in the title', () => {
       const header = getAIReadyHeader('thomas')
-      expect(header).toContain('# Captured Ideas — thomas')
+      expect(header).toContain('# Captured Ideas - thomas')
     })
 
     it('includes AI agent instructions about managed section', () => {
@@ -63,7 +63,7 @@ describe('markdown-templates', () => {
       expect(header).toContain('Instructions for AI Agents')
       expect(header).toContain('managed-start')
       expect(header).toContain('managed-end')
-      expect(header).toContain('Do not manually edit tasks between the')
+      expect(header).toContain('Tasks between the `managed-start` and `managed-end` markers are auto-generated. Never edit them by hand.')
     })
 
     it('includes the MANAGED_START marker', () => {
@@ -81,15 +81,41 @@ describe('markdown-templates', () => {
       expect(header).toContain('[Processed by: YourAgentName]')
     })
 
-    it('includes proactive task-check instruction for agents', () => {
+    it('directively tells the agent to scan and print unchecked tasks grouped by priority', () => {
       const header = getAIReadyHeader('testuser')
-      expect(header).toContain('At the start of each session')
-      expect(header).toContain('check for new open tasks')
+      expect(header).toContain('First action every session:')
+      expect(header).toContain('scan the managed block for unchecked items')
+      expect(header).toContain('grouped by priority')
+      expect(header).toContain('Then wait for direction. Do not execute silently.')
+    })
+
+    it('provides trivial-vs-non-trivial decision criteria', () => {
+      const header = getAIReadyHeader('testuser')
+      expect(header).toContain('Trivial')
+      expect(header).toContain('≤ 30 min, clearly bounded, no design choices')
+      expect(header).toContain('Non-trivial')
+      expect(header).toContain('propose turning it into a story or quick spec')
+    })
+
+    it('does not use the old passive task-check phrasing', () => {
+      const header = getAIReadyHeader('testuser')
+      expect(header).not.toContain('check for new open tasks')
     })
 
     it('includes note that content below managed-end is not overwritten', () => {
       const header = getAIReadyHeader('testuser')
-      expect(header).toContain('You may add notes or context below the `managed-end` marker — they will not be overwritten')
+      expect(header).toContain('You may add notes or context **below** the `managed-end` marker. They will not be overwritten')
+    })
+
+    it('includes the branch-awareness line when a syncBranch is provided', () => {
+      const header = getAIReadyHeader('tholo91', 'gitty/tholo91')
+      expect(header).toContain('> 7. 📍 This file is synced to branch `gitty/tholo91` in this repo. To get the latest captures from another branch, run: `git fetch && git show origin/gitty/tholo91:captured-ideas-tholo91.md`.')
+    })
+
+    it('omits the branch-awareness line when no syncBranch is provided', () => {
+      const header = getAIReadyHeader('tholo91')
+      expect(header).not.toContain('📍')
+      expect(header).not.toContain('This file is synced to branch')
     })
   })
 
@@ -238,7 +264,7 @@ describe('markdown-templates', () => {
       const result = buildFileContent(null, tasks, username)
 
       expect(result).toContain(HEADER_SIGNATURE)
-      expect(result).toContain('# Captured Ideas — testuser')
+      expect(result).toContain('# Captured Ideas - testuser')
       expect(result).toContain(MANAGED_START)
       expect(result).toContain(MANAGED_END)
       expect(result).toContain('**Fix the login bug**')
@@ -386,6 +412,42 @@ Some content without a separator line
       const between = result.substring(taskAEnd, taskBStart)
       expect(between).toContain('\n\n')
     })
+
+    it('writes full template with managed markers around an empty task list on a fresh repo, and hasAIReadyHeader detects it', () => {
+      // Fresh repo: no existing file (null), no tasks yet
+      const result = buildFileContent(null, [], username)
+
+      expect(hasAIReadyHeader(result)).toBe(true)
+      expect(result).toContain(HEADER_SIGNATURE)
+      expect(result).toContain(MANAGED_START)
+      expect(result).toContain(MANAGED_END)
+
+      // managed-start precedes managed-end and nothing task-like sits between them
+      const startIdx = result.indexOf(MANAGED_START) + MANAGED_START.length
+      const endIdx = result.indexOf(MANAGED_END)
+      expect(startIdx).toBeLessThan(endIdx)
+      expect(result.substring(startIdx, endIdx).trim()).toBe('')
+    })
+
+    it('emits the branch line when a syncBranch is passed (new file)', () => {
+      const tasks = [createTask({ body: '' })]
+      const result = buildFileContent(null, tasks, username, 'gitty/testuser')
+      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+      expect(result).toContain('git show origin/gitty/testuser:captured-ideas-testuser.md')
+    })
+
+    it('emits the branch line when a syncBranch is passed (headerless existing file)', () => {
+      const existing = '- [ ] Old task from manual entry'
+      const tasks = [createTask({ body: '' })]
+      const result = buildFileContent(existing, tasks, username, 'gitty/testuser')
+      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+    })
+
+    it('omits the branch line when no syncBranch is passed (new file)', () => {
+      const tasks = [createTask({ body: '' })]
+      const result = buildFileContent(null, tasks, username)
+      expect(result).not.toContain('📍')
+    })
   })
 
   describe('buildFullFileContent', () => {
@@ -484,6 +546,25 @@ Some content without a separator line
 
       expect(result).toContain('## Completed')
       expect(result).toContain('**Done only**')
+    })
+
+    it('emits the branch line when a syncBranch is passed', () => {
+      const tasks = [createTask({ id: '1', title: 'Active task', body: '' })]
+      const result = buildFullFileContent(tasks, 'testuser', 'gitty/testuser')
+      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+      expect(result).toContain('git show origin/gitty/testuser:captured-ideas-testuser.md')
+    })
+
+    it('emits the branch line for an empty task list when a syncBranch is passed', () => {
+      const result = buildFullFileContent([], 'testuser', 'gitty/testuser')
+      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+      expect(result).toContain('No active tasks')
+    })
+
+    it('omits the branch line when no syncBranch is passed', () => {
+      const tasks = [createTask({ id: '1', title: 'Active task', body: '' })]
+      const result = buildFullFileContent(tasks, 'testuser')
+      expect(result).not.toContain('📍')
     })
   })
 

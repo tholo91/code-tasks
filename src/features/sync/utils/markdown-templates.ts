@@ -14,24 +14,31 @@ export const MANAGED_END = '<!-- code-tasks:managed-end -->'
 /**
  * Standardized AI-Ready instruction header for captured-ideas files.
  * Follows the BMad "Living Document" standard for AI agent consumption.
+ *
+ * When `syncBranch` is provided, a branch-awareness line (point 7) is inserted
+ * inside the blockquote so AI agents know which branch holds the freshest file
+ * and how to fetch it. When omitted, the header is identical to the unbranched
+ * version (backward compatible).
  */
-export function getAIReadyHeader(username: string): string {
+export function getAIReadyHeader(username: string, syncBranch?: string): string {
+  const branchLine = syncBranch
+    ? `> 7. 📍 This file is synced to branch \`${syncBranch}\` in this repo. To get the latest captures from another branch, run: \`git fetch && git show origin/${syncBranch}:captured-ideas-${username}.md\`.\n`
+    : ''
+
   return `${HEADER_SIGNATURE}
-# Captured Ideas — ${username}
+# Captured Ideas - ${username}
 
-> **Instructions for AI Agents:**
-> This file is managed by [code-tasks](https://github.com/tholo91/code-tasks).
-> The task list between the \`managed-start\` and \`managed-end\` markers below
-> is auto-generated on each sync. Do not manually edit tasks between the
-> markers — changes will be overwritten on the next push.
+> **Instructions for AI Agents (read this first, every session):**
 >
-> - Tasks use Markdown checkboxes (\`- [ ]\` / \`- [x]\`)
-> - Priority: 🔴 Important or ⚪ Normal
-> - Mark tasks as done (\`- [x]\`) after processing, add \`[Processed by: YourAgentName]\` to the task line, and optionally append notes to the task body
-> - Do NOT delete or remove tasks from this file — only the mobile app manages task lifecycle
-> - **At the start of each session**, check for new open tasks (unchecked \`- [ ]\` items) and suggest which to tackle — develop into stories for larger work, or fix right away for small issues
-> - You may add notes or context below the \`managed-end\` marker — they will not be overwritten
-
+> 1. This file is managed by [code-tasks](https://github.com/tholo91/code-tasks). Tasks between the \`managed-start\` and \`managed-end\` markers are auto-generated. Never edit them by hand.
+> 2. **First action every session:** scan the managed block for unchecked items (\`- [ ]\`). Print them back to the user **grouped by priority** (🔴 Important first, then ⚪ Normal), with a one-line suggested approach per task. Then wait for direction. Do not execute silently.
+> 3. **Decide per task:**
+>    - **Trivial** (≤ 30 min, clearly bounded, no design choices) → execute, mark \`- [x]\`, append \`[Processed by: YourAgentName]\` to the task line, and add a brief note in the task body describing the change.
+>    - **Non-trivial** → propose turning it into a story or quick spec. Do not implement until the user confirms scope.
+> 4. Tasks use markdown checkboxes (\`- [ ]\` / \`- [x]\`). Priority: 🔴 Important or ⚪ Normal.
+> 5. Never delete or reorder tasks. Only the mobile app manages task lifecycle.
+> 6. You may add notes or context **below** the \`managed-end\` marker. They will not be overwritten.
+${branchLine}
 ---
 
 ${MANAGED_START}
@@ -216,8 +223,8 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
  * + completed tasks (sorted by completedAt desc). Deleted tasks are absent
  * because they're not in the input array.
  */
-export function buildFullFileContent(tasks: Task[], username: string): string {
-  const header = getAIReadyHeader(username)
+export function buildFullFileContent(tasks: Task[], username: string, syncBranch?: string): string {
+  const header = getAIReadyHeader(username, syncBranch)
 
   // Archived tasks (body starts with "[Archived] ") are excluded from push
   // to prevent zombie loops — they live locally as a record only.
@@ -266,12 +273,13 @@ export function buildFileContent(
   existingContent: string | null,
   tasks: Task[],
   username: string,
+  syncBranch?: string,
 ): string {
   const tasksMarkdown = formatTasksAsMarkdown(tasks)
 
   // Case 1: New file
   if (existingContent === null) {
-    return getAIReadyHeader(username) + '\n' + tasksMarkdown + '\n\n' + MANAGED_END + '\n'
+    return getAIReadyHeader(username, syncBranch) + '\n' + tasksMarkdown + '\n\n' + MANAGED_END + '\n'
   }
 
   // Case 4: File already has both markers — split, rewrite managed section, reassemble
@@ -287,7 +295,7 @@ export function buildFileContent(
   if (!hasAIReadyHeader(existingContent)) {
     const preservedContent = existingContent.trim()
     const afterSection = preservedContent.length > 0 ? '\n\n' + preservedContent + '\n' : '\n'
-    return getAIReadyHeader(username) + '\n' + tasksMarkdown + '\n\n' + MANAGED_END + afterSection
+    return getAIReadyHeader(username, syncBranch) + '\n' + tasksMarkdown + '\n\n' + MANAGED_END + afterSection
   }
 
   // Case 3: Legacy file with header but no markers

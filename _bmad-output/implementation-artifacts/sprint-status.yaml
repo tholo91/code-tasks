@@ -51,7 +51,7 @@ development_status:
   qs-sort-button-fix: "done"                              # Completed 2026-04-03 — opacity fix in dropdownVariants
 
   # --- Ready for dev (AI-coding-tool adoption pair — ship 9-15 first, then 9-16) ---
-  9-15-active-ai-briefing-header: "ready-for-dev"         # Rewrite getAIReadyHeader() to be directive + add branch awareness line. Composes with 9-16.
+  9-15-active-ai-briefing-header: "done"                  # Implemented 2026-06-11 — directive header rewrite + 📍 branch-awareness line; F1 (buildFileContent/commitTasks/SyncConflictSheet made branch-aware) + F2 (no-extra-API branch resolution). 550 tests green.
   9-16-captured-ideas-slash-command: "ready-for-dev"      # Ship .claude/commands/captured-ideas.md inside the repo — one-command pull + brief across branches. Composes with 9-15.
 
   # --- Paused (not needed now — app works well without tab bar) ---
