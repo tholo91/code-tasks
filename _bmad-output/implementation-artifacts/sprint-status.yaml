@@ -1,5 +1,5 @@
 # code-tasks - Sprint Status Report
-# Updated: 2026-06-08 (Stories 9-15 + 9-16 enriched — blockers fixed, scoped, set to ready-for-dev)
+# Updated: 2026-06-11 (qs-sync-data-loss-and-defaults implemented — 4 sync data-loss fixes + 2 default flips)
 # Sprint 4: Sync Trust & AI Agent Power
 
 status_definitions:
@@ -51,8 +51,9 @@ development_status:
   qs-sort-button-fix: "done"                              # Completed 2026-04-03 — opacity fix in dropdownVariants
 
   # --- Ready for dev (AI-coding-tool adoption pair — ship 9-15 first, then 9-16) ---
-  9-15-active-ai-briefing-header: "ready-for-dev"         # Rewrite getAIReadyHeader() to be directive + add branch awareness line. Composes with 9-16.
-  9-16-captured-ideas-slash-command: "ready-for-dev"      # Ship .claude/commands/captured-ideas.md inside the repo — one-command pull + brief across branches. Composes with 9-15.
+  9-15-active-ai-briefing-header: "done"                  # Implemented 2026-06-11 — directive header rewrite + 📍 branch-awareness line; F1 (buildFileContent/commitTasks/SyncConflictSheet made branch-aware) + F2 (no-extra-API branch resolution). 550 tests green.
+  9-16-captured-ideas-slash-command: "done"               # Implemented 2026-06-11 — .claude/commands/captured-ideas.md slash command (read-only, F3 union-by-filename-then-group-by-username multi-user discovery, F7 fetch exit-code fallback, token guard) + README "Using Gitty with Claude Code" section + CLAUDE.md one-liner. .cursorrules dropped per decision 4/5. 550 tests green, build passes. Manual verification.
+  9-17-post-sync-claude-code-hint: "in-progress"          # Story created 2026-06-11 — third leg of adoption pair: one-time dismissible card after first successful sync pointing users to /captured-ideas on desktop. Per-repo persisted flag (repoClaudeCodeHintSeen). UI-only, no new API calls.
 
   # --- Paused (not needed now — app works well without tab bar) ---
   9-1-bottom-tab-navigation: "paused"                    # Single-screen overlay UX is sufficient
@@ -80,6 +81,7 @@ development_status:
   # Quick Specs & Ideas (drafts, not yet in sprint)
   # ═══════════════════════════════════════════════════════
   qs-repo-detail-view: "draft"                           # Repo overview screen (README, AI instructions, switch repo) — needs investigation
+  qs-sync-data-loss-and-defaults: "done"                 # Completed 2026-06-11 — 4 sync data-loss fixes (** title, multiline body, banner-dismiss SHA baseline, branch conflict gate) + 2 default flips ([skip ci] on, gitty branch recommended)
 
   # ═══════════════════════════════════════════════════════
   # Epic 7: The Real App (DONE)

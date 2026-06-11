@@ -1,6 +1,6 @@
 # Story 9.15: Active AI Briefing Header + Branch Awareness
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -26,22 +26,26 @@ so that I never act on stale data and the AI behaves predictably across all my r
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Rewrite `getAIReadyHeader()` body in `src/features/sync/utils/markdown-templates.ts` (AC: #1, #3)
-  - [ ] Replace the bullet list with the directive 6-point structure (see Dev Notes for verbatim text)
-  - [ ] Preserve `HEADER_SIGNATURE` exactly
-- [ ] Task 2: Add `syncBranch` parameter and branch-awareness line (AC: #2, #6)
-  - [ ] Add optional `syncBranch?: string` param to `getAIReadyHeader()`
-  - [ ] Inject the 📍 branch line only when `syncBranch` is provided
-  - [ ] Update all call sites to pass the resolved branch:
-    - `src/services/github/sync-service.ts` — read from `repoSyncBranches[repoKey]` or fall back to repo default
-    - `buildFullFileContent()` in `src/features/sync/utils/markdown-templates.ts:208` — add `syncBranch?: string` param and pass through to `getAIReadyHeader()`
-- [ ] Task 3: Update tests in `src/features/sync/utils/markdown-templates.test.ts` (AC: #5)
-  - [ ] Replace old assertion strings with new header text
-  - [ ] Add a new test case: `getAIReadyHeader('tholo91', 'gitty/tholo91')` contains the branch line
-  - [ ] Add a new test case: `getAIReadyHeader('tholo91')` (no branch) does NOT contain the branch line
-  - [ ] Add a new test case: fresh repo with no existing header — full template is written including managed-block markers around an empty task list; verify `hasAIReadyHeader()` returns true on the output
-  - [ ] Run `npm test` — all pass
-- [ ] Task 4: Manual verification on a live repo (AC: #1–#3)
+- [x] Task 1: Rewrite `getAIReadyHeader()` body in `src/features/sync/utils/markdown-templates.ts` (AC: #1, #3)
+  - [x] Replace the bullet list with the directive 6-point structure (see Dev Notes for verbatim text)
+  - [x] Preserve `HEADER_SIGNATURE` exactly
+- [x] Task 2: Add `syncBranch` parameter and branch-awareness line (AC: #2, #6)
+  - [x] Add optional `syncBranch?: string` param to `getAIReadyHeader()`
+  - [x] Inject the 📍 branch line (as point 7) only when `syncBranch` is provided
+  - [x] Update all call sites to pass the resolved branch:
+    - [x] `src/services/github/sync-service.ts` — `syncAllRepoTasksOnce` + `syncPendingTasksOnce` resolve `repoSyncBranches[repoKey] ?? targetBranch ?? (already-fetched defaultBranch)` and pass it to the builders
+    - [x] `buildFullFileContent()` — added `syncBranch?: string` param, passes through to `getAIReadyHeader()`
+- [x] Task 2b (F1 review-blocker): `buildFileContent()` is a second header-emitting builder
+  - [x] Added `syncBranch?: string` param to `buildFileContent()`; passes it to `getAIReadyHeader()` in Case 1 (new file) and Case 2 (headerless file)
+  - [x] Threaded `syncBranch` into `commitTasks()` (per-task commit path) and the `SyncConflictSheet` preview builder + keep-local push
+- [x] Task 3: Update tests in `src/features/sync/utils/markdown-templates.test.ts` (AC: #5)
+  - [x] Replace old passive assertion strings with new directive header text; assert old phrasing is gone
+  - [x] Add a new test case: `getAIReadyHeader('tholo91', 'gitty/tholo91')` contains the branch line
+  - [x] Add a new test case: `getAIReadyHeader('tholo91')` (no branch) does NOT contain the branch line
+  - [x] Add a new test case: fresh repo with no existing header — full template written incl. managed markers around an empty task list; `hasAIReadyHeader()` returns true on the output
+  - [x] Add tests proving `buildFileContent` and `buildFullFileContent` emit the branch line when a branch is passed (covers F1)
+  - [x] Run `npm test` — all pass (550/550)
+- [ ] Task 4: Manual verification on a live repo (AC: #1–#3) — deferred to user (requires live GitHub repo + dev build; automated tests cover header generation paths)
   - [ ] Trigger a sync in dev, open the resulting captured-ideas file, confirm header renders correctly
   - [ ] Test against an existing repo with the old header — confirm Case 4 rewrites it
 
@@ -117,16 +121,28 @@ See: [9-16-captured-ideas-slash-command.md](9-16-captured-ideas-slash-command.md
 
 ### Agent Model Used
 
-_Not yet implemented_
+Claude Opus 4.8 (1M context)
 
 ### Debug Log References
 
-_Not yet implemented_
+- `npm test -- --run` → 47 files, 550 tests passed (baseline was 539; +11 new tests for this story).
+- `npm run build` → succeeded (only pre-existing chunk-size + dynamic-import warnings; no errors).
+- `npx eslint` on all four changed source/test files → clean.
 
 ### Completion Notes List
 
-_Not yet implemented_
+- **AC#1 / AC#3 (directive header):** `getAIReadyHeader()` rewritten to the verbatim 6-point directive body from Dev Notes. Passive "check for new open tasks" phrasing removed; a regression test asserts it is gone. `HEADER_SIGNATURE` unchanged (`<!-- code-tasks:ai-ready-header -->`), so `hasAIReadyHeader()` detection and the Case 4 markers-rewrite migration path are preserved (AC#4, no migration code).
+- **AC#2 / AC#6 (branch awareness):** `getAIReadyHeader(username, syncBranch?)` inserts the 📍 line as **point 7** inside the blockquote between point 6 and the `---`. When `syncBranch` is omitted, output is byte-identical to the unbranched version (backward compatible; the "no branch" unit test passes).
+- **F1 (second header-emitting builder):** `buildFileContent()` also emits the header (Case 1 new file, Case 2 headerless file). Added `syncBranch?: string` to `buildFileContent()` and `buildFullFileContent()`, threaded through every header-emitting path. Cases 3/4 of `buildFileContent` reuse the existing file's `before` content and do not call `getAIReadyHeader()`, so nothing to thread there — the directive-header migration for existing repos happens on the next full-file rebuild (`buildFullFileContent`).
+- **Call sites made branch-aware (F1):** `sync-service.ts` → `syncAllRepoTasksOnce` (`buildFullFileContent`), `syncPendingTasksOnce` → `commitTasks` → `buildFileContent`; `SyncConflictSheet.tsx` → local-preview `buildFileContent` (both try + catch fallback) and the keep-local `syncPendingTasks({ branch })` push (already passed the override; sync-service now resolves it into the header).
+- **F2 (branch resolution + latency, LOCKED):** Both sync paths resolve `syncBranch = repoSyncBranches[repoKey] ?? options.branch ?? defaultBranch`, where `defaultBranch` is **only** used when it was already fetched for the fallback-branch path (`options.branch` set). There is NO stored default branch in `RepoSyncMeta`/`SelectedRepo`, and we add **no new GitHub round-trip** to learn it. Consequence: on the common no-override → main sync, `syncBranch` is `undefined` and the header omits the 📍 line — this is the LOCKED choice to avoid a sync-latency regression. The branch line appears whenever a per-repo override is set (the gitty branch is now the recommended default per qs-sync-data-loss-and-defaults) or when pushing to an explicit fallback branch.
+- **Task 4 (manual live-repo verification):** deferred to the user — requires a live GitHub repo and a dev build. Automated tests fully cover the header-generation paths (branch / no-branch / fresh repo / both builders).
 
 ### File List
 
-_Not yet implemented_
+- `src/features/sync/utils/markdown-templates.ts` (modified — directive header rewrite, `syncBranch` param on `getAIReadyHeader`, `buildFullFileContent`, `buildFileContent`)
+- `src/services/github/sync-service.ts` (modified — branch resolution in both sync paths; `syncBranch` threaded into `buildFullFileContent` and `commitTasks` → `buildFileContent`)
+- `src/features/sync/components/SyncConflictSheet.tsx` (modified — branch-aware local-content preview builder)
+- `src/features/sync/utils/markdown-templates.test.ts` (modified — updated assertions to directive text + 11 new tests covering branch line, fresh repo, both builders)
+- `_bmad-output/implementation-artifacts/9-15-active-ai-briefing-header.md` (modified — Tasks, Dev Agent Record, Status)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — story 9-15 status)

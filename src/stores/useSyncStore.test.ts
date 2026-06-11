@@ -33,7 +33,7 @@ vi.mock('../services/storage/token-vault', () => ({
 }))
 
 // Import after mocks
-import { useSyncStore, selectHasUnsyncedChanges } from './useSyncStore'
+import { useSyncStore, selectHasUnsyncedChanges, selectRepoClaudeCodeHintSeen } from './useSyncStore'
 
 describe('useSyncStore', () => {
   beforeEach(() => {
@@ -674,6 +674,38 @@ describe('useSyncStore', () => {
       useSyncStore.getState().setRepoSortMode('user/repo', 'created-desc')
       useSyncStore.getState().setRepoSortMode('user/repo', 'manual')
       expect(useSyncStore.getState().repoSortModes['user/repo']).toBe('manual')
+    })
+  })
+
+  describe('repoClaudeCodeHintSeen', () => {
+    it('selector defaults to false for an unseen repo', () => {
+      const state = useSyncStore.getState()
+      expect(selectRepoClaudeCodeHintSeen('Owner/Repo')(state)).toBe(false)
+    })
+
+    it('setter persists true for the repo', () => {
+      useSyncStore.getState().setRepoClaudeCodeHintSeen('Owner/Repo', true)
+      const state = useSyncStore.getState()
+      expect(selectRepoClaudeCodeHintSeen('Owner/Repo')(state)).toBe(true)
+    })
+
+    it('is keyed by normalized (lowercase) repo name', () => {
+      useSyncStore.getState().setRepoClaudeCodeHintSeen('Owner/Repo', true)
+      const state = useSyncStore.getState()
+      expect(selectRepoClaudeCodeHintSeen('owner/repo')(state)).toBe(true)
+    })
+
+    it('per-repo isolation: seen for repo A does not affect repo B', () => {
+      useSyncStore.getState().setRepoClaudeCodeHintSeen('user/repo-a', true)
+      const state = useSyncStore.getState()
+      expect(selectRepoClaudeCodeHintSeen('user/repo-a')(state)).toBe(true)
+      expect(selectRepoClaudeCodeHintSeen('user/repo-b')(state)).toBe(false)
+    })
+
+    it('can be reset back to false', () => {
+      useSyncStore.getState().setRepoClaudeCodeHintSeen('user/repo', true)
+      useSyncStore.getState().setRepoClaudeCodeHintSeen('user/repo', false)
+      expect(selectRepoClaudeCodeHintSeen('user/repo')(useSyncStore.getState())).toBe(false)
     })
   })
 })

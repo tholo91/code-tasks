@@ -19,7 +19,7 @@ vi.mock('framer-motion', () => ({
 }))
 
 describe('PullToRefreshIndicator', () => {
-  it('shows "Check for updates" text when pulling', () => {
+  it('shows "Pull to refresh from main" text when pulling below threshold', () => {
     render(
       <PullToRefreshIndicator
         pullDistance={40}
@@ -29,10 +29,10 @@ describe('PullToRefreshIndicator', () => {
       />,
     )
 
-    expect(screen.getByText('Check for updates')).toBeInTheDocument()
+    expect(screen.getByText('Pull to refresh from main')).toBeInTheDocument()
   })
 
-  it('shows spinner and "Checking…" when isRefreshing is true', () => {
+  it('shows spinner and "Checking for updates…" when isRefreshing is true', () => {
     render(
       <PullToRefreshIndicator
         pullDistance={0}
@@ -42,7 +42,7 @@ describe('PullToRefreshIndicator', () => {
       />,
     )
 
-    expect(screen.getByText('Checking…')).toBeInTheDocument()
+    expect(screen.getByText('Checking for updates…')).toBeInTheDocument()
   })
 
   it('shows "Up to date" when result is up-to-date', () => {

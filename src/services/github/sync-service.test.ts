@@ -323,7 +323,7 @@ describe('sync-service', () => {
         mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
       const content = decodeURIComponent(escape(atob(call.content)))
       expect(content).toContain(HEADER_SIGNATURE)
-      expect(content).toContain('# Captured Ideas — testuser')
+      expect(content).toContain('# Captured Ideas - testuser')
       expect(content).toContain(MANAGED_START)
       expect(content).toContain(MANAGED_END)
       expect(content).toContain('**Fix the login bug**')
@@ -713,9 +713,9 @@ describe('sync-service', () => {
       expect(call.message).toContain('[skip ci]')
     })
 
-    it('skips conflict detection when branch is provided', async () => {
+    it('returns conflict for a branch push when the branch remote changed', async () => {
       const task = createTask()
-      useSyncStore.setState({ 
+      useSyncStore.setState({
         tasks: [task],
         repoSyncMeta: {
           'testuser/my-repo': {
@@ -730,16 +730,16 @@ describe('sync-service', () => {
 
       mockOctokit.rest.repos.get.mockResolvedValue({ data: { default_branch: 'main' } })
       mockOctokit.rest.git.getRef.mockResolvedValue({ data: { object: { sha: 'main-sha' } } })
-      // Remote SHA is different (normally a conflict)
+      // Branch remote SHA differs from the recorded baseline — must trigger the conflict gate
       mockOctokit.rest.repos.getContent.mockResolvedValue({ data: { content: btoa('# content'), sha: 'new-remote-sha' } })
       mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
 
       const result = await syncPendingTasks({ branch: 'gitty/user' })
 
-      expect(result.error).toBeUndefined()
-      expect(result.syncedCount).toBe(1)
-      expect(result.status).not.toBe('conflict')
-      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalled()
+      expect(result.status).toBe('conflict')
+      expect(result.remoteSha).toBe('new-remote-sha')
+      // Must NOT overwrite the remote on conflict
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).not.toHaveBeenCalled()
     })
   })
 

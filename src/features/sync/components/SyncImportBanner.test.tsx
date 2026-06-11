@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { SyncImportBanner } from './SyncImportBanner'
 import type { ImportDiffSummary } from '../../../utils/task-diff'
 
@@ -57,7 +57,7 @@ describe('SyncImportBanner', () => {
         diffSummary={makeDiff({ completedByAgent: 1, localSafeCount: 3 })}
       />
     )
-    expect(screen.getByText('Your 3 new ideas are safe')).toBeInTheDocument()
+    expect(screen.getByText(/Your 3 local ideas are safe/)).toBeInTheDocument()
   })
 
   it('does not show safety line when localSafeCount is 0', () => {
@@ -100,7 +100,7 @@ describe('SyncImportBanner', () => {
     render(
       <SyncImportBanner {...baseProps} variant="initial-import" />
     )
-    expect(screen.getByText(/Your local list is empty/)).toBeInTheDocument()
+    expect(screen.getByText(/Fresh load from remote/)).toBeInTheDocument()
   })
 
   it('renders "Apply updates" button for remote-update variant', () => {
@@ -119,5 +119,17 @@ describe('SyncImportBanner', () => {
       <SyncImportBanner {...baseProps} variant="initial-import" />
     )
     expect(screen.getByText('Load tasks')).toBeInTheDocument()
+  })
+
+  // Bug P2: dismissing the banner must reach the host handler, which records the
+  // fetched remote SHA as the new sync baseline (see App.tsx onDismiss). The banner
+  // itself is presentational; this verifies the dismiss wiring the host depends on.
+  it('invokes onDismiss when the Dismiss button is clicked', () => {
+    const onDismiss = vi.fn()
+    render(
+      <SyncImportBanner {...baseProps} variant="remote-update" diffSummary={makeDiff()} onDismiss={onDismiss} />
+    )
+    fireEvent.click(screen.getByText('Dismiss'))
+    expect(onDismiss).toHaveBeenCalledTimes(1)
   })
 })

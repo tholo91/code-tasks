@@ -96,6 +96,8 @@ captured-ideas-{username}.md
 
 The live file for this repo is **`captured-ideas-tholo91.md`** in the root. It contains Thomas's open tasks (unchecked `- [ ]` items) captured directly from the Gitty app. These are real, unprocessed ideas that may need to be turned into stories, quick specs, or BMAD artifacts.
 
+Claude Code users can run `/captured-ideas` to fetch and list the open captures across all branches, grouped by priority.
+
 - Open items (`- [ ]`) = not yet planned or implemented
 - Items with `→ Planned: Story X` in their body = already captured in a story file
 - Mark items as done (`- [x]`) and append `[Processed by: Claude]` after they have been turned into a story or resolved

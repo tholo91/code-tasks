@@ -11,7 +11,13 @@ const plannedItems = roadmapData.filter((item) => item.status === 'planned')
 const steps = [
   { num: '01', text: 'Capture a task from your phone, mid-thought, in seconds.' },
   { num: '02', text: 'It lands in your GitHub repo as a markdown file.' },
-  { num: '03', text: 'Your AI agent reads it on the next run.' },
+  { num: '03', text: "Claude Code, Cursor, or Codex reads it on next startup and can report back when it's done." },
+]
+
+const agentSteps = [
+  { num: '01', text: 'The file tells your agent to pull the freshest tasks from whichever branch they live on. No manual git fetch, no branch hunting.' },
+  { num: '02', text: 'It briefs itself: open tasks grouped by priority, each with a one-line suggested approach.' },
+  { num: '03', text: 'It handles the small ones, proposes a story for the bigger ones, and checks them off when done.' },
 ]
 
 export function LandingPage({ onSuccess }: LandingPageProps) {
@@ -75,8 +81,8 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             marginBottom: '1.25rem',
           }}
         >
-          The task layer for<br />
-          AI&#8209;native workflows.
+          Capture on your phone.<br />
+          Ship in your agent's next run.
         </h1>
 
         <p
@@ -88,7 +94,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             maxWidth: '34ch',
           }}
         >
-          Your ideas, straight into GitHub. Ready for your agents on the next run.
+          Tap a task on your phone. It lands as markdown in your repo, pre-formatted so Claude Code, Cursor, or Codex picks it up automatically.
         </p>
 
         <AuthForm onSuccess={onSuccess} layout="inline" />
@@ -168,6 +174,116 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
 
+      {/* Connect your AI agent */}
+      <section
+        style={{
+          padding: '5rem 1.5rem',
+          maxWidth: '480px',
+          margin: '0 auto',
+        }}
+      >
+        <SectionLabel>Connect your AI agent</SectionLabel>
+
+        <p
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--text-body)',
+            lineHeight: 1.7,
+            color: 'var(--color-text-secondary)',
+            margin: '0 0 2.25rem',
+            maxWidth: '38ch',
+          }}
+        >
+          Your captures land as agent-ready markdown. Claude Code, Cursor, Codex, and Gemini CLI all read the same file, brief themselves, and get to work.
+        </p>
+
+        <div style={{ marginBottom: '2.75rem' }}>
+          <p
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-label)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--color-text-secondary)',
+              margin: '0 0 0.6rem',
+              opacity: 0.6,
+            }}
+          >
+            Claude Code shortcut
+          </p>
+          <code
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-body)',
+              color: 'var(--color-accent)',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '0.6rem',
+              padding: '0.65rem 0.9rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <span style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}>&gt;</span>
+            /captured-ideas
+          </code>
+          <p
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-label)',
+              lineHeight: 1.6,
+              color: 'var(--color-text-secondary)',
+              margin: '0.85rem 0 0',
+              opacity: 0.55,
+            }}
+          >
+            Cursor, Codex, and Gemini CLI read the same file directly.
+          </p>
+        </div>
+
+        <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {agentSteps.map((step) => (
+            <li
+              key={step.num}
+              style={{
+                display: 'flex',
+                gap: '1.5rem',
+                paddingBottom: '2.25rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-label)',
+                  color: 'var(--color-accent)',
+                  letterSpacing: '0.06em',
+                  paddingTop: '0.1rem',
+                  flexShrink: 0,
+                  opacity: 0.7,
+                }}
+              >
+                {step.num}
+              </span>
+              <p
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-body)',
+                  lineHeight: 1.7,
+                  color: 'var(--color-text-primary)',
+                  margin: 0,
+                }}
+              >
+                {step.text}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
+
       {/* Screenshots */}
       <section
         style={{
@@ -207,7 +323,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
               color: 'var(--color-text-secondary)',
               margin: 0,
               opacity: 0.7,
-            }}>Capture tasks on the go</p>
+            }}>Capture anywhere. Syncs straight to your repo.</p>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2.5rem' }}>
             <img
@@ -303,7 +419,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             opacity: 0.6,
           }}
         >
-          Built in public
+          Built in public. Wir bauen das zusammen.
         </span>
         <a
           href="https://github.com/tholo91/code-tasks"

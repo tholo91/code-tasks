@@ -96,7 +96,7 @@ describe('AuthForm', () => {
 
   it('shows help text about local-only encrypted storage', () => {
     render(<AuthForm onSuccess={mockOnSuccess} />)
-    expect(screen.getByText(/stored locally on this device/i)).toBeInTheDocument()
+    expect(screen.getByText(/never leaves this device/i)).toBeInTheDocument()
     expect(screen.getAllByText(/encrypted at rest/i).length).toBeGreaterThan(0)
     expect(screen.queryByText(/passphrase/i)).not.toBeInTheDocument()
   })

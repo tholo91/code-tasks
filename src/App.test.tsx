@@ -51,20 +51,51 @@ vi.mock('./features/auth/components/AuthForm', () => ({
 }))
 
 // Mock framer-motion to avoid heavy bundle in test environment
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
-    svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-  Reorder: {
-    Group: ({ children, ...props }: any) => <ul {...props}>{children}</ul>,
-    Item: ({ children, ...props }: any) => <li {...props}>{children}</li>,
-  },
-  useDragControls: () => ({ start: () => {} }),
-  useReducedMotion: () => false,
-}))
+vi.mock('framer-motion', () => {
+  // Proxy renders any motion.<tag> as the plain DOM element, stripping
+  // motion-only props so the whole App tree works without enumerating every
+  // primitive (TaskToolbar alone uses div/button/span).
+  const stripMotionProps = ({
+    children,
+    animate,
+    initial,
+    exit,
+    whileTap,
+    whileHover,
+    whileInView,
+    whileFocus,
+    whileDrag,
+    transition,
+    layout,
+    layoutId,
+    variants,
+    drag,
+    dragControls,
+    dragConstraints,
+    custom,
+    ...props
+  }: any) => ({ children, props })
+  const motion = new Proxy({} as Record<string, any>, {
+    get: (_target, tag) => {
+      if (typeof tag !== 'string') return undefined
+      const Tag = tag
+      return (allProps: any) => {
+        const { children, props } = stripMotionProps(allProps)
+        return <Tag {...props}>{children}</Tag>
+      }
+    },
+  })
+  return {
+    motion,
+    AnimatePresence: ({ children }: any) => <>{children}</>,
+    Reorder: {
+      Group: ({ children, ...props }: any) => <ul {...props}>{children}</ul>,
+      Item: ({ children, ...props }: any) => <li {...props}>{children}</li>,
+    },
+    useDragControls: () => ({ start: () => {} }),
+    useReducedMotion: () => false,
+  }
+})
 
 // Mock heavy components not under test to reduce memory pressure
 vi.mock('./features/sync/hooks/useAutoSync', () => ({
@@ -261,9 +292,10 @@ describe('App', () => {
       render(<App />)
     })
 
-    expect(screen.getByText(/code-tasks/i)).toBeInTheDocument()
-    expect(screen.getByTestId('selected-repo')).toHaveTextContent('testuser/repo')
-    expect(screen.getByTestId('task-search-input')).toBeInTheDocument()
+    // Header shows just the repo name (fullName after the slash), not owner/name.
+    expect(screen.getByTestId('selected-repo')).toHaveTextContent('repo')
+    // Search collapses to an icon button by default; the input is revealed on tap.
+    expect(screen.getByTestId('task-search-button')).toBeInTheDocument()
   })
 
   it('shows empty state with inviting text when no tasks exist', async () => {
@@ -298,6 +330,7 @@ describe('App', () => {
       render(<App />)
     })
 
+    await user.click(screen.getByTestId('task-search-button'))
     const searchInput = screen.getByTestId('task-search-input')
     await user.type(searchInput, 'milk')
 
@@ -319,6 +352,7 @@ describe('App', () => {
       render(<App />)
     })
 
+    await user.click(screen.getByTestId('task-search-button'))
     const searchInput = screen.getByTestId('task-search-input')
     await user.type(searchInput, 'nonexistent')
 
@@ -374,17 +408,18 @@ describe('App', () => {
       render(<App />)
     })
 
-    const header = screen.getByTestId('completed-section-header')
+    // Re-query each time: the header re-renders, so a captured reference goes stale.
+    const getHeader = () => screen.getByTestId('completed-section-header')
     // Default: collapsed
-    expect(header.getAttribute('aria-expanded')).toBe('false')
+    expect(getHeader().getAttribute('aria-expanded')).toBe('false')
 
     // Click to expand
-    await user.click(header)
-    expect(header.getAttribute('aria-expanded')).toBe('true')
+    await user.click(getHeader())
+    expect(getHeader().getAttribute('aria-expanded')).toBe('true')
 
     // Click to collapse again
-    await user.click(header)
-    expect(header.getAttribute('aria-expanded')).toBe('false')
+    await user.click(getHeader())
+    expect(getHeader().getAttribute('aria-expanded')).toBe('false')
   })
 
   it('completed section is collapsed by default — header visible but tasks hidden', async () => {
@@ -425,6 +460,7 @@ describe('App', () => {
     expect(screen.getByTestId('completed-section-header').getAttribute('aria-expanded')).toBe('false')
 
     // Search for a completed task
+    await user.click(screen.getByTestId('task-search-button'))
     const searchInput = screen.getByTestId('task-search-input')
     await act(async () => {
       await user.type(searchInput, 'Fix bug')
@@ -448,6 +484,7 @@ describe('App', () => {
       render(<App />)
     })
 
+    await user.click(screen.getByTestId('task-search-button'))
     const searchInput = screen.getByTestId('task-search-input')
 
     // Type a query to expand
@@ -456,9 +493,13 @@ describe('App', () => {
     })
     expect(screen.getByTestId('completed-section-header').getAttribute('aria-expanded')).toBe('true')
 
-    // Clear the search
+    // Searching a completed task collapses the search bar back to its button
+    // while the query persists; reopen it to reach the input and clear it.
+    if (!screen.queryByTestId('task-search-input')) {
+      await user.click(screen.getByTestId('task-search-button'))
+    }
     await act(async () => {
-      await user.clear(searchInput)
+      await user.clear(screen.getByTestId('task-search-input'))
     })
     expect(screen.getByTestId('completed-section-header').getAttribute('aria-expanded')).toBe('false')
   })

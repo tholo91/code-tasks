@@ -16,6 +16,7 @@ interface SyncConflictSheetProps {
 export function SyncConflictSheet({ isOpen, repoFullName, username, onClose }: SyncConflictSheetProps) {
   const tasks = useSyncStore((s) => s.tasks)
   const repoSyncMeta = useSyncStore((s) => s.repoSyncMeta)
+  const repoSyncBranches = useSyncStore((s) => s.repoSyncBranches)
   const replaceTasksForRepo = useSyncStore((s) => s.replaceTasksForRepo)
   const setRepoSyncMeta = useSyncStore((s) => s.setRepoSyncMeta)
   const clearRepoConflict = useSyncStore((s) => s.clearRepoConflict)
@@ -54,13 +55,14 @@ export function SyncConflictSheet({ isOpen, repoFullName, username, onClose }: S
   )
   const sortedTasks = useMemo(() => sortTasksForDisplay(localTasks).all, [localTasks])
 
+  const conflictSyncBranch = repoSyncBranches[repoKey] ?? undefined
   const localContent = useMemo(() => {
     try {
-      return buildFileContent(remoteContent ?? null, sortedTasks, username)
+      return buildFileContent(remoteContent ?? null, sortedTasks, username, conflictSyncBranch)
     } catch {
-      return buildFileContent(null, sortedTasks, username)
+      return buildFileContent(null, sortedTasks, username, conflictSyncBranch)
     }
-  }, [remoteContent, sortedTasks, username])
+  }, [remoteContent, sortedTasks, username, conflictSyncBranch])
 
   const remoteCount = useMemo(() => {
     if (!remoteContent) return 0

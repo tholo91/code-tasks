@@ -72,6 +72,7 @@ interface SyncState {
   repoSortModes: Record<string, SortMode>
   repoSyncBranches: Record<string, string>
   repoSkipCi: Record<string, boolean>
+  repoClaudeCodeHintSeen: Record<string, boolean>
   repoSyncErrors: Record<string, RepoSyncError>
   errorSheetOpen: boolean
   repoDrafts: Record<string, CaptureDraft>
@@ -104,6 +105,7 @@ interface SyncState {
   setRepoSortMode: (repoFullName: string, mode: SortMode) => void
   setRepoSyncBranch: (repoFullName: string, branch: string | null) => void
   setRepoSkipCi: (repoFullName: string, enabled: boolean) => void
+  setRepoClaudeCodeHintSeen: (repoFullName: string, seen: boolean) => void
 }
 
 /**
@@ -174,7 +176,10 @@ export const selectSyncBranch = (repoFullName: string) => (state: SyncState) =>
   state.repoSyncBranches[repoFullName.toLowerCase()] ?? null
 
 export const selectRepoSkipCi = (repoFullName: string) => (state: SyncState) =>
-  state.repoSkipCi[repoFullName.toLowerCase()] ?? false
+  state.repoSkipCi[repoFullName.toLowerCase()] ?? true
+
+export const selectRepoClaudeCodeHintSeen = (repoFullName: string) => (state: SyncState) =>
+  state.repoClaudeCodeHintSeen[repoFullName.toLowerCase()] ?? false
 
 export const selectRepoDraft = (repoFullName: string) => (state: SyncState) =>
   state.repoDrafts[repoFullName.toLowerCase()] ?? null
@@ -233,6 +238,7 @@ export const useSyncStore = create<SyncState>()(
       repoSortModes: {},
       repoSyncBranches: {},
       repoSkipCi: {},
+      repoClaudeCodeHintSeen: {},
       repoSyncErrors: {},
       errorSheetOpen: false,
       repoDrafts: {},
@@ -863,14 +869,16 @@ export const useSyncStore = create<SyncState>()(
       setRepoSkipCi: (repoFullName: string, enabled: boolean) => {
         const key = normalizeRepoKey(repoFullName)
         set((state) => {
-          const updated = { ...state.repoSkipCi }
-          if (enabled) {
-            updated[key] = true
-          } else {
-            delete updated[key]
-          }
+          // Persist `false` explicitly: with the selector default now `true`,
+          // an absent key reads as ON, so an explicit OFF must be stored.
+          const updated = { ...state.repoSkipCi, [key]: enabled }
           return { repoSkipCi: updated }
         })
+      },
+
+      setRepoClaudeCodeHintSeen: (repoFullName: string, seen: boolean) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => ({ repoClaudeCodeHintSeen: { ...state.repoClaudeCodeHintSeen, [key]: seen } }))
       },
     }),
     {
@@ -887,6 +895,7 @@ export const useSyncStore = create<SyncState>()(
         repoSortModes: state.repoSortModes,
         repoSyncBranches: state.repoSyncBranches,
         repoSkipCi: state.repoSkipCi,
+        repoClaudeCodeHintSeen: state.repoClaudeCodeHintSeen,
         repoSyncErrors: state.repoSyncErrors,
         repoDrafts: state.repoDrafts,
       }),

@@ -4,7 +4,7 @@
 
 Gitty is an offline-first PWA that bridges the gap between a quick idea and a GitHub issue. It writes to a plain markdown file (`captured-ideas-{username}.md`) in your repo — no database, no extra accounts, no merge conflicts.
 
-**Live app:** [code-tasks.vercel.app](https://code-tasks.vercel.app)
+**Live app:** [tholo91.github.io/code-tasks](https://tholo91.github.io/code-tasks/)
 
 ---
 
@@ -65,6 +65,18 @@ Key directories:
 | `_bmad/` | AI agent workflows (BMAD framework) |
 | `_bmad-output/` | PRD, architecture, epics, sprint status |
 | `docs/` | Vision doc and architectural decisions |
+
+---
+
+## Using Gitty with Claude Code
+
+This repo ships a `/captured-ideas` slash command in `.claude/commands/captured-ideas.md`. Run `/captured-ideas` in Claude Code to fetch the freshest `captured-ideas-*.md` across all branches and print your open captures grouped by priority. No manual `git fetch`, no branch hunting.
+
+> **Where are the captures?** Gitty syncs each user's task file to a dedicated branch (by default `gitty/<username>`), not to `main`. If you don't see a `captured-ideas-*.md` on the branch you're on, that's expected — run `/captured-ideas` (it scans all branches), or `git fetch && git branch -r | grep gitty/` to find it.
+
+To use it in another Gitty-managed repo, copy that one file into that repo's `.claude/commands/` directory (manual install, auto-distribution is a future story).
+
+Broader agent support (Cursor, Codex, Gemini CLI) is planned via an AGENTS.md convention.
 
 ---
 
