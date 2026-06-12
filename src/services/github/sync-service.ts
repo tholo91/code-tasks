@@ -194,8 +194,14 @@ async function commitTasks(
  * Idempotent: if the block is already present, does not duplicate.
  * Errors are swallowed (secondary goal) but logged.
  *
- * Detects language from repo name patterns (German repos: "bremen-", "spiesser"):
- * Uses German block for those, English for everything else.
+ * Language detection (write-once):
+ * - Detects language from repo name patterns (German repos: "bremen-", "spiesser", "brief-nach-berlin", "rauchfrei")
+ * - Uses German block for those, English for everything else
+ * - NOTE: Language choice is write-once. If a repo is renamed across the German/English boundary
+ *   (e.g., "bremen-rauchfrei" → "rauchfrei-app"), the original language block persists and is NOT updated.
+ *   This is an accepted design trade-off: (1) block content is functionally identical in both languages,
+ *   (2) renames are rare, (3) avoiding block replacement prevents churn. If update-on-rename behavior is
+ *   needed in the future, add a language version field to the signature and detect mismatches.
  */
 async function ensureAgentFrontDoor(
   octokit: Octokit,

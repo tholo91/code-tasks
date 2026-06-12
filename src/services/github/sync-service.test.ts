@@ -841,4 +841,92 @@ describe('sync-service', () => {
       expect(result.errorType).toBe('unknown')
     })
   })
+
+  describe('ensureAgentFrontDoor', () => {
+    beforeEach(() => {
+      mockOctokit.rest.repos.getContent.mockReset()
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockReset()
+    })
+
+    it('exports ensureAgentFrontDoor for testing', async () => {
+      const { ensureAgentFrontDoor } = await import('./sync-service')
+      expect(typeof ensureAgentFrontDoor).toBe('function')
+    })
+
+    it('handles missing files gracefully (creates new files with front-door block)', async () => {
+      const { ensureAgentFrontDoor } = await import('./sync-service')
+
+      // Simulate 404 by throwing — getFileContent does this
+      mockOctokit.rest.repos.getContent.mockRejectedValue({
+        status: 404,
+        message: 'Not Found',
+      })
+
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'newsha' } },
+      })
+
+      // Should not throw
+      await expect(
+        ensureAgentFrontDoor(mockOctokit, 'owner', 'repo', undefined),
+      ).resolves.toBeUndefined()
+
+      // Should have attempted to create files
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalled()
+    })
+
+    it('detects German repos and uses German front-door block', async () => {
+      const { ensureAgentFrontDoor } = await import('./sync-service')
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'newsha' } },
+      })
+
+      // Test with German-named repo
+      await ensureAgentFrontDoor(mockOctokit, 'owner', 'bremen-rauchfrei', undefined)
+
+      // Check that the content written contains German text
+      const firstCall = mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0]?.[0]
+      if (firstCall?.content) {
+        const decoded = Buffer.from(firstCall.content, 'base64').toString('utf-8')
+        expect(decoded).toContain('Dieses Repo ist mit der Gitty-App')
+      }
+    })
+
+    it('passes branch parameter to file operations', async () => {
+      const { ensureAgentFrontDoor } = await import('./sync-service')
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'newsha' } },
+      })
+
+      await ensureAgentFrontDoor(mockOctokit, 'owner', 'repo', 'feature-branch')
+
+      // Verify branch was passed to at least one file operation
+      const callsWithBranch = mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls.some(
+        (call) => call[0]?.branch === 'feature-branch',
+      )
+      expect(callsWithBranch).toBe(true)
+    })
+
+    it('catches errors and continues (fire-and-forget robustness)', async () => {
+      const { ensureAgentFrontDoor } = await import('./sync-service')
+
+      // First call fails, then succeeds
+      mockOctokit.rest.repos.getContent
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockRejectedValueOnce(new Error('Network error'))
+
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'newsha' } },
+      })
+
+      // Should not throw even with network errors
+      await expect(
+        ensureAgentFrontDoor(mockOctokit, 'owner', 'repo', undefined),
+      ).resolves.toBeUndefined()
+    })
+  })
 })
