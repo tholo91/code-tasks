@@ -2,7 +2,7 @@ import type { Octokit } from 'octokit'
 import type { Task } from '../../types/task'
 import { recoverOctokit } from './octokit-provider'
 import { useSyncStore } from '../../stores/useSyncStore'
-import { buildFileContent, buildFullFileContent, parseTasksFromMarkdown } from '../../features/sync/utils/markdown-templates'
+import { buildFileContent, buildFullFileContent, parseTasksFromMarkdown, appendAgentFrontDoor } from '../../features/sync/utils/markdown-templates'
 import { sortTasksForDisplay } from '../../utils/task-sorting'
 import { generateUUID } from '../../utils/uuid'
 
@@ -187,6 +187,72 @@ async function commitTasks(
   }
 
   throw new Error('Failed to commit after maximum conflict retries')
+}
+
+/**
+ * Ensures AGENTS.md and CLAUDE.md exist at repo root with the agent front-door block.
+ * Idempotent: if the block is already present, does not duplicate.
+ * Errors are swallowed (secondary goal) but logged.
+ *
+ * Detects language from repo name patterns (German repos: "bremen-", "spiesser"):
+ * Uses German block for those, English for everything else.
+ */
+async function ensureAgentFrontDoor(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branch?: string,
+): Promise<void> {
+  // Detect language from repo name (simple heuristic)
+  const isGerman = /^(bremen-|spiesser|brief-nach-berlin|rauchfrei)/i.test(repo)
+
+  const filesToUpdate = ['AGENTS.md', 'CLAUDE.md']
+
+  for (const fileName of filesToUpdate) {
+    try {
+      // Fetch existing file (if any)
+      const existing = await getFileContent(octokit, owner, repo, fileName, branch)
+      const existingContent = existing?.content ?? null
+
+      // Append the front-door block (idempotent if already present)
+      const updated = appendAgentFrontDoor(existingContent, isGerman)
+
+      // Skip if no change (idempotent re-run)
+      if (existing && existing.content === updated) {
+        continue
+      }
+
+      // Write the file
+      const commitParams: {
+        owner: string
+        repo: string
+        path: string
+        message: string
+        content: string
+        sha?: string
+        branch?: string
+      } = {
+        owner,
+        repo,
+        path: fileName,
+        message: `docs: add agent front-door for Gitty captures via code-tasks [skip ci]`,
+        content: utf8ToBase64(updated),
+      }
+
+      if (existing?.sha) {
+        commitParams.sha = existing.sha
+      }
+
+      if (branch) {
+        commitParams.branch = branch
+      }
+
+      await octokit.rest.repos.createOrUpdateFileContents(commitParams)
+    } catch (err) {
+      // Log but don't rethrow — this is a best-effort secondary goal
+      console.warn(`Failed to ensure ${fileName} front-door block:`, err)
+    }
+  }
 }
 
 function getRetryDelay(attempt: number): number {
@@ -491,6 +557,13 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   // Reset pending deletions
   useSyncStore.setState({ hasPendingDeletions: false })
 
+  // Ensure agent front-door files (AGENTS.md, CLAUDE.md) exist with Gitty instructions.
+  // This is best-effort (errors are swallowed) so it doesn't block sync completion.
+  // Fire-and-forget: don't await, don't block return.
+  ensureAgentFrontDoor(octokit, owner, repo, targetBranch).catch(() => {
+    // Silently ignore failures — front-door is secondary goal
+  })
+
   return { syncedCount: Math.max(repoTasks.length, 1) }
 }
 
@@ -696,9 +769,16 @@ async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
     }
   }
 
+  // Ensure agent front-door files (AGENTS.md, CLAUDE.md) exist with Gitty instructions.
+  // This is best-effort (errors are swallowed) so it doesn't block sync completion.
+  // Fire-and-forget: don't await, don't block return.
+  ensureAgentFrontDoor(octokit, owner, repo, targetBranch).catch(() => {
+    // Silently ignore failures — front-door is secondary goal
+  })
+
   return { syncedCount: Math.max(pendingTasks.length, hasPendingDeletions ? 1 : 0) }
 }
 
 // Export for testing
-export { getFileContent, commitTasks }
+export { getFileContent, commitTasks, ensureAgentFrontDoor }
 // Re-export getScopedFileName, classifySyncError, syncAllRepoTasks (already exported at definition)

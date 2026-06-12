@@ -4,6 +4,7 @@ import {
   HEADER_SIGNATURE,
   MANAGED_START,
   MANAGED_END,
+  AGENT_FRONT_DOOR_SIGNATURE,
   getAIReadyHeader,
   hasAIReadyHeader,
   splitAtMarkers,
@@ -12,6 +13,10 @@ import {
   buildFileContent,
   buildFullFileContent,
   parseTasksFromMarkdown,
+  getAgentFrontDoor,
+  getAgentFrontDoorDE,
+  hasAgentFrontDoor,
+  appendAgentFrontDoor,
 } from './markdown-templates'
 
 function createTask(overrides: Partial<Task> = {}): Task {
@@ -109,7 +114,7 @@ describe('markdown-templates', () => {
 
     it('includes the branch-awareness line when a syncBranch is provided', () => {
       const header = getAIReadyHeader('tholo91', 'gitty/tholo91')
-      expect(header).toContain('> 7. 📍 This file is synced to branch `gitty/tholo91` in this repo. To get the latest captures from another branch, run: `git fetch && git show origin/gitty/tholo91:captured-ideas-tholo91.md`.')
+      expect(header).toContain('> 8. 📍 This file is synced to branch `gitty/tholo91` in this repo. To get the latest captures from another branch, run: `git fetch && git show origin/gitty/tholo91:captured-ideas-tholo91.md`.')
     })
 
     it('omits the branch-awareness line when no syncBranch is provided', () => {
@@ -432,7 +437,7 @@ Some content without a separator line
     it('emits the branch line when a syncBranch is passed (new file)', () => {
       const tasks = [createTask({ body: '' })]
       const result = buildFileContent(null, tasks, username, 'gitty/testuser')
-      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+      expect(result).toContain('> 8. 📍 This file is synced to branch `gitty/testuser` in this repo.')
       expect(result).toContain('git show origin/gitty/testuser:captured-ideas-testuser.md')
     })
 
@@ -440,7 +445,7 @@ Some content without a separator line
       const existing = '- [ ] Old task from manual entry'
       const tasks = [createTask({ body: '' })]
       const result = buildFileContent(existing, tasks, username, 'gitty/testuser')
-      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+      expect(result).toContain('> 8. 📍 This file is synced to branch `gitty/testuser` in this repo.')
     })
 
     it('omits the branch line when no syncBranch is passed (new file)', () => {
@@ -573,13 +578,13 @@ Some content without a separator line
     it('emits the branch line when a syncBranch is passed', () => {
       const tasks = [createTask({ id: '1', title: 'Active task', body: '' })]
       const result = buildFullFileContent(tasks, 'testuser', 'gitty/testuser')
-      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+      expect(result).toContain('> 8. 📍 This file is synced to branch `gitty/testuser` in this repo.')
       expect(result).toContain('git show origin/gitty/testuser:captured-ideas-testuser.md')
     })
 
     it('emits the branch line for an empty task list when a syncBranch is passed', () => {
       const result = buildFullFileContent([], 'testuser', 'gitty/testuser')
-      expect(result).toContain('> 7. 📍 This file is synced to branch `gitty/testuser` in this repo.')
+      expect(result).toContain('> 8. 📍 This file is synced to branch `gitty/testuser` in this repo.')
       expect(result).toContain('No active tasks')
     })
 
@@ -683,6 +688,112 @@ ${MANAGED_END}
       const markdown = formatTaskAsMarkdown(task)
       const parsed = parseTasksFromMarkdown(markdown)
       expect(parsed[0].body).toBe(body)
+    })
+  })
+
+  describe('Agent Front-Door Block', () => {
+    describe('AGENT_FRONT_DOOR_SIGNATURE', () => {
+      it('is an HTML comment marker', () => {
+        expect(AGENT_FRONT_DOOR_SIGNATURE).toBe('<!-- code-tasks:agent-front-door -->')
+      })
+    })
+
+    describe('getAgentFrontDoor (English)', () => {
+      it('includes the signature marker', () => {
+        const block = getAgentFrontDoor()
+        expect(block).toContain(AGENT_FRONT_DOOR_SIGNATURE)
+      })
+
+      it('includes git fetch instruction', () => {
+        const block = getAgentFrontDoor()
+        expect(block).toContain('git fetch --quiet')
+      })
+
+      it('includes captured-ideas reference', () => {
+        const block = getAgentFrontDoor()
+        expect(block).toContain('captured-ideas-*.md')
+      })
+
+      it('includes AI agent instructions heading', () => {
+        const block = getAgentFrontDoor()
+        expect(block).toContain('Captured Ideas (Gitty)')
+      })
+    })
+
+    describe('getAgentFrontDoorDE (German)', () => {
+      it('includes the signature marker', () => {
+        const block = getAgentFrontDoorDE()
+        expect(block).toContain(AGENT_FRONT_DOOR_SIGNATURE)
+      })
+
+      it('includes German fetch instruction', () => {
+        const block = getAgentFrontDoorDE()
+        expect(block).toContain('git fetch --quiet')
+      })
+
+      it('is in German language', () => {
+        const block = getAgentFrontDoorDE()
+        expect(block).toContain('Captured Ideas (Gitty)')
+        expect(block).toContain('Dieses Repo ist mit der Gitty-App')
+      })
+    })
+
+    describe('hasAgentFrontDoor', () => {
+      it('returns true when signature is present', () => {
+        const content = 'Some content\n' + getAgentFrontDoor()
+        expect(hasAgentFrontDoor(content)).toBe(true)
+      })
+
+      it('returns false when signature is absent', () => {
+        const content = 'Some content without the marker'
+        expect(hasAgentFrontDoor(content)).toBe(false)
+      })
+
+      it('returns false for empty string', () => {
+        expect(hasAgentFrontDoor('')).toBe(false)
+      })
+    })
+
+    describe('appendAgentFrontDoor', () => {
+      it('appends block to non-empty content', () => {
+        const existing = '# My Custom Readme\n\nSome description'
+        const result = appendAgentFrontDoor(existing, false)
+        expect(result).toContain(existing)
+        expect(result).toContain(AGENT_FRONT_DOOR_SIGNATURE)
+        expect(result).toContain('git fetch --quiet')
+      })
+
+      it('returns block unchanged when already present (idempotent)', () => {
+        const block = getAgentFrontDoor()
+        const content = 'Preamble\n\n' + block + '\n\nEpilogue'
+        const result = appendAgentFrontDoor(content, false)
+        expect(result).toBe(content)
+      })
+
+      it('returns just the block for null/empty input', () => {
+        const result = appendAgentFrontDoor(null, false)
+        expect(result).toContain(AGENT_FRONT_DOOR_SIGNATURE)
+        expect(result).toContain('git fetch --quiet')
+      })
+
+      it('returns German block when isGerman=true', () => {
+        const result = appendAgentFrontDoor(null, true)
+        expect(result).toContain('Dieses Repo ist mit der Gitty-App')
+      })
+
+      it('idempotent: re-appending does not duplicate', () => {
+        let content = appendAgentFrontDoor(null, false)
+        const before = content
+        content = appendAgentFrontDoor(content, false)
+        expect(content).toBe(before)
+      })
+
+      it('preserves existing content when appending', () => {
+        const existing = '## Section 1\n\nContent here.'
+        const result = appendAgentFrontDoor(existing, false)
+        expect(result).toContain(existing)
+        expect(result).toContain(AGENT_FRONT_DOOR_SIGNATURE)
+      })
     })
   })
 })
