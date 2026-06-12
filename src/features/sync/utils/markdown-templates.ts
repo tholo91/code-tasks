@@ -15,14 +15,14 @@ export const MANAGED_END = '<!-- code-tasks:managed-end -->'
  * Standardized AI-Ready instruction header for captured-ideas files.
  * Follows the BMad "Living Document" standard for AI agent consumption.
  *
- * When `syncBranch` is provided, a branch-awareness line (point 7) is inserted
+ * When `syncBranch` is provided, a branch-awareness line (point 8) is inserted
  * inside the blockquote so AI agents know which branch holds the freshest file
  * and how to fetch it. When omitted, the header is identical to the unbranched
  * version (backward compatible).
  */
 export function getAIReadyHeader(username: string, syncBranch?: string): string {
   const branchLine = syncBranch
-    ? `> 7. 📍 This file is synced to branch \`${syncBranch}\` in this repo. To get the latest captures from another branch, run: \`git fetch && git show origin/${syncBranch}:captured-ideas-${username}.md\`.\n`
+    ? `> 8. 📍 This file is synced to branch \`${syncBranch}\` in this repo. To get the latest captures from another branch, run: \`git fetch && git show origin/${syncBranch}:captured-ideas-${username}.md\`.\n`
     : ''
 
   return `${HEADER_SIGNATURE}
@@ -32,12 +32,13 @@ export function getAIReadyHeader(username: string, syncBranch?: string): string 
 >
 > 1. This file is managed by [code-tasks](https://github.com/tholo91/code-tasks). Tasks between the \`managed-start\` and \`managed-end\` markers are auto-generated. Never edit them by hand.
 > 2. **First action every session:** scan the managed block for unchecked items (\`- [ ]\`). Print them back to the user **grouped by priority** (🔴 Important first, then ⚪ Normal), with a one-line suggested approach per task. Then wait for direction. Do not execute silently.
-> 3. **Decide per task:**
+> 3. **These are on-the-go captures** — quick sketches and loose thoughts typed on the go, not polished specs. If a task's intent, scope, or wording is ambiguous, **ask clarifying questions before acting**. Confirm your understanding of unclear items with the user instead of guessing.
+> 4. **Decide per task:**
 >    - **Trivial** (≤ 30 min, clearly bounded, no design choices) → execute, mark \`- [x]\`, append \`[Processed by: YourAgentName]\` to the task line, and add a brief note in the task body describing the change.
 >    - **Non-trivial** → propose turning it into a story or quick spec. Do not implement until the user confirms scope.
-> 4. Tasks use markdown checkboxes (\`- [ ]\` / \`- [x]\`). Priority: 🔴 Important or ⚪ Normal.
-> 5. Never delete or reorder tasks. Only the mobile app manages task lifecycle.
-> 6. You may add notes or context **below** the \`managed-end\` marker. They will not be overwritten.
+> 5. Tasks use markdown checkboxes (\`- [ ]\` / \`- [x]\`). Priority: 🔴 Important or ⚪ Normal.
+> 6. Never delete or reorder tasks. Only the mobile app manages task lifecycle.
+> 7. You may add notes or context **below** the \`managed-end\` marker. They will not be overwritten.
 ${branchLine}
 ---
 
@@ -322,4 +323,77 @@ export function buildFileContent(
 
   // Fallback: header exists but no separator found — append markers at end
   return existingContent.trimEnd() + '\n\n' + MANAGED_START + '\n\n' + tasksMarkdown + '\n\n' + MANAGED_END + '\n'
+}
+
+/**
+ * Signature string used to detect if the agent front-door block is already present.
+ */
+export const AGENT_FRONT_DOOR_SIGNATURE = '<!-- code-tasks:agent-front-door -->'
+
+/**
+ * Generates the shared agent front-door block (language-agnostic).
+ * This block instructs any agent (Claude Code, Cursor, Codex) to:
+ * 1. Fetch the latest from GitHub
+ * 2. Read the freshest captured-ideas-*.md file
+ * 3. Follow its built-in AI agent instructions
+ */
+export function getAgentFrontDoor(): string {
+  return `${AGENT_FRONT_DOOR_SIGNATURE}
+## Captured Ideas (Gitty)
+
+This repo is connected to the Gitty app for mobile task capture. Captures land in \`captured-ideas-<username>.md\`.
+
+**At the start of every session, before other work:**
+1. Run \`git fetch --quiet\` to get the latest without touching the working tree.
+2. Read the freshest \`captured-ideas-*.md\` — if the local copy may be behind, read the remote directly: \`git show origin/<branch>:captured-ideas-<username>.md\`.
+3. Follow the "Instructions for AI Agents" header inside that file: list the open \`- [ ]\` items grouped by priority and wait for direction. Do not execute silently.
+`
+}
+
+/**
+ * Generates the agent front-door block in German (for German-speaking repos).
+ */
+export function getAgentFrontDoorDE(): string {
+  return `${AGENT_FRONT_DOOR_SIGNATURE}
+## Captured Ideas (Gitty)
+
+Dieses Repo ist mit der Gitty-App für mobiles Task-Capturing verbunden. Captures landen in \`captured-ideas-<username>.md\`.
+
+**Zu Beginn jeder Session, vor allem anderen:**
+1. \`git fetch --quiet\` ausführen, um den neuesten Stand zu holen, ohne den Working Tree anzufassen.
+2. Die frischeste \`captured-ideas-*.md\` lesen — falls die lokale Kopie veraltet sein könnte, direkt remote: \`git show origin/<branch>:captured-ideas-<username>.md\`.
+3. Dem Header „Instructions for AI Agents" in der Datei folgen: offene \`- [ ]\` Punkte nach Priorität gruppiert auflisten und auf Anweisung warten. Nicht still ausführen.
+`
+}
+
+/**
+ * Checks whether content already contains the agent front-door block.
+ */
+export function hasAgentFrontDoor(content: string): boolean {
+  return content.includes(AGENT_FRONT_DOOR_SIGNATURE)
+}
+
+/**
+ * Idempotently appends the agent front-door block to existing content.
+ * If the block is already present (signature found), returns content unchanged.
+ * If absent, appends the block to the end of content.
+ */
+export function appendAgentFrontDoor(
+  existingContent: string | null,
+  isGerman: boolean = false,
+): string {
+  const block = isGerman ? getAgentFrontDoorDE() : getAgentFrontDoor()
+
+  // If no content yet, just return the block
+  if (existingContent === null || existingContent.trim() === '') {
+    return block + '\n'
+  }
+
+  // If block already present, return unchanged
+  if (hasAgentFrontDoor(existingContent)) {
+    return existingContent
+  }
+
+  // Append block to end
+  return existingContent.trimEnd() + '\n\n' + block + '\n'
 }

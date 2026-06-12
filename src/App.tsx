@@ -1,6 +1,6 @@
 import { Suspense, use, useMemo, useState, useEffect, useRef, useCallback, Component, type ReactNode } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { useSyncStore, selectSyncBranch, selectRepoSkipCi } from './stores/useSyncStore'
+import { useSyncStore, selectSyncBranch, selectRepoSkipCi, selectRepoClaudeCodeHintSeen } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AppHeader } from './components/layout/AppHeader'
@@ -22,6 +22,7 @@ import { SyncConflictBanner } from './features/sync/components/SyncConflictBanne
 import { BranchProtectionBanner } from './features/sync/components/BranchProtectionBanner'
 import { BranchFallbackPrompt } from './features/sync/components/BranchFallbackPrompt'
 import { SyncImportBanner } from './features/sync/components/SyncImportBanner'
+import { ClaudeCodeHintCard } from './features/sync/components/ClaudeCodeHintCard'
 import { useAutoSync } from './features/sync/hooks/useAutoSync'
 import { useRemoteChangeDetection } from './hooks/useRemoteChangeDetection'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
@@ -193,6 +194,8 @@ function AppContent() {
   const setRepoSortMode = useSyncStore((s) => s.setRepoSortMode)
   const setRepoSyncBranch = useSyncStore((s) => s.setRepoSyncBranch)
   const setSyncStatus = useSyncStore((s) => s.setSyncStatus)
+  const setRepoClaudeCodeHintSeen = useSyncStore((s) => s.setRepoClaudeCodeHintSeen)
+  const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
   const fallbackBranch = useSyncStore(
     selectedRepo ? selectSyncBranch(selectedRepo.fullName) : () => null
   )
@@ -233,6 +236,7 @@ function AppContent() {
     sha: string | null
     source?: 'repo-switch' | 'remote-update'
   } | null>(null)
+  const [showClaudeCodeHint, setShowClaudeCodeHint] = useState(false)
   const [diffSummary, setDiffSummary] = useState<ImportDiffSummary | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   const [pullToRefreshResult, setPullToRefreshResult] = useState<'up-to-date' | null>(null)
@@ -269,6 +273,13 @@ function AppContent() {
   }, [loadTasksFromIDB])
 
   useAutoSync()
+
+  // Show the one-time Claude Code hint after the first successful sync per repo (AC: #1, #3, #5)
+  useEffect(() => {
+    if (syncEngineStatus !== 'success' || !selectedRepo) return
+    const alreadySeen = selectRepoClaudeCodeHintSeen(selectedRepo.fullName)(useSyncStore.getState())
+    if (!alreadySeen) setShowClaudeCodeHint(true)
+  }, [syncEngineStatus, selectedRepo])
 
   // Pull to refresh handler
   const handlePullRefresh = useCallback(async () => {
@@ -727,6 +738,14 @@ function AppContent() {
           />
 
           <SyncConflictBanner />
+          {showClaudeCodeHint && (
+            <ClaudeCodeHintCard
+              onDismiss={() => {
+                if (selectedRepo) setRepoClaudeCodeHintSeen(selectedRepo.fullName, true)
+                setShowClaudeCodeHint(false)
+              }}
+            />
+          )}
           {importPrompt && (
             <SyncImportBanner
               repoFullName={importPrompt.repoFullName}

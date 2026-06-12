@@ -5,6 +5,8 @@ description: "List unprocessed captures from this repo's captured-ideas-*.md fil
 
 You are listing the open captures from this Gitty-managed repo. Captures live in `captured-ideas-{username}.md` files that the Gitty app pushes, sometimes to `main`, sometimes to a per-user `gitty/{username}` branch. Your job is to find the freshest one, parse the unchecked items, and print a clean, prioritized brief.
 
+Keep in mind: these captures are on-the-go sketches, typed quickly on a phone. They are loose thoughts, not polished specs. When an item is ambiguous, ask a clarifying question instead of interpreting it your way.
+
 An optional argument may be passed: a GitHub username (for example `/captured-ideas tholo91`). If provided, use that user directly and skip the disambiguation step.
 
 This command is strictly read-only. NEVER modify files, NEVER push, NEVER check out or create branches. Read remote content only via `git show origin/{branch}:{path}`. Use the Bash tool for every git operation below.
@@ -92,7 +94,22 @@ For each unchecked item, capture:
 - The body (the indented lines below the title, if any).
 - The priority: an item carries 🔴 (Important) or ⚪ (Normal). If an item has NO priority emoji (legacy or hand-edited), treat it as ⚪ Normal. Never drop an item and never error just because its priority marker is missing.
 
-## Step 6: Output
+## Step 6: Detect the planning framework (read-only)
+
+Before printing, figure out which planning framework this repo uses, so your per-item suggestions can route into the right workflow. Check for these indicators in the working tree (a simple `ls` / glob check is enough, no git commands needed):
+
+- `.planning/` or `.gsd/` directory → **GSD**
+- `_bmad/` or `_bmad-output/` directory → **BMAD**
+- `.claude/skills/superpowers*` → **Superpowers**
+- None of the above → no framework
+
+Resolution:
+
+- Exactly one match → use it. Include this line near the top of your output: `Detected framework: <name> — non-trivial items should be routed through its workflow (e.g. a story, spec, or phase).`
+- Zero matches → no framework line, suggest plain implementation steps.
+- MORE THAN ONE match, or you are unsure → do NOT guess. Ask the user once: `Which framework does this repo use for planning — GSD, BMAD, something else, or none?` Use the answer for your suggestions.
+
+## Step 7: Output
 
 If there are ZERO unchecked items, print exactly one line (do not exit silently):
 
@@ -109,7 +126,8 @@ Found on branch `<branch>` (last updated <relative-time>)
 For each item print:
 - The title.
 - The body (if present), trimmed.
-- A one-line suggested approach. This is your own reasoning, one sentence, lightweight: how you would tackle it. Do not write a spec, do not implement, do not propose a full plan. Just a single practical next step.
+- A one-line suggested approach. This is your own reasoning, one sentence, lightweight: how you would tackle it. If a framework was detected in Step 6, route non-trivial items into it (for example "turn into a BMAD story" or "add as a GSD phase"). Do not write a spec, do not implement, do not propose a full plan. Just a single practical next step.
+- EXCEPTION for ambiguous items: captures are quick sketches typed on the go. If you cannot tell what an item actually means (unclear intent, scope, or wording), do NOT invent an approach. Instead print one concrete clarifying question, prefixed with `❓ Unclear:`. Example: `❓ Unclear: should this apply to all repos or only the current one?`
 
 **Token guard:** if there are MORE THAN 10 unchecked items, generate a suggested approach for only the FIRST 5 items. List the remaining titles without a suggestion, then end with this line:
 
@@ -121,6 +139,6 @@ where `{N}` is the count of items beyond the first 5.
 
 ## Rules recap
 
-- Read-only and idempotent: only `git fetch`, `git branch -r`, `git ls-tree`, `git log`, and `git show`. No writes, no pushes, no checkouts.
+- Read-only and idempotent: only `git fetch`, `git branch -r`, `git ls-tree`, `git log`, `git show`, and directory listing for framework detection. No writes, no pushes, no checkouts.
 - Never invent captures. If a step finds nothing, say so with the exact copy above.
 - Keep all copy plain: commas and periods, no em dashes.
