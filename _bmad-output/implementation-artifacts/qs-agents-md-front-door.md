@@ -1,8 +1,10 @@
 # Quick Spec — Auto-emit tool-agnostic agent "front door" on repo connect
 
-Status: Draft
+Status: Implementation Complete
 Created: 2026-06-12
 Type: Quick Spec
+Completed: 2026-06-12
+Commit: f458694
 
 ## Problem
 
@@ -41,6 +43,26 @@ When the Gitty app first creates/syncs `captured-ideas-<user>.md` in a repo, it 
 - `src/features/sync/utils/markdown-templates.ts` — add `getAgentFrontDoor()` + signature marker + idempotent append helper.
 - Tests: `src/features/sync/utils/markdown-templates.test.ts` (block generation + idempotent append), `src/services/github/sync-service.test.ts` (files emitted on first connect, not duplicated on re-sync).
 
-## Notes
+## Implementation Notes
 
-The manual stop-gap is already applied to Thomas's 5 connected repos (brief-nach-berlin, bremen-rauchfrei, surv.ai, thomas-lorenz, code-tasks). This spec generalizes that to every user automatically.
+### What Was Built
+
+1. **markdown-templates.ts:** Added 4 new exported functions:
+   - `getAgentFrontDoor()` — generates English front-door block with signature marker
+   - `getAgentFrontDoorDE()` — generates German variant
+   - `hasAgentFrontDoor(content)` — idempotency check
+   - `appendAgentFrontDoor(content, isGerman)` — safely appends block (idempotent, preserves existing content)
+
+2. **sync-service.ts:** Added 1 new exported function:
+   - `ensureAgentFrontDoor(octokit, owner, repo, branch)` — fires after every sync, creates/updates AGENTS.md and CLAUDE.md with front-door block
+   - Language auto-detection: German repos (matched by name) get DE block
+   - Fire-and-forget async (errors swallowed — secondary goal)
+   - Called in both `syncAllRepoTasksOnce` and `syncPendingTasksOnce`
+
+3. **Tests:** 10 new test cases covering block generation, append logic, idempotency (no duplication on re-sync)
+
+4. **Test Status:** All 579 tests passing; build verified (PWA v1.2.0)
+
+### Deployment Notes
+
+The manual stop-gap (CLAUDE.md + AGENTS.md added to Thomas's 5 repos) is already pushed (commits 4c8afc4, f6e8e44, 1a36f66, 93ebac9, 04b5ce8). This Quick Spec generalizes the pattern to all future users automatically via the sync pipeline — no manual file creation needed after this ship.
