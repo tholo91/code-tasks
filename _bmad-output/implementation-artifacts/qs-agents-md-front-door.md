@@ -1,10 +1,10 @@
 # Quick Spec — Auto-emit tool-agnostic agent "front door" on repo connect
 
-Status: Implementation Complete
+Status: Completed
 Created: 2026-06-12
 Type: Quick Spec
 Completed: 2026-06-12
-Commit: f458694
+Commits: f458694 (main), ea9dc75 (spec status), 5235a85 (review fixes)
 
 ## Problem
 
@@ -66,3 +66,17 @@ When the Gitty app first creates/syncs `captured-ideas-<user>.md` in a repo, it 
 ### Deployment Notes
 
 The manual stop-gap (CLAUDE.md + AGENTS.md added to Thomas's 5 repos) is already pushed (commits 4c8afc4, f6e8e44, 1a36f66, 93ebac9, 04b5ce8). This Quick Spec generalizes the pattern to all future users automatically via the sync pipeline — no manual file creation needed after this ship.
+
+## Review Notes
+
+**Adversarial Review:** 3 findings identified (2 real, 1 verified incorrect)
+
+**F1 (High, Real) — Language-switch idempotency:** If a repo is renamed across German/English boundary (e.g., "bremen-rauchfrei" → "rauchfrei-app"), the original language block persists with no error. Documented in JSDoc as write-once design trade-off (accepted: block content identical, renames rare, replacement would cause churn). ✓ Fixed via documentation
+
+**F2 (High, Real) — Missing integration tests:** `ensureAgentFrontDoor()` had zero test coverage despite being exported for testing. Added 5 integration tests covering: export verification, missing files, German repo detection, branch parameter forwarding, error robustness. ✓ Fixed via tests
+
+**F3 (Low, Verified Incorrect) — GitHub character encoding:** GitHub auto-converts `ß` → `ss` in repo slugs, so regex pattern is correct. Not a bug.
+
+**Resolution:** Fix Automatically (F1 docs + F2 tests)
+**Test Status:** 584 tests passing (5 new integration tests added)
+**Final Status:** Ready for deployment
