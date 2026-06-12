@@ -69,6 +69,7 @@ Object.defineProperty(globalThis, 'sessionStorage', { value: sessionStorageMock 
 // Import after mocks
 import {
   syncPendingTasks,
+  syncAllRepoTasks,
   getFileContent,
   commitTasks,
   getScopedFileName,
@@ -740,6 +741,50 @@ describe('sync-service', () => {
       expect(result.remoteSha).toBe('new-remote-sha')
       // Must NOT overwrite the remote on conflict
       expect(mockOctokit.rest.repos.createOrUpdateFileContents).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('syncAllRepoTasks', () => {
+    it('excludes archived tasks from the commit message counts', async () => {
+      // 1 active + 1 completed + 1 archived-completed. The archived task is
+      // omitted from the file, so the counts must not include it.
+      const activeTask = createTask({
+        id: 'active-1',
+        title: 'Active task',
+        body: 'still open',
+        isCompleted: false,
+      })
+      const completedTask = createTask({
+        id: 'completed-1',
+        title: 'Completed task',
+        body: 'done',
+        isCompleted: true,
+        completedAt: '2026-03-14T12:00:00.000Z',
+      })
+      const archivedTask = createTask({
+        id: 'archived-1',
+        title: 'Archived task',
+        body: '[Archived] no longer relevant',
+        isCompleted: true,
+        completedAt: '2026-03-14T13:00:00.000Z',
+      })
+      useSyncStore.setState({ tasks: [activeTask, completedTask, archivedTask] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({})
+
+      await syncAllRepoTasks()
+
+      const call =
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0]
+      // 2 tasks counted (1 active, 1 completed) — archived excluded
+      expect(call.message).toBe(
+        'sync: 2 tasks (1 active, 1 completed) via code-tasks',
+      )
+
+      // Sanity: archived task is not in the written file content
+      const content = decodeURIComponent(escape(atob(call.content)))
+      expect(content).not.toContain('**Archived task**')
     })
   })
 

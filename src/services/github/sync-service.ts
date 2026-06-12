@@ -408,10 +408,12 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   // Full rebuild from all current tasks
   const content = buildFullFileContent(repoTasks, user.login, syncBranch)
 
-  // Descriptive commit message with task counts
-  const activeCount = repoTasks.filter(t => !t.isCompleted).length
-  const completedCount = repoTasks.filter(t => t.isCompleted).length
-  const total = repoTasks.length
+  // Descriptive commit message with task counts — exclude archived tasks so
+  // the counts match the file content written by buildFullFileContent().
+  const countedTasks = repoTasks.filter(t => !t.body.startsWith('[Archived] '))
+  const activeCount = countedTasks.filter(t => !t.isCompleted).length
+  const completedCount = countedTasks.filter(t => t.isCompleted).length
+  const total = countedTasks.length
   const skipCiSuffix = options.skipCi ? ' [skip ci]' : ''
   const commitMessage = total > 0
     ? `sync: ${total} tasks (${activeCount} active, ${completedCount} completed) via code-tasks${skipCiSuffix}`
