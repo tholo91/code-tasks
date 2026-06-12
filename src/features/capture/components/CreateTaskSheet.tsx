@@ -29,7 +29,6 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const notesRef = useRef<HTMLTextAreaElement>(null)
   const submitRef = useRef<HTMLButtonElement>(null)
-  const sheetRef = useRef<HTMLDivElement>(null)
 
   // Persist draft to the store on every change so an accidental backdrop tap
   // or drag-down won't lose the in-progress capture. Scoped per repo.
@@ -119,22 +118,6 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleSubmit])
 
-  // iOS visualViewport keyboard fix
-  useEffect(() => {
-    const viewport = window.visualViewport
-    if (!viewport) return
-
-    const handleViewportResize = () => {
-      const offsetFromBottom = window.innerHeight - viewport.height - viewport.offsetTop
-      if (sheetRef.current) {
-        sheetRef.current.style.paddingBottom = `${Math.max(0, offsetFromBottom)}px`
-      }
-    }
-
-    viewport.addEventListener('resize', handleViewportResize)
-    return () => viewport.removeEventListener('resize', handleViewportResize)
-  }, [])
-
   // Auto-expand title textarea
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTitle(e.target.value)
@@ -160,7 +143,6 @@ export function CreateTaskSheet({ onClose, onTaskCreated }: CreateTaskSheetProps
 
   return (
     <BottomSheet
-      ref={sheetRef}
       onClose={handlePreserveClose}
       backdropBlur
       ariaLabel="Create new task"
