@@ -114,6 +114,12 @@ export function formatTaskAsMarkdown(task: Task): string {
     line += ` [Processed by: ${task.processedBy}]`
   }
 
+  // Stable identity anchor as an HTML comment — invisible in rendered markdown
+  // (and never surfaced in the mobile UI, which renders from parsed Task objects,
+  // not raw text). Lets the merge match a task across reformatting, reordering,
+  // and renaming by an AI agent instead of guessing by title.
+  line += ` <!-- ct:${task.id} -->`
+
   if (task.body) {
     // Indent EVERY line of a multiline body with 2 spaces so the parser
     // (which strips a 2-space prefix per line) round-trips all lines, not
@@ -135,6 +141,8 @@ export function formatTasksAsMarkdown(tasks: Task[]): string {
 }
 
 export interface ParsedMarkdownTask {
+  /** Stable id from the `<!-- ct:ID -->` anchor, null for legacy files without it */
+  id: string | null
   title: string
   body: string
   createdAt: string | null
@@ -188,6 +196,11 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
     const isCompleted = checkbox === 'x'
     const isImportant = meta.includes('Important')
 
+    // Stable identity anchor written by formatTaskAsMarkdown. Absent in legacy
+    // files — those fall back to title matching during merge.
+    const idMatch = meta.match(/<!--\s*ct:([^\s]+?)\s*-->/)
+    const id = idMatch ? idMatch[1] : null
+
     const createdAt = normalizeDate(extractBracketValue(meta, 'Created'))
     const updatedAt = normalizeDate(extractBracketValue(meta, 'Updated'))
     const completedAt = normalizeDate(extractBracketValue(meta, 'Completed'))
@@ -204,6 +217,7 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
     }
 
     tasks.push({
+      id,
       title,
       body: bodyLines.join('\n').trim(),
       createdAt,

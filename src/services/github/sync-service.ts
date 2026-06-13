@@ -636,7 +636,11 @@ export async function fetchRemoteTasksForRepo(
       }
 
       return {
-        id: generateUUID(),
+        // Reuse the stable id from the file's `<!-- ct:ID -->` anchor so remote
+        // tasks keep the same identity as their local counterparts across the
+        // round-trip. Legacy files without the anchor get a fresh UUID and fall
+        // back to title matching during merge.
+        id: parsedTask.id ?? generateUUID(),
         username,
         repoFullName,
         title: parsedTask.title,

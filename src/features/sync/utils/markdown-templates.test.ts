@@ -176,7 +176,7 @@ describe('markdown-templates', () => {
       const task = createTask({ body: '' })
       const result = formatTaskAsMarkdown(task)
       expect(result).toBe(
-        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal)',
+        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal) <!-- ct:test-id-1 -->',
       )
     })
 
@@ -184,7 +184,7 @@ describe('markdown-templates', () => {
       const task = createTask()
       const result = formatTaskAsMarkdown(task)
       expect(result).toBe(
-        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal)\n  Users are seeing an error on the login page',
+        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal) <!-- ct:test-id-1 -->\n  Users are seeing an error on the login page',
       )
     })
 
@@ -671,6 +671,36 @@ ${MANAGED_END}
       const content = `- [ ] **Fix login** ([Created: 2026-03-14]) (Priority: ⚪ Normal)`
       const tasks = parseTasksFromMarkdown(content)
       expect(tasks[0].processedBy).toBeNull()
+    })
+  })
+
+  describe('parseTasksFromMarkdown — stable id anchor', () => {
+    it('extracts the id from a <!-- ct:ID --> anchor', () => {
+      const content = `- [ ] **Fix login** ([Created: 2026-03-14]) (Priority: ⚪ Normal) <!-- ct:abc-123 -->`
+      const tasks = parseTasksFromMarkdown(content)
+      expect(tasks[0].id).toBe('abc-123')
+    })
+
+    it('returns null id for legacy lines without an anchor', () => {
+      const content = `- [ ] **Fix login** ([Created: 2026-03-14]) (Priority: ⚪ Normal)`
+      const tasks = parseTasksFromMarkdown(content)
+      expect(tasks[0].id).toBeNull()
+    })
+
+    it('the anchor does not leak into title, processedBy or importance', () => {
+      const content = `- [x] **Fix login** ([Created: 2026-03-14]) (Priority: 🔴 Important) [Processed by: Claude] <!-- ct:xyz-9 -->`
+      const tasks = parseTasksFromMarkdown(content)
+      expect(tasks[0].title).toBe('Fix login')
+      expect(tasks[0].processedBy).toBe('Claude')
+      expect(tasks[0].isImportant).toBe(true)
+      expect(tasks[0].id).toBe('xyz-9')
+    })
+
+    it('round-trip: format then parse preserves the task id', () => {
+      const task = createTask({ id: 'stable-uuid-7' })
+      const markdown = formatTaskAsMarkdown(task)
+      const parsed = parseTasksFromMarkdown(markdown)
+      expect(parsed[0].id).toBe('stable-uuid-7')
     })
   })
 
