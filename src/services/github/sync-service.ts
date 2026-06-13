@@ -477,8 +477,9 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
     }
   }
 
-  // Full rebuild from all current tasks
-  const content = buildFullFileContent(repoTasks, user.login, syncBranch)
+  // Full rebuild from all current tasks. Pass the existing remote content so
+  // agent notes below the managed-end marker survive the rebuild (header rule #7).
+  const content = buildFullFileContent(repoTasks, user.login, syncBranch, existing?.content)
 
   // Descriptive commit message with task counts — exclude archived tasks so
   // the counts match the file content written by buildFullFileContent().

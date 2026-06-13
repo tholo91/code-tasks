@@ -224,8 +224,32 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
  * + completed tasks (sorted by completedAt desc). Deleted tasks are absent
  * because they're not in the input array.
  */
-export function buildFullFileContent(tasks: Task[], username: string, syncBranch?: string): string {
+export function buildFullFileContent(
+  tasks: Task[],
+  username: string,
+  syncBranch?: string,
+  existingContent?: string | null,
+): string {
   const header = getAIReadyHeader(username, syncBranch)
+
+  // Preserve anything the agent wrote BELOW the managed-end marker (header
+  // rule #7 promises it is never overwritten). The full rebuild regenerates
+  // header + managed block from scratch, so without this the agent's notes
+  // would be silently dropped on the next mobile sync. Matches buildFileContent
+  // Case 4 (`... + MANAGED_END + after`).
+  let afterSection = '\n'
+  if (
+    existingContent &&
+    existingContent.includes(MANAGED_START) &&
+    existingContent.includes(MANAGED_END)
+  ) {
+    try {
+      const { after } = splitAtMarkers(existingContent)
+      if (after.trim().length > 0) afterSection = after
+    } catch {
+      // Malformed markers — keep the default trailing newline.
+    }
+  }
 
   // Archived tasks (body starts with "[Archived] ") are excluded from push
   // to prevent zombie loops — they live locally as a record only.
@@ -242,7 +266,7 @@ export function buildFullFileContent(tasks: Task[], username: string, syncBranch
     )
 
   if (active.length === 0 && completed.length === 0) {
-    return header + '\n> No active tasks. Capture new ideas with [code-tasks](https://github.com/tholo91/code-tasks).\n\n' + MANAGED_END + '\n'
+    return header + '\n> No active tasks. Capture new ideas with [code-tasks](https://github.com/tholo91/code-tasks).\n\n' + MANAGED_END + afterSection
   }
 
   let managed = ''
@@ -256,7 +280,7 @@ export function buildFullFileContent(tasks: Task[], username: string, syncBranch
     managed += '\n## Completed\n\n' + formatTasksAsMarkdown(completed)
   }
 
-  return header + managed + '\n\n' + MANAGED_END + '\n'
+  return header + managed + '\n\n' + MANAGED_END + afterSection
 }
 
 /**

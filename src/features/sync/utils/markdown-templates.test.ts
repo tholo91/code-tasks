@@ -593,6 +593,31 @@ Some content without a separator line
       const result = buildFullFileContent(tasks, 'testuser')
       expect(result).not.toContain('📍')
     })
+
+    it('preserves agent notes below managed-end when existing content is passed', () => {
+      const tasks = [createTask({ id: '1', title: 'Active task', body: '' })]
+      const existing = buildFullFileContent(tasks, 'testuser')
+      const withNote = existing.replace(
+        MANAGED_END + '\n',
+        MANAGED_END + '\n\n## Agent Notes\n\nClaude: estimated 2h for this task.\n',
+      )
+
+      const rebuilt = buildFullFileContent(tasks, 'testuser', undefined, withNote)
+
+      expect(rebuilt).toContain('## Agent Notes')
+      expect(rebuilt).toContain('Claude: estimated 2h for this task.')
+      // Note must live AFTER the managed-end marker, not inside the managed block.
+      expect(rebuilt.indexOf('## Agent Notes')).toBeGreaterThan(rebuilt.indexOf(MANAGED_END))
+    })
+
+    it('does not duplicate the managed block when rebuilding with existing content', () => {
+      const tasks = [createTask({ id: '1', title: 'Active task', body: '' })]
+      const existing = buildFullFileContent(tasks, 'testuser')
+      const rebuilt = buildFullFileContent(tasks, 'testuser', undefined, existing)
+
+      expect(rebuilt.split(MANAGED_START).length - 1).toBe(1)
+      expect(rebuilt.split(MANAGED_END).length - 1).toBe(1)
+    })
   })
 
   describe('parseTasksFromMarkdown', () => {
