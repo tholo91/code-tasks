@@ -42,9 +42,16 @@ describe('computeImportDiff', () => {
     expect(diff.updatedWithNotes).toBe(1)
   })
 
-  it('does NOT count updatedWithNotes if local is pending (F3 guard)', () => {
+  it('counts updatedWithNotes for a pending task when the agent added a distinct note (preserved by append)', () => {
     const local = [makeTask({ title: 'Task A', body: 'short', syncStatus: 'pending' })]
     const remote = [makeTask({ title: 'Task A', body: 'much longer body with notes' })]
+    const diff = computeImportDiff(local, remote)
+    expect(diff.updatedWithNotes).toBe(1)
+  })
+
+  it('does NOT count updatedWithNotes for a pending task when remote note is already contained locally', () => {
+    const local = [makeTask({ title: 'Task A', body: 'my edit\n\n---\nAgent note: done', syncStatus: 'pending' })]
+    const remote = [makeTask({ title: 'Task A', body: 'done' })]
     const diff = computeImportDiff(local, remote)
     expect(diff.updatedWithNotes).toBe(0)
   })
@@ -56,7 +63,7 @@ describe('computeImportDiff', () => {
     expect(diff.processedByAdded).toBe(1)
   })
 
-  it('counts archived for local synced tasks missing from remote', () => {
+  it('counts archived (kept, not deleted) for local synced tasks missing from remote', () => {
     const local = [makeTask({ title: 'Task A', syncStatus: 'synced' })]
     const remote: Task[] = []
     const diff = computeImportDiff(local, remote)
@@ -110,13 +117,17 @@ describe('isAllZero', () => {
     expect(isAllZero({ completedByAgent: 0, updatedWithNotes: 0, processedByAdded: 0, archived: 0, newFromRemote: 0, localSafeCount: 0 })).toBe(true)
   })
 
-  it('returns false when any change count is non-zero', () => {
+  it('returns false when any actionable change count is non-zero', () => {
     expect(isAllZero({ completedByAgent: 1, updatedWithNotes: 0, processedByAdded: 0, archived: 0, newFromRemote: 0, localSafeCount: 0 })).toBe(false)
-    expect(isAllZero({ completedByAgent: 0, updatedWithNotes: 0, processedByAdded: 0, archived: 1, newFromRemote: 0, localSafeCount: 0 })).toBe(false)
+    expect(isAllZero({ completedByAgent: 0, updatedWithNotes: 0, processedByAdded: 0, archived: 0, newFromRemote: 1, localSafeCount: 0 })).toBe(false)
   })
 
   it('returns true when only localSafeCount is non-zero (local state, not a remote change)', () => {
     expect(isAllZero({ completedByAgent: 0, updatedWithNotes: 0, processedByAdded: 0, archived: 0, newFromRemote: 0, localSafeCount: 3 })).toBe(true)
+  })
+
+  it('returns true when only archived (vanished-but-kept) is non-zero — safe silent self-heal, no banner', () => {
+    expect(isAllZero({ completedByAgent: 0, updatedWithNotes: 0, processedByAdded: 0, archived: 2, newFromRemote: 0, localSafeCount: 0 })).toBe(true)
   })
 })
 
@@ -144,24 +155,29 @@ describe('buildMergedTaskList', () => {
     expect(result[0].body).toBe('longer body with agent notes')
   })
 
-  it('keeps local body when local is pending even if remote is longer', () => {
+  it('never overwrites a pending local edit; preserves the agent note by appending it', () => {
     const local = makeTask({ title: 'Task', body: 'my local edit', syncStatus: 'pending' })
-    const remote = makeTask({ title: 'Task', body: 'much longer remote body that should not win' })
+    const remote = makeTask({ title: 'Task', body: 'agent note from desktop' })
     const result = buildMergedTaskList([local], [remote])
-    expect(result[0].body).toBe('my local edit')
+    expect(result[0].body).toContain('my local edit')
+    expect(result[0].body).toContain('agent note from desktop')
+    // Local edit comes first; agent note is appended below a divider.
+    expect(result[0].body.indexOf('my local edit')).toBeLessThan(result[0].body.indexOf('agent note from desktop'))
   })
 
-  it('archives local synced tasks missing from remote with "[Archived] " prefix', () => {
-    const local = makeTask({ title: 'Deleted on remote', syncStatus: 'synced', body: 'original body' })
-    const result = buildMergedTaskList([local], [])
-    expect(result[0].isCompleted).toBe(true)
-    expect(result[0].body).toBe('[Archived] original body')
+  it('appending the agent note is idempotent across repeated merges', () => {
+    const local = makeTask({ title: 'Task', body: 'my local edit', syncStatus: 'pending' })
+    const remote = makeTask({ title: 'Task', body: 'agent note' })
+    const once = buildMergedTaskList([local], [remote])[0]
+    const twice = buildMergedTaskList([once], [remote])[0]
+    expect(twice.body).toBe(once.body)
   })
 
-  it('does not double-prefix "[Archived] " if already archived', () => {
-    const local = makeTask({ title: 'Already archived', syncStatus: 'synced', body: '[Archived] original body' })
+  it('KEEPS local synced tasks missing from remote untouched (no archive, no silent complete)', () => {
+    const local = makeTask({ title: 'Vanished on remote', syncStatus: 'synced', body: 'original body', isCompleted: false })
     const result = buildMergedTaskList([local], [])
-    expect(result[0].body).toBe('[Archived] original body')
+    expect(result).toHaveLength(1)
+    expect(result[0]).toEqual(local)
   })
 
   it('adds remote-only tasks with synced status', () => {
@@ -179,14 +195,26 @@ describe('buildMergedTaskList', () => {
     expect(result[0].isCompleted).toBe(true)
   })
 
-  it('first-occurrence wins when duplicate titles exist', () => {
+  it('first-occurrence wins when duplicate titles exist; the unmatched twin is kept untouched', () => {
     const local1 = makeTask({ id: 'id-1', title: 'Duplicate', syncStatus: 'synced', order: 0 })
-    const local2 = makeTask({ id: 'id-2', title: 'Duplicate', syncStatus: 'synced', order: 1 })
+    const local2 = makeTask({ id: 'id-2', title: 'Duplicate', syncStatus: 'synced', order: 1, isCompleted: false })
     const remote = makeTask({ title: 'Duplicate', isCompleted: true, completedAt: '2026-03-18T00:00:00.000Z' })
     const result = buildMergedTaskList([local1, local2], [remote])
-    // First local task should be updated, second archived (no match since remote was consumed)
+    // First local task is updated; the second has no remote to match and is kept as-is (not archived).
     expect(result.find((t) => t.id === 'id-1')?.isCompleted).toBe(true)
-    expect(result.find((t) => t.id === 'id-2')?.body).toMatch(/^\[Archived\]/)
+    expect(result.find((t) => t.id === 'id-2')?.isCompleted).toBe(false)
+  })
+
+  it('matches by stable id even when the agent renamed the task', () => {
+    const local = makeTask({ id: 'shared-id', title: 'Fix login bug', syncStatus: 'synced' })
+    const remote = makeTask({ id: 'shared-id', title: 'Fix OAuth redirect', isCompleted: true, completedAt: '2026-03-18T00:00:00.000Z' })
+    const result = buildMergedTaskList([local], [remote])
+    // One task, not a duplicate + a ghost.
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('shared-id')
+    expect(result[0].isCompleted).toBe(true)
+    // Synced local adopts the agent's rename.
+    expect(result[0].title).toBe('Fix OAuth redirect')
   })
 
   it('preserves local id, order, isImportant, createdAt, syncStatus for matched tasks', () => {
@@ -235,12 +263,12 @@ describe('buildMergedTaskList', () => {
 })
 
 describe('buildImportFeedbackMessage', () => {
-  it('shows completed tasks and safe ideas', () => {
+  it('shows completed tasks and safe ideas (vanished-but-kept tasks are not counted as completed)', () => {
     const msg = buildImportFeedbackMessage({
       completedByAgent: 2, archived: 1, updatedWithNotes: 0,
       processedByAdded: 0, newFromRemote: 0, localSafeCount: 3,
     })
-    expect(msg).toBe('3 tasks completed. Your 3 ideas are safe.')
+    expect(msg).toBe('2 tasks completed. Your 3 ideas are safe.')
   })
 
   it('shows new from remote', () => {

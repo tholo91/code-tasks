@@ -4,6 +4,7 @@ export interface ImportDiffSummary {
   completedByAgent: number
   updatedWithNotes: number
   processedByAdded: number
+  /** Synced tasks missing from remote that were KEPT (not archived). Self-heal on next push. */
   archived: number
   newFromRemote: number
   localSafeCount: number
@@ -11,13 +12,71 @@ export interface ImportDiffSummary {
 
 const titleKey = (t: Task) => t.title.trim().toLowerCase()
 
+/** Divider used when preserving an agent's remote note on a locally-edited task. */
+const AGENT_NOTE_DIVIDER = '\n\n---\nAgent note: '
+
 /**
- * Computes a summary of what would change if the remote tasks were merged
- * into the local task list. Pure function — no side effects.
+ * Matches remote tasks to local tasks by stable id first, then by title for any
+ * leftovers. The id anchor (`<!-- ct:ID -->`) survives an AI agent reformatting,
+ * reordering, or renaming a task; title matching is the legacy/no-anchor fallback.
+ *
+ * Pure: returns a map from local id → matched remote task, plus the remote tasks
+ * that matched nothing (genuinely new from remote). Shared by computeImportDiff
+ * and buildMergedTaskList so the preview and the merge can never disagree.
+ */
+function matchRemoteToLocal(
+  localTasks: Task[],
+  remoteTasks: Task[],
+): { matchByLocalId: Map<string, Task>; remoteOnly: Task[] } {
+  const remoteById = new Map<string, Task>()
+  for (const r of remoteTasks) {
+    if (!remoteById.has(r.id)) remoteById.set(r.id, r)
+  }
+
+  const remoteByTitle = new Map<string, Task[]>()
+  for (const r of remoteTasks) {
+    const k = titleKey(r)
+    const queue = remoteByTitle.get(k)
+    if (queue) queue.push(r)
+    else remoteByTitle.set(k, [r])
+  }
+
+  const consumed = new Set<Task>()
+  const matchByLocalId = new Map<string, Task>()
+
+  // Pass 1 — authoritative id match.
+  for (const local of localTasks) {
+    const r = remoteById.get(local.id)
+    if (r && !consumed.has(r)) {
+      consumed.add(r)
+      matchByLocalId.set(local.id, r)
+    }
+  }
+
+  // Pass 2 — title match for locals still unmatched (legacy files, or a task
+  // captured on two devices before either had an id).
+  for (const local of localTasks) {
+    if (matchByLocalId.has(local.id)) continue
+    const queue = remoteByTitle.get(titleKey(local))
+    const r = queue?.find((x) => !consumed.has(x))
+    if (r) {
+      consumed.add(r)
+      matchByLocalId.set(local.id, r)
+    }
+  }
+
+  const remoteOnly = remoteTasks.filter((r) => !consumed.has(r))
+  return { matchByLocalId, remoteOnly }
+}
+
+/**
+ * Computes a summary of what would change if the remote tasks were merged into
+ * the local task list. Pure function — no side effects. Mirrors the exact merge
+ * decisions in buildMergedTaskList so isAllZero is a faithful "nothing to import"
+ * predicate for the phantom-banner guard.
  */
 export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): ImportDiffSummary {
-  const remoteMap = new Map(remoteTasks.map((t) => [titleKey(t), t]))
-  const consumedRemoteKeys = new Set<string>()
+  const { matchByLocalId, remoteOnly } = matchRemoteToLocal(localTasks, remoteTasks)
 
   let completedByAgent = 0
   let updatedWithNotes = 0
@@ -25,39 +84,41 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
   let archived = 0
 
   for (const local of localTasks) {
-    const key = titleKey(local)
-    const remote = !consumedRemoteKeys.has(key) ? remoteMap.get(key) : undefined
+    const remote = matchByLocalId.get(local.id)
 
-    if (remote) {
-      consumedRemoteKeys.add(key)
-      if (remote.isCompleted && !local.isCompleted) {
-        completedByAgent++
-      }
-      if (
-        remote.body.length > local.body.length &&
-        local.syncStatus === 'synced'
-      ) {
-        updatedWithNotes++
-      }
-      if (remote.processedBy && !local.processedBy) {
-        processedByAdded++
-      }
-    } else if (local.syncStatus === 'synced') {
-      archived++
+    if (!remote) {
+      // Vanished from remote. We keep it (no archiving) — count it only so the
+      // store can surface it later if wanted; it does NOT drive the banner.
+      if (local.syncStatus === 'synced') archived++
+      continue
     }
-  }
 
-  let newFromRemote = 0
-  const localTitleSet = new Set(localTasks.map(titleKey))
-  for (const remote of remoteTasks) {
-    if (!localTitleSet.has(titleKey(remote))) {
-      newFromRemote++
+    if (remote.isCompleted && !local.isCompleted) completedByAgent++
+
+    if (local.syncStatus === 'synced') {
+      if (remote.body !== local.body) updatedWithNotes++
+    } else if (
+      remote.body &&
+      remote.body !== local.body &&
+      !local.body.includes(remote.body)
+    ) {
+      // Pending task: the agent's note would be appended (preserved), not dropped.
+      updatedWithNotes++
     }
+
+    if (remote.processedBy && !local.processedBy) processedByAdded++
   }
 
   const localSafeCount = localTasks.filter((t) => t.syncStatus === 'pending').length
 
-  return { completedByAgent, updatedWithNotes, processedByAdded, archived, newFromRemote, localSafeCount }
+  return {
+    completedByAgent,
+    updatedWithNotes,
+    processedByAdded,
+    archived,
+    newFromRemote: remoteOnly.length,
+    localSafeCount,
+  }
 }
 
 /**
@@ -67,9 +128,8 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
 export function buildImportFeedbackMessage(diff: ImportDiffSummary): string {
   const parts: string[] = []
 
-  const totalCompleted = diff.completedByAgent + diff.archived
-  if (totalCompleted > 0) {
-    parts.push(`${totalCompleted} task${totalCompleted === 1 ? '' : 's'} completed`)
+  if (diff.completedByAgent > 0) {
+    parts.push(`${diff.completedByAgent} task${diff.completedByAgent === 1 ? '' : 's'} completed`)
   }
   if (diff.updatedWithNotes > 0) {
     parts.push(`${diff.updatedWithNotes} updated with notes`)
@@ -88,90 +148,96 @@ export function buildImportFeedbackMessage(diff: ImportDiffSummary): string {
 }
 
 /**
- * Returns true if all counts in the diff summary are zero.
+ * Returns true if the diff carries no change the user needs to act on.
+ *
+ * `archived` (synced tasks missing from remote, which we KEEP) is intentionally
+ * excluded: keeping a vanished task is a safe, silent self-heal — it re-pushes on
+ * the next sync — so it must not raise a banner on its own.
  */
 export function isAllZero(diff: ImportDiffSummary): boolean {
   return (
     diff.completedByAgent === 0 &&
     diff.updatedWithNotes === 0 &&
     diff.processedByAdded === 0 &&
-    diff.archived === 0 &&
     diff.newFromRemote === 0
   )
 }
 
 /**
- * Builds a merged task list by applying additive merge rules:
- * - Matched tasks: update completion, processedBy, and body (if remote is longer and local is synced)
- * - Local-only pending tasks: preserved as-is (unpushed ideas are sacred)
- * - Local synced tasks missing from remote: archived (marked completed, body prefixed with "[Archived] ")
- * - Remote-only tasks: added with syncStatus 'synced'
+ * Merges one matched (local, remote) pair under the safety policy:
+ * - status: completed wins (local OR remote) — never silently un-completes.
+ * - processedBy: additive — adopt remote's agent name.
+ * - body, local synced (== last-synced base): remote is the newer truth (even shorter).
+ * - body, local pending (user edited since last sync): NEVER overwrite the user's
+ *   edit. If the agent added distinct content, append it once (idempotent) so the
+ *   agent's note is preserved instead of lost.
+ * - title: adopt a remote rename only for id-matched pairs (titleKey differs),
+ *   never for a mere case/whitespace difference.
+ */
+function mergeOne(local: Task, remote: Task): Task {
+  const merged: Task = { ...local }
+
+  // Status — completed wins, no silent re-open.
+  if (remote.isCompleted && !local.isCompleted) {
+    merged.isCompleted = true
+    merged.completedAt = remote.completedAt ?? new Date().toISOString()
+  }
+
+  // processedBy — additive.
+  if (remote.processedBy) {
+    merged.processedBy = remote.processedBy
+  }
+
+  // Body.
+  if (local.syncStatus === 'synced') {
+    if (remote.body !== local.body) merged.body = remote.body
+  } else if (
+    remote.body &&
+    remote.body !== local.body &&
+    !local.body.includes(remote.body)
+  ) {
+    merged.body = local.body
+      ? `${local.body}${AGENT_NOTE_DIVIDER}${remote.body}`
+      : remote.body
+  }
+
+  // Title — only a genuine rename on an id-matched task.
+  if (local.syncStatus === 'synced' && titleKey(remote) !== titleKey(local)) {
+    merged.title = remote.title
+  }
+
+  return merged
+}
+
+/**
+ * Builds a merged task list by applying additive, non-destructive merge rules
+ * (see mergeOne). Local-only tasks are preserved:
+ * - pending  → kept as-is (unpushed idea, sacred).
+ * - synced but missing from remote → KEPT UNTOUCHED (never completed/archived).
+ *   A parser glitch or an agent dropping a line must not look like "done"; the
+ *   task re-pushes on the next outbound sync (self-heal).
+ * Remote-only tasks are added with syncStatus 'synced'.
  *
  * Pure function — no store access, no side effects.
  */
 export function buildMergedTaskList(localTasks: Task[], remoteTasks: Task[]): Task[] {
-  const remoteMap = new Map(remoteTasks.map((t) => [titleKey(t), t]))
-  const consumedRemoteKeys = new Set<string>()
+  const { matchByLocalId, remoteOnly } = matchRemoteToLocal(localTasks, remoteTasks)
 
   const result: Task[] = []
 
   for (const local of localTasks) {
-    const key = titleKey(local)
-    const remote = !consumedRemoteKeys.has(key) ? remoteMap.get(key) : undefined
-
-    if (remote) {
-      consumedRemoteKeys.add(key)
-
-      let merged = { ...local }
-
-      // Update completion from remote
-      if (remote.isCompleted && !local.isCompleted) {
-        merged = {
-          ...merged,
-          isCompleted: true,
-          completedAt: remote.completedAt ?? new Date().toISOString(),
-        }
-      }
-
-      // Update processedBy from remote
-      if (remote.processedBy) {
-        merged = { ...merged, processedBy: remote.processedBy }
-      }
-
-      // Take remote body only if longer AND local is synced (not pending)
-      if (remote.body.length > local.body.length && local.syncStatus === 'synced') {
-        merged = { ...merged, body: remote.body }
-      }
-
-      result.push(merged)
-    } else if (local.syncStatus === 'synced') {
-      // Local synced task missing from remote — archive it
-      const prefix = '[Archived] '
-      const archivedBody = local.body.startsWith(prefix)
-        ? local.body
-        : prefix + local.body
-      result.push({
-        ...local,
-        isCompleted: true,
-        completedAt: new Date().toISOString(),
-        body: archivedBody,
-      })
-    } else {
-      // Local pending task — keep as-is (unpushed idea)
-      result.push(local)
-    }
+    const remote = matchByLocalId.get(local.id)
+    result.push(remote ? mergeOne(local, remote) : local)
   }
 
-  // Add remote-only tasks
+  // Add remote-only tasks at the end, after the current max order.
   let maxOrder = result.reduce((max, t) => Math.max(max, t.order ?? 0), -1)
-  for (const remote of remoteTasks) {
-    if (!consumedRemoteKeys.has(titleKey(remote))) {
-      maxOrder++
-      result.push({ ...remote, syncStatus: 'synced', order: maxOrder })
-    }
+  for (const remote of remoteOnly) {
+    maxOrder++
+    result.push({ ...remote, syncStatus: 'synced', order: maxOrder })
   }
 
-  // Safety guard: every local task ID must exist in the output
+  // Safety guard: every local task id must survive the merge.
   const resultIds = new Set(result.map((t) => t.id))
   const missingIds = localTasks.filter((t) => !resultIds.has(t.id))
   if (missingIds.length > 0) {
@@ -179,8 +245,8 @@ export function buildMergedTaskList(localTasks: Task[], remoteTasks: Task[]): Ta
       `[buildMergedTaskList] Safety guard triggered: ${missingIds.length} local task(s) missing from merge result. Returning local tasks + new remote tasks as fail-safe.`,
     )
     const localIds = new Set(localTasks.map((t) => t.id))
-    const remoteOnly = result.filter((t) => !localIds.has(t.id))
-    return [...localTasks, ...remoteOnly]
+    const remoteOnlyResult = result.filter((t) => !localIds.has(t.id))
+    return [...localTasks, ...remoteOnlyResult]
   }
 
   return result
