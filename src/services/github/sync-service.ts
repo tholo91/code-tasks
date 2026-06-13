@@ -534,13 +534,32 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
       newSha = responseSha ?? currentExisting?.sha ?? null
       break
     } catch (err: unknown) {
-      if (
-        err &&
-        typeof err === 'object' &&
-        'status' in err &&
-        err.status === 409 &&
-        conflictAttempt < MAX_CONFLICT_RETRIES - 1
-      ) {
+      const is409 =
+        err && typeof err === 'object' && 'status' in err && err.status === 409
+
+      // A 409 means remote moved between our SHA check and this PUT — typically a
+      // desktop AI agent committing a check-off in the same window. Unless the
+      // user explicitly chose "keep local" (allowConflict), retrying with the
+      // same content would silently clobber the agent's commit. Surface it as a
+      // conflict instead so the safe merge path runs.
+      if (is409 && !options.allowConflict) {
+        const latest = await getFileContent(octokit, owner, repo, filePath, targetBranch)
+        setRepoSyncMeta(selectedRepo.fullName, {
+          conflict: {
+            remoteSha: latest?.sha ?? null,
+            detectedAt: new Date().toISOString(),
+          },
+        })
+        return {
+          syncedCount: 0,
+          error: 'Remote file changed during push',
+          status: 'conflict',
+          remoteSha: latest?.sha ?? null,
+        }
+      }
+
+      if (is409 && conflictAttempt < MAX_CONFLICT_RETRIES - 1) {
+        // allowConflict (keep-local): retry to force the local state through.
         continue
       }
       throw err

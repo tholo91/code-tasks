@@ -786,6 +786,38 @@ describe('sync-service', () => {
       const content = decodeURIComponent(escape(atob(call.content)))
       expect(content).not.toContain('**Archived task**')
     })
+
+    it('surfaces a conflict (no silent overwrite) when remote moves mid-push (409)', async () => {
+      const task = createTask({ id: 'race-1', title: 'Race task' })
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'sha-baseline',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 1,
+            lastSyncedRevision: 1,
+            conflict: null,
+          },
+        },
+      })
+
+      // Initial fetch matches the baseline → pre-push conflict gate passes.
+      // After the 409, the catch re-fetches the latest SHA (agent's commit).
+      mockOctokit.rest.repos.getContent
+        .mockResolvedValueOnce({ data: { content: btoa('# content'), sha: 'sha-baseline' } })
+        .mockResolvedValueOnce({ data: { content: btoa('# agent edit'), sha: 'agent-sha' } })
+
+      // Agent committed in the same window → our PUT collides.
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockRejectedValueOnce({ status: 409 })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.status).toBe('conflict')
+      expect(result.remoteSha).toBe('agent-sha')
+      // Must have attempted the push exactly once and NOT retried-to-overwrite.
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('classifySyncError', () => {
