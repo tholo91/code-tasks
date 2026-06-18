@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AuthForm } from '../../features/auth/components/AuthForm'
 import { roadmapData } from '../../data/roadmap'
 import logoUrl from '/maskable-icon-512x512-light.png'
@@ -7,12 +7,29 @@ interface LandingPageProps {
   onSuccess: () => void
 }
 
+const REPO_URL = 'https://github.com/tholo91/code-tasks'
+const FEEDBACK_URL = 'https://www.heyspeak.io/l/dPAgTYLhiBV_veeNE8Tq1w'
+
 const plannedItems = roadmapData.filter((item) => item.status === 'planned')
+
+const problemPhrases = [
+  'a notes app',
+  'a voice memo',
+  'a message to yourself',
+  'a forgotten .md file',
+  'twelve open browser tabs',
+]
 
 const mobileSteps = [
   { num: '01', text: 'Capture a task from your phone, mid-thought, in seconds.' },
-  { num: '02', text: 'It lands in your GitHub repo as a markdown file.' },
-  { num: '03', text: "Claude Code, Cursor, or Codex reads it on next startup and can report back when it's done." },
+  { num: '02', text: 'It syncs to your GitHub repo as clean, agent-ready markdown.' },
+  { num: '03', text: "Claude Code, Cursor, Gemini, or Codex picks it up on its next run, and reports back when it's done." },
+]
+
+const communitySteps = [
+  { num: '01', title: 'Star the repo', text: 'Two seconds, and it helps more than you would think.' },
+  { num: '02', title: 'Grab an open story', text: 'Pick one from the board, open a PR against main.' },
+  { num: '03', title: 'Tell us what is missing', text: 'Drop a 30-second voice note. We read every one.' },
 ]
 
 const ideSteps = [
@@ -25,6 +42,7 @@ const MAX_WIDTH = '720px'
 
 export function LandingPage({ onSuccess }: LandingPageProps) {
   const [activeTab, setActiveTab] = useState<'mobile' | 'ide'>('mobile')
+  const [showAuth, setShowAuth] = useState(false)
 
   return (
     <div style={{
@@ -86,8 +104,8 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             marginBottom: '1.25rem',
           }}
         >
-          Capture ideas on your phone.<br />
-          Ship in your agent's next run.
+          Capture coding ideas on your phone.<br />
+          Let AI build them later.
         </h1>
 
         <p
@@ -95,14 +113,60 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             fontSize: 'var(--text-body)',
             lineHeight: 1.65,
             color: 'var(--color-text-secondary)',
-            marginBottom: '2.75rem',
-            maxWidth: '40ch',
+            marginBottom: '2.25rem',
+            maxWidth: '46ch',
           }}
         >
-          Create a task on your phone. It lands in your repo as md, pre-formatted so Claude Code, Cursor, or Codex picks it up automatically.
+          Gitty is the open-source, privacy-first inbox for AI coding tasks. Capture an idea in seconds, sync it to GitHub, and feed it straight to Claude Code, Gemini, or Codex on their next run.
         </p>
 
-        <AuthForm onSuccess={onSuccess} layout="inline" />
+        {showAuth ? (
+          <AuthForm onSuccess={onSuccess} layout="inline" />
+        ) : (
+          <div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <CtaButton variant="primary" onClick={() => setShowAuth(true)}>
+                Use Gitty, free forever
+              </CtaButton>
+              <CtaButton variant="secondary" href={REPO_URL}>
+                <GitHubIcon />
+                Contribute on GitHub
+              </CtaButton>
+            </div>
+            <p
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--text-label)',
+                color: 'var(--color-text-secondary)',
+                margin: '1rem 0 0',
+                opacity: 0.6,
+              }}
+            >
+              No sign-up. Connect your GitHub in about 30 seconds.
+            </p>
+          </div>
+        )}
+
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.4rem 1rem',
+            marginTop: '2rem',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--text-label)',
+            color: 'var(--color-text-secondary)',
+            opacity: 0.7,
+          }}
+        >
+          <span>Open source</span>
+          <span aria-hidden="true">·</span>
+          <span>No database</span>
+          <span aria-hidden="true">·</span>
+          <span>Works offline</span>
+          <span aria-hidden="true">·</span>
+          <span>Your ideas stay in your repo</span>
+        </div>
 
         <div
           style={{
@@ -128,7 +192,47 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
 
-      {/* How it works — tabbed */}
+      {/* Problem */}
+      <section
+        style={{
+          padding: '5rem 1.5rem',
+          maxWidth: MAX_WIDTH,
+          margin: '0 auto',
+        }}
+      >
+        <SectionLabel>The problem</SectionLabel>
+
+        <h2
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'clamp(1.5rem, 5vw, 2.25rem)',
+            fontWeight: 700,
+            lineHeight: 1.2,
+            letterSpacing: '-0.01em',
+            color: 'var(--color-text-primary)',
+            margin: '0 0 2rem',
+          }}
+        >
+          Your best ideas die in<br />
+          <RotatingPhrase items={problemPhrases} />
+        </h2>
+
+        <p
+          style={{
+            fontSize: 'var(--text-body)',
+            lineHeight: 1.7,
+            color: 'var(--color-text-secondary)',
+            margin: 0,
+            maxWidth: '48ch',
+          }}
+        >
+          The idea hits on a walk, in bed, on the train, never at your desk. By the time you are back at your machine, it is buried under tabs or gone for good. Your AI agent could have built it. It just never got the chance.
+        </p>
+      </section>
+
+      <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
+
+      {/* How it works - tabbed */}
       <section
         style={{
           padding: '5rem 1.5rem',
@@ -430,6 +534,105 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
         </ul>
       </section>
 
+      <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
+
+      {/* Community */}
+      <section
+        style={{
+          padding: '5rem 1.5rem',
+          maxWidth: MAX_WIDTH,
+          margin: '0 auto',
+        }}
+      >
+        <SectionLabel>Built in public</SectionLabel>
+
+        <h2
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'clamp(1.5rem, 5vw, 2.25rem)',
+            fontWeight: 700,
+            lineHeight: 1.2,
+            letterSpacing: '-0.01em',
+            color: 'var(--color-text-primary)',
+            margin: '0 0 1.25rem',
+          }}
+        >
+          Help us build the best idea inbox for AI developers.
+        </h2>
+
+        <p
+          style={{
+            fontSize: 'var(--text-body)',
+            lineHeight: 1.7,
+            color: 'var(--color-text-secondary)',
+            margin: '0 0 2.75rem',
+            maxWidth: '48ch',
+          }}
+        >
+          We are not a startup. No database, no upsell, no account beyond your GitHub login. Gitty is open source and still evolving, and the roadmap is shaped by the people who use it daily. That could be you.
+        </p>
+
+        <ol style={{ listStyle: 'none', padding: 0, margin: '0 0 2.75rem' }}>
+          {communitySteps.map((step) => (
+            <li
+              key={step.num}
+              style={{
+                display: 'flex',
+                gap: '1.5rem',
+                paddingBottom: '2rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-label)',
+                  color: 'var(--color-accent)',
+                  letterSpacing: '0.06em',
+                  paddingTop: '0.2rem',
+                  flexShrink: 0,
+                  opacity: 0.7,
+                }}
+              >
+                {step.num}
+              </span>
+              <div>
+                <p
+                  style={{
+                    fontSize: 'var(--text-body)',
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                    margin: '0 0 0.3rem',
+                  }}
+                >
+                  {step.title}
+                </p>
+                <p
+                  style={{
+                    fontSize: 'var(--text-body)',
+                    lineHeight: 1.6,
+                    color: 'var(--color-text-secondary)',
+                    margin: 0,
+                  }}
+                >
+                  {step.text}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <CtaButton variant="primary" href={REPO_URL}>
+            <GitHubIcon />
+            Contribute on GitHub
+          </CtaButton>
+          <CtaButton variant="secondary" href={FEEDBACK_URL}>
+            Leave feedback
+          </CtaButton>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer
         style={{
@@ -450,10 +653,10 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             opacity: 0.6,
           }}
         >
-          Built in public. Feel free to contribute.
+          Wir bauen das zusammen. · Open source
         </span>
         <a
-          href="https://github.com/tholo91/code-tasks"
+          href={REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -494,6 +697,98 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     >
       {children}
     </p>
+  )
+}
+
+function CtaButton({
+  children,
+  variant,
+  href,
+  onClick,
+}: {
+  children: React.ReactNode
+  variant: 'primary' | 'secondary'
+  href?: string
+  onClick?: () => void
+}) {
+  const isPrimary = variant === 'primary'
+  const baseStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-body)',
+    fontWeight: 600,
+    padding: '0.7rem 1.25rem',
+    borderRadius: '0.6rem',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    transition: 'background 150ms ease, border-color 150ms ease, opacity 150ms ease',
+    background: isPrimary ? 'var(--color-accent)' : 'transparent',
+    color: isPrimary ? '#ffffff' : 'var(--color-text-primary)',
+    border: isPrimary ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
+  }
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={baseStyle}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+      >
+        {children}
+      </a>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={baseStyle}
+      onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+      onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+    >
+      {children}
+    </button>
+  )
+}
+
+function RotatingPhrase({ items }: { items: string[] }) {
+  const [index, setIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReduced) return
+
+    const interval = setInterval(() => {
+      setVisible(false)
+      window.setTimeout(() => {
+        setIndex((prev) => (prev + 1) % items.length)
+        setVisible(true)
+      }, 250)
+    }, 2400)
+
+    return () => clearInterval(interval)
+  }, [items.length])
+
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        color: 'var(--color-accent)',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 250ms ease',
+      }}
+    >
+      {items[index]}
+    </span>
   )
 }
 
