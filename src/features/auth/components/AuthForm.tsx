@@ -76,13 +76,6 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
         )}
 
         <div className="mb-4">
-          <label
-            htmlFor="pat-input"
-            className="mb-2 block text-body font-medium"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Personal Access Token
-          </label>
           <input
             id="pat-input"
             name="token"
@@ -102,7 +95,7 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
             className="mt-2 flex min-h-[44px] w-full items-center justify-between rounded-md px-2 text-label"
             style={{ color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            <span>How do I get a token?</span>
+            <span>How do I get a Github access token?</span>
             <svg
               width="16"
               height="16"
@@ -164,10 +157,6 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
           </div>
         )}
 
-        <p className="mb-3 text-label" style={{ color: 'var(--color-text-secondary)' }}>
-          Your token never leaves this device and is encrypted at rest.
-        </p>
-
         <motion.button
           type="submit"
           disabled={isPending}
@@ -176,6 +165,10 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
         >
           {isPending ? 'Authenticating...' : 'Authenticate'}
         </motion.button>
+
+        <p className="mt-3 text-label" style={{ color: 'var(--color-text-secondary)' }}>
+          Your token never leaves this device and is encrypted at rest.
+        </p>
       </form>
     </div>
   )

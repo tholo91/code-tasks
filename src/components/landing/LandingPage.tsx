@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { AuthForm } from '../../features/auth/components/AuthForm'
 import { roadmapData } from '../../data/roadmap'
 import logoUrl from '/maskable-icon-512x512-light.png'
@@ -8,19 +9,23 @@ interface LandingPageProps {
 
 const plannedItems = roadmapData.filter((item) => item.status === 'planned')
 
-const steps = [
+const mobileSteps = [
   { num: '01', text: 'Capture a task from your phone, mid-thought, in seconds.' },
   { num: '02', text: 'It lands in your GitHub repo as a markdown file.' },
   { num: '03', text: "Claude Code, Cursor, or Codex reads it on next startup and can report back when it's done." },
 ]
 
-const agentSteps = [
-  { num: '01', text: 'The file tells your agent to pull the freshest tasks from whichever branch they live on. No manual git fetch, no branch hunting.' },
+const ideSteps = [
+  { num: '01', text: 'Your agent pulls the freshest tasks from whichever branch they live on. No manual git fetch, no branch hunting.' },
   { num: '02', text: 'It briefs itself: open tasks grouped by priority, each with a one-line suggested approach.' },
   { num: '03', text: 'It handles the small ones, proposes a story for the bigger ones, and checks them off when done.' },
 ]
 
+const MAX_WIDTH = '720px'
+
 export function LandingPage({ onSuccess }: LandingPageProps) {
+  const [activeTab, setActiveTab] = useState<'mobile' | 'ide'>('mobile')
+
   return (
     <div style={{
       position: 'fixed',
@@ -39,7 +44,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
           flexDirection: 'column',
           justifyContent: 'center',
           padding: '5rem 1.5rem 4rem',
-          maxWidth: '480px',
+          maxWidth: MAX_WIDTH,
           margin: '0 auto',
           position: 'relative',
         }}
@@ -81,7 +86,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             marginBottom: '1.25rem',
           }}
         >
-          Capture on your phone.<br />
+          Capture ideas on your phone.<br />
           Ship in your agent's next run.
         </h1>
 
@@ -91,10 +96,10 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             lineHeight: 1.65,
             color: 'var(--color-text-secondary)',
             marginBottom: '2.75rem',
-            maxWidth: '34ch',
+            maxWidth: '40ch',
           }}
         >
-          Tap a task on your phone. It lands as markdown in your repo, pre-formatted so Claude Code, Cursor, or Codex picks it up automatically.
+          Create a task on your phone. It lands in your repo as md, pre-formatted so Claude Code, Cursor, or Codex picks it up automatically.
         </p>
 
         <AuthForm onSuccess={onSuccess} layout="inline" />
@@ -123,163 +128,189 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
 
-      {/* How it works */}
+      {/* How it works — tabbed */}
       <section
         style={{
           padding: '5rem 1.5rem',
-          maxWidth: '480px',
+          maxWidth: MAX_WIDTH,
           margin: '0 auto',
         }}
       >
         <SectionLabel>How it works</SectionLabel>
 
-        <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {steps.map((step) => (
-            <li
-              key={step.num}
-              style={{
-                display: 'flex',
-                gap: '1.5rem',
-                paddingBottom: '2.25rem',
-                alignItems: 'flex-start',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--text-label)',
-                  color: 'var(--color-accent)',
-                  letterSpacing: '0.06em',
-                  paddingTop: '0.1rem',
-                  flexShrink: 0,
-                  opacity: 0.7,
-                }}
-              >
-                {step.num}
-              </span>
-              <p
-                style={{
-                  fontSize: 'var(--text-body)',
-                  lineHeight: 1.65,
-                  color: 'var(--color-text-primary)',
-                  margin: 0,
-                }}
-              >
-                {step.text}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
-
-      {/* Connect your AI agent */}
-      <section
-        style={{
-          padding: '5rem 1.5rem',
-          maxWidth: '480px',
-          margin: '0 auto',
-        }}
-      >
-        <SectionLabel>Connect your AI agent</SectionLabel>
-
-        <p
+        {/* Tab buttons */}
+        <div
           style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'var(--text-body)',
-            lineHeight: 1.7,
-            color: 'var(--color-text-secondary)',
-            margin: '0 0 2.25rem',
-            maxWidth: '38ch',
+            display: 'inline-flex',
+            gap: '0.375rem',
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '0.75rem',
+            padding: '0.25rem',
+            marginBottom: '2.5rem',
           }}
         >
-          Your captures land as agent-ready markdown. Claude Code, Cursor, Codex, and Gemini CLI all read the same file, brief themselves, and get to work.
-        </p>
-
-        <div style={{ marginBottom: '2.75rem' }}>
-          <p
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--text-label)',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'var(--color-text-secondary)',
-              margin: '0 0 0.6rem',
-              opacity: 0.6,
-            }}
-          >
-            Claude Code shortcut
-          </p>
-          <code
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--text-body)',
-              color: 'var(--color-accent)',
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '0.6rem',
-              padding: '0.65rem 0.9rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <span style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}>&gt;</span>
-            /captured-ideas
-          </code>
-          <p
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--text-label)',
-              lineHeight: 1.6,
-              color: 'var(--color-text-secondary)',
-              margin: '0.85rem 0 0',
-              opacity: 0.55,
-            }}
-          >
-            Cursor, Codex, and Gemini CLI read the same file directly.
-          </p>
-        </div>
-
-        <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {agentSteps.map((step) => (
-            <li
-              key={step.num}
+          {(['mobile', 'ide'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
               style={{
-                display: 'flex',
-                gap: '1.5rem',
-                paddingBottom: '2.25rem',
-                alignItems: 'flex-start',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--text-label)',
+                letterSpacing: '0.04em',
+                padding: '0.4rem 0.9rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background 150ms ease, color 150ms ease',
+                background: activeTab === tab ? 'var(--color-accent)' : 'transparent',
+                color: activeTab === tab ? '#ffffff' : 'var(--color-text-secondary)',
               }}
             >
-              <span
+              {tab === 'mobile' ? 'On mobile' : 'In your IDE'}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'mobile' && (
+          <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {mobileSteps.map((step) => (
+              <li
+                key={step.num}
                 style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--text-label)',
-                  color: 'var(--color-accent)',
-                  letterSpacing: '0.06em',
-                  paddingTop: '0.1rem',
-                  flexShrink: 0,
-                  opacity: 0.7,
+                  display: 'flex',
+                  gap: '1.5rem',
+                  paddingBottom: '2.25rem',
+                  alignItems: 'flex-start',
                 }}
               >
-                {step.num}
-              </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-label)',
+                    color: 'var(--color-accent)',
+                    letterSpacing: '0.06em',
+                    paddingTop: '0.1rem',
+                    flexShrink: 0,
+                    opacity: 0.7,
+                  }}
+                >
+                  {step.num}
+                </span>
+                <p
+                  style={{
+                    fontSize: 'var(--text-body)',
+                    lineHeight: 1.65,
+                    color: 'var(--color-text-primary)',
+                    margin: 0,
+                  }}
+                >
+                  {step.text}
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {activeTab === 'ide' && (
+          <>
+            <p
+              style={{
+                fontSize: 'var(--text-body)',
+                lineHeight: 1.7,
+                color: 'var(--color-text-secondary)',
+                margin: '0 0 2.25rem',
+                maxWidth: '44ch',
+              }}
+            >
+              Your captures land as agent-ready markdown. Claude Code, Cursor, Codex, and Gemini CLI all read the same file, brief themselves, and get to work.
+            </p>
+
+            <div style={{ marginBottom: '2.75rem' }}>
               <p
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--text-body)',
-                  lineHeight: 1.7,
-                  color: 'var(--color-text-primary)',
-                  margin: 0,
+                  fontSize: 'var(--text-label)',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: 'var(--color-text-secondary)',
+                  margin: '0 0 0.6rem',
+                  opacity: 0.6,
                 }}
               >
-                {step.text}
+                Claude Code shortcut
               </p>
-            </li>
-          ))}
-        </ol>
+              <code
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-body)',
+                  color: 'var(--color-accent)',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '0.6rem',
+                  padding: '0.65rem 0.9rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <span style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}>&gt;</span>
+                /captured-ideas
+              </code>
+              <p
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-label)',
+                  lineHeight: 1.6,
+                  color: 'var(--color-text-secondary)',
+                  margin: '0.85rem 0 0',
+                  opacity: 0.55,
+                }}
+              >
+                Cursor, Codex, and Gemini CLI read the same file directly.
+              </p>
+            </div>
+
+            <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {ideSteps.map((step) => (
+                <li
+                  key={step.num}
+                  style={{
+                    display: 'flex',
+                    gap: '1.5rem',
+                    paddingBottom: '2.25rem',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--text-label)',
+                      color: 'var(--color-accent)',
+                      letterSpacing: '0.06em',
+                      paddingTop: '0.1rem',
+                      flexShrink: 0,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {step.num}
+                  </span>
+                  <p
+                    style={{
+                      fontSize: 'var(--text-body)',
+                      lineHeight: 1.65,
+                      color: 'var(--color-text-primary)',
+                      margin: 0,
+                    }}
+                  >
+                    {step.text}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </section>
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 1.5rem' }} />
@@ -288,7 +319,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
       <section
         style={{
           padding: '5rem 1.5rem',
-          maxWidth: '480px',
+          maxWidth: MAX_WIDTH,
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
@@ -300,6 +331,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             gap: '1rem',
             width: '100%',
             alignItems: 'flex-start',
+            maxWidth: '480px',
           }}
         >
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -357,7 +389,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
       <section
         style={{
           padding: '5rem 1.5rem',
-          maxWidth: '480px',
+          maxWidth: MAX_WIDTH,
           margin: '0 auto',
         }}
       >
@@ -375,7 +407,6 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             >
               <p
                 style={{
-                  fontFamily: 'var(--font-mono)',
                   fontSize: 'var(--text-body)',
                   fontWeight: 600,
                   color: 'var(--color-text-primary)',
@@ -407,7 +438,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          maxWidth: '480px',
+          maxWidth: MAX_WIDTH,
           margin: '0 auto',
         }}
       >
@@ -419,7 +450,7 @@ export function LandingPage({ onSuccess }: LandingPageProps) {
             opacity: 0.6,
           }}
         >
-          Built in public. Wir bauen das zusammen.
+          Built in public. Feel free to contribute.
         </span>
         <a
           href="https://github.com/tholo91/code-tasks"
