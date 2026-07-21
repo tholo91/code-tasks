@@ -81,6 +81,8 @@ development_status:
   # Quick Specs & Ideas (drafts, not yet in sprint)
   # ═══════════════════════════════════════════════════════
   qs-repo-detail-view: "draft"                           # Repo overview screen (README, AI instructions, switch repo) — needs investigation
+  qs-github-app-oauth-auth: "draft"                      # Replace PAT-first auth with GitHub App/OAuth; better new-repo access, trust, multi-account path
+  qs-promote-task-to-github-issue: "draft"                # Optional explicit promotion from repo-local Gitty task to GitHub Issue; enriches Markdown capture without replacing it
   qs-sync-data-loss-and-defaults: "done"                 # Completed 2026-06-11 — 4 sync data-loss fixes (** title, multiline body, banner-dismiss SHA baseline, branch conflict gate) + 2 default flips ([skip ci] on, gitty branch recommended)
   qs-voice-to-tasks: "ready-for-dev"                     # Voice/audio → Whisper transcription → task + transcript.md saved to repo; user brings OpenAI key
 

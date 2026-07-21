@@ -86,22 +86,21 @@ src/
 
 - **Project spirit:** Community-first indie project. "Wir bauen das zusammen." Not a startup, not SaaS.
 
-## Task Discovery — Check Before Starting Work
+## Task Discovery — Quiet Gitty Handoff
 
-At the start of every session or when asked "what's next", always check:
+At the start of every session, silently check:
 
 ```
 captured-ideas-{username}.md
 ```
 
-The live file for this repo is **`captured-ideas-tholo91.md`** in the root. It contains Thomas's open tasks (unchecked `- [ ]` items) captured directly from the Gitty app. These are real, unprocessed ideas that may need to be turned into stories, quick specs, or BMAD artifacts.
+The live file for this repo is **`captured-ideas-tholo91.md`** in the root. It contains Thomas's on-the-go captures. Compare each task's `Capture revision` with its `Seen revision`; only unseen revisions receive a Seen receipt on the configured capture branch.
 
-Claude Code users can run `/captured-ideas` to fetch and list the open captures across all branches, grouped by priority.
+Claude Code users can run `/captured-ideas` to fetch and review captures across all branches. Do not list them unprompted or let them interrupt Thomas's actual request.
 
 - Open items (`- [ ]`) = not yet planned or implemented
-- Items with `→ Planned: Story X` in their body = already captured in a story file
-- Mark items as done (`- [x]`) and append `[Processed by: Claude]` after they have been turned into a story or resolved
-- Do NOT manually edit tasks between `managed-start` and `managed-end` markers — the app owns that content
+- A `Gitty: Filed` receipt means deliberate hand-off; `Gitty: Done` requires a proof URL for verified implementation
+- Only update receipt metadata (`Seen`, `Gitty`, `Proof`, `Handled`, `Processed by`) on a task line and mark the checkbox after verified work. Preserve capture text, priority, and order; a brief verified completion note is the only allowed body change.
 
 ## Versioning
 

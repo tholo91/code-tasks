@@ -381,6 +381,10 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
                     </span>
                   </DetailRow>
 
+                  <DetailRow label="Handoff" data-testid="task-detail-handoff">
+                    <HandoffReceipt task={task} />
+                  </DetailRow>
+
                   {/* Created */}
                   <DetailRow label="Created">
                     <span className="text-body" style={{ color: 'var(--color-text-primary)' }} data-testid="task-detail-created">
@@ -422,6 +426,51 @@ function DetailRow({ label, children, ...rest }: { label: string; children: Reac
       {children}
     </div>
   )
+}
+
+function HandoffReceipt({ task }: { task: Task }) {
+  const currentRevision = task.captureRevision ?? task.id
+  const hasBeenSeen = task.seenRevision === currentRevision
+  const proofUrl = safeHttpsUrl(task.proofUrl)
+
+  if (!hasBeenSeen) {
+    return <span className="text-body" style={{ color: 'var(--color-text-secondary)' }}>New</span>
+  }
+
+  const status = task.handoffStatus === 'done' && proofUrl
+    ? 'Done'
+    : task.handoffStatus === 'filed'
+      ? 'Filed'
+      : 'Seen'
+  const agent = task.processedBy ?? task.seenBy
+  const timestamp = task.handledAt ?? task.seenAt
+
+  return (
+    <span className="flex items-center gap-2 text-body" style={{ color: status === 'Done' ? 'var(--color-success)' : 'var(--color-text-primary)' }}>
+      <span>{status}{agent ? ` by ${agent}` : ''}{timestamp ? ` · ${formatRelativeTime(timestamp)}` : ''}</span>
+      {task.handoffStatus && proofUrl && (
+        <a
+          href={proofUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--color-accent)' }}
+          data-testid="task-detail-handoff-proof"
+        >
+          Proof
+        </a>
+      )}
+    </span>
+  )
+}
+
+function safeHttpsUrl(value: string | null | undefined): string | null {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' ? url.toString() : null
+  } catch {
+    return null
+  }
 }
 
 function formatRelativeTime(dateString: string): string {

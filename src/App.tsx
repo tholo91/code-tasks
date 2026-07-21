@@ -285,7 +285,7 @@ function AppContent() {
   const handlePullRefresh = useCallback(async () => {
     if (!selectedRepo || !user || !isOnline) return
 
-    const result = await fetchRemoteTasksForRepo(selectedRepo.fullName, user.login)
+    const result = await fetchRemoteTasksForRepo(selectedRepo.fullName, user.login, fallbackBranch ?? undefined)
     if (result.error) return
 
     const repoKey = selectedRepo.fullName.toLowerCase()
@@ -305,7 +305,7 @@ function AppContent() {
       setPullToRefreshResult('up-to-date')
       setTimeout(() => setPullToRefreshResult(null), 1500)
     }
-  }, [selectedRepo, user, isOnline, setRepoSyncMeta])
+  }, [selectedRepo, user, isOnline, fallbackBranch, setRepoSyncMeta])
 
   const { pullDistance, isRefreshing: isPullRefreshing, handlers: pullHandlers } = usePullToRefresh({
     onRefresh: handlePullRefresh,
@@ -368,15 +368,16 @@ function AppContent() {
     if (!idbLoaded || !selectedRepo || !user || !isOnline) return
 
     const repoKey = selectedRepo.fullName.toLowerCase()
-    if (importAttemptedRef.current.has(repoKey)) return
-    importAttemptedRef.current.add(repoKey)
+    const importKey = `${repoKey}:${fallbackBranch ?? 'default'}`
+    if (importAttemptedRef.current.has(importKey)) return
+    importAttemptedRef.current.add(importKey)
     setImportPrompt(null)
 
     const localRepoTasks = useSyncStore
       .getState()
       .tasks.filter((t) => t.repoFullName.toLowerCase() === repoKey)
 
-    fetchRemoteTasksForRepo(selectedRepo.fullName, user.login).then((result) => {
+    fetchRemoteTasksForRepo(selectedRepo.fullName, user.login, fallbackBranch ?? undefined).then((result) => {
       if (result.error || result.tasks.length === 0) return
 
       // Content-level diff to catch no-op imports
@@ -424,7 +425,7 @@ function AppContent() {
         })
       }
     })
-  }, [idbLoaded, isOnline, replaceTasksForRepo, selectedRepo, setRepoSyncMeta, user])
+  }, [fallbackBranch, idbLoaded, isOnline, replaceTasksForRepo, selectedRepo, setRepoSyncMeta, user])
 
   useEffect(() => {
     setImportPrompt(null)

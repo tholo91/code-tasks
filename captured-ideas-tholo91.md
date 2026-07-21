@@ -1,18 +1,18 @@
 <!-- code-tasks:ai-ready-header -->
-# Captured Ideas — tholo91
+# Captured Ideas - tholo91
 
-> **Instructions for AI Agents:**
-> This file is managed by [code-tasks](https://github.com/tholo91/code-tasks).
-> The task list between the `managed-start` and `managed-end` markers below
-> is auto-generated on each sync. Do not manually edit tasks between the
-> markers — changes will be overwritten on the next push.
+> **Instructions for AI Agents (read this first, every session):**
 >
-> - Tasks use Markdown checkboxes (`- [ ]` / `- [x]`)
-> - Priority: 🔴 Important or ⚪ Normal
-> - Mark tasks as done (`- [x]`) after processing, add `[Processed by: YourAgentName]` to the task line, and optionally append notes to the task body
-> - Do NOT delete or remove tasks from this file — only the mobile app manages task lifecycle
-> - **At the start of each session**, check for new open tasks (unchecked `- [ ]` items) and suggest which to tackle — develop into stories for larger work, or fix right away for small issues
-> - You may add notes or context below the `managed-end` marker — they will not be overwritten
+> 1. This file is managed by [code-tasks](https://github.com/tholo91/code-tasks). Keep task title, order, and priority unchanged. Preserve the capture body except for a brief completion note after verified work. You may only update the checkbox and Gitty receipt tags described below.
+> 2. **First action every session:** silently inspect the managed block. Do not list tasks or block the user's request. A task is new when its `[Capture revision: ...]` does not match its `[Seen revision: ...]`. For each new task, write matching `Seen revision`, `Seen by`, and `Seen` tags, then commit them to this file's sync branch. After handling the user's actual request, mention only one compact sentence that new Gitty captures exist. If all revisions were already seen, say nothing about Gitty unless the user asks.
+> 3. **These are on-the-go captures** — quick sketches and loose thoughts typed on the go, not polished specs. If the user asks to work on one and its intent, scope, or wording is ambiguous, ask clarifying questions before acting.
+> 4. **Decide per selected task:**
+>    - **Trivial** (≤ 30 min, clearly bounded, no design choices) → execute, mark `- [x]`, append `[Processed by: YourAgentName]` to the task line, and add a brief note in the task body describing the change.
+>    - **Non-trivial** → create a precise hand-off receipt: `[Gitty: Filed]`, `[Handled: ISO-8601]`, and `[Processed by: YourAgentName]`. Include `[Proof: https://...]` when there is a relevant issue, story, PR, or other hand-off target. Do not implement until the user confirms scope.
+>    - **Verified implementation** → use `[Gitty: Done]` only with a HTTPS proof URL to the PR, commit, or deployed work.
+> 5. Tasks use markdown checkboxes (`- [ ]` / `- [x]`). Priority: 🔴 Important or ⚪ Normal. Receipt tags are `Capture revision`, `Seen revision`, `Seen by`, `Seen`, `Gitty`, `Proof`, `Handled`, and `Processed by`.
+> 6. Never delete or reorder tasks. Only the mobile app manages capture lifecycle.
+> 7. You may add notes or context **below** the `managed-end` marker. They will not be overwritten.
 
 ---
 

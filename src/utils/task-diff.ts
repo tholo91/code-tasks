@@ -4,6 +4,7 @@ export interface ImportDiffSummary {
   completedByAgent: number
   updatedWithNotes: number
   processedByAdded: number
+  handoffUpdates?: number
   /** Synced tasks missing from remote that were KEPT (not archived). Self-heal on next push. */
   archived: number
   newFromRemote: number
@@ -11,6 +12,70 @@ export interface ImportDiffSummary {
 }
 
 const titleKey = (t: Task) => t.title.trim().toLowerCase()
+
+function captureRevision(task: Task): string {
+  return task.captureRevision ?? task.id
+}
+
+function hasConflictingCaptureRevisions(local: Task, remote: Task): boolean {
+  return Boolean(
+    local.captureRevision &&
+    remote.captureRevision &&
+    local.captureRevision !== remote.captureRevision,
+  )
+}
+
+function hasSafeProofUrl(value: string | null | undefined): boolean {
+  if (!value) return false
+  try {
+    return new URL(value).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function receiptRank(task: Task): number {
+  if (!task.seenRevision || task.seenRevision !== captureRevision(task)) return 0
+  if (task.handoffStatus === 'done' && hasSafeProofUrl(task.proofUrl)) return 3
+  if (task.handoffStatus === 'filed') return 2
+  return 1
+}
+
+function canApplyRemoteReceipt(local: Task, remote: Task): boolean {
+  return Boolean(
+    remote.seenBy &&
+    remote.seenAt &&
+    remote.seenRevision === captureRevision(local) &&
+    remote.seenRevision === captureRevision(remote),
+  )
+}
+
+function hasReceiptMetadata(task: Task): boolean {
+  return Boolean(
+    task.seenRevision ||
+    task.seenAt ||
+    task.seenBy ||
+    task.handoffStatus ||
+    task.proofUrl ||
+    task.handledAt,
+  )
+}
+
+function receiptChanged(local: Task, remote: Task): boolean {
+  if (!canApplyRemoteReceipt(local, remote)) return false
+  const remoteRank = receiptRank(remote)
+  const localRank = receiptRank(local)
+  if (remoteRank > localRank) return true
+  if (remoteRank < localRank || remoteRank === 0) return false
+
+  return (
+    (!local.seenAt && Boolean(remote.seenAt)) ||
+    (!local.seenBy && Boolean(remote.seenBy)) ||
+    (!local.proofUrl && Boolean(remote.proofUrl)) ||
+    (!local.handledAt && Boolean(remote.handledAt)) ||
+    (!local.processedBy && Boolean(remote.processedBy))
+  )
+}
 
 /** Divider used when preserving an agent's remote note on a locally-edited task. */
 const AGENT_NOTE_DIVIDER = '\n\n---\nAgent note: '
@@ -81,6 +146,7 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
   let completedByAgent = 0
   let updatedWithNotes = 0
   let processedByAdded = 0
+  let handoffUpdates = 0
   let archived = 0
 
   for (const local of localTasks) {
@@ -92,6 +158,11 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
       if (local.syncStatus === 'synced') archived++
       continue
     }
+
+    if (
+      hasConflictingCaptureRevisions(local, remote) ||
+      (hasReceiptMetadata(remote) && !canApplyRemoteReceipt(local, remote))
+    ) continue
 
     if (remote.isCompleted && !local.isCompleted) completedByAgent++
 
@@ -107,6 +178,7 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
     }
 
     if (remote.processedBy && !local.processedBy) processedByAdded++
+    if (receiptChanged(local, remote)) handoffUpdates++
   }
 
   const localSafeCount = localTasks.filter((t) => t.syncStatus === 'pending').length
@@ -115,6 +187,7 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
     completedByAgent,
     updatedWithNotes,
     processedByAdded,
+    handoffUpdates,
     archived,
     newFromRemote: remoteOnly.length,
     localSafeCount,
@@ -133,6 +206,9 @@ export function buildImportFeedbackMessage(diff: ImportDiffSummary): string {
   }
   if (diff.updatedWithNotes > 0) {
     parts.push(`${diff.updatedWithNotes} updated with notes`)
+  }
+  if ((diff.handoffUpdates ?? 0) > 0) {
+    parts.push(`${diff.handoffUpdates} handoff${diff.handoffUpdates === 1 ? '' : 's'} updated`)
   }
   if (diff.newFromRemote > 0) {
     parts.push(`${diff.newFromRemote} new from remote`)
@@ -159,6 +235,7 @@ export function isAllZero(diff: ImportDiffSummary): boolean {
     diff.completedByAgent === 0 &&
     diff.updatedWithNotes === 0 &&
     diff.processedByAdded === 0 &&
+    (diff.handoffUpdates ?? 0) === 0 &&
     diff.newFromRemote === 0
   )
 }
@@ -176,6 +253,10 @@ export function isAllZero(diff: ImportDiffSummary): boolean {
  */
 function mergeOne(local: Task, remote: Task): Task {
   const merged: Task = { ...local }
+  const sameCaptureRevision = !hasConflictingCaptureRevisions(local, remote)
+
+  if (!sameCaptureRevision) return merged
+  if (hasReceiptMetadata(remote) && !canApplyRemoteReceipt(local, remote)) return merged
 
   // Status — completed wins, no silent re-open.
   if (remote.isCompleted && !local.isCompleted) {
@@ -184,8 +265,33 @@ function mergeOne(local: Task, remote: Task): Task {
   }
 
   // processedBy — additive.
-  if (remote.processedBy) {
+  if (!merged.processedBy && remote.processedBy) {
     merged.processedBy = remote.processedBy
+  }
+
+  if (canApplyRemoteReceipt(local, remote)) {
+    const localRank = receiptRank(local)
+    const remoteRank = receiptRank(remote)
+
+    if (remoteRank > localRank || remoteRank === localRank) {
+      if (remoteRank > localRank || !merged.seenRevision) {
+        merged.seenRevision = remote.seenRevision
+      }
+      if (!merged.seenAt && remote.seenAt) {
+        merged.seenAt = remote.seenAt
+      }
+      if (!merged.seenBy && remote.seenBy) {
+        merged.seenBy = remote.seenBy
+      }
+      if (remoteRank > localRank) {
+        merged.handoffStatus = remote.handoffStatus ?? null
+        merged.proofUrl = remote.proofUrl ?? null
+        merged.handledAt = remote.handledAt ?? null
+      } else {
+        if (!merged.proofUrl && remote.proofUrl) merged.proofUrl = remote.proofUrl
+        if (!merged.handledAt && remote.handledAt) merged.handledAt = remote.handledAt
+      }
+    }
   }
 
   // Body.

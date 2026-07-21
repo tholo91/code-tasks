@@ -365,6 +365,14 @@ export function classifySyncError(err: unknown): {
   }
 
   // Auth errors
+  if (status === 403 && msgLower.includes('resource not accessible by personal access token')) {
+    return {
+      message: 'This GitHub token cannot write to this repository. Re-authorize Gitty with contents write access for this repo, or include the repo in the token access list.',
+      errorType: 'auth',
+      rawError,
+    }
+  }
+
   if (status === 401 || (status === 403 && msgLower.includes('token'))) {
     return { message: 'Authentication failed. Please log in again.', errorType: 'auth', rawError }
   }
@@ -632,13 +640,14 @@ export async function syncPendingTasks(options: SyncOptions = {}): Promise<SyncR
 export async function fetchRemoteTasksForRepo(
   repoFullName: string,
   username: string,
+  branch?: string,
 ): Promise<RemoteTasksResult> {
   const [owner, repo] = repoFullName.split('/')
   const filePath = getScopedFileName(username)
   const octokit = await recoverOctokit()
 
   try {
-    const existing = await getFileContent(octokit, owner, repo, filePath)
+    const existing = await getFileContent(octokit, owner, repo, filePath, branch)
     if (!existing) {
       return { tasks: [], sha: null }
     }
@@ -647,6 +656,7 @@ export async function fetchRemoteTasksForRepo(
     const nowIso = new Date().toISOString()
 
     const tasks = parsed.map((parsedTask, index) => {
+      const id = parsedTask.id ?? generateUUID()
       const createdAt = parsedTask.createdAt ?? nowIso
       const updatedAt = parsedTask.updatedAt
       let completedAt = parsedTask.completedAt
@@ -659,7 +669,7 @@ export async function fetchRemoteTasksForRepo(
         // tasks keep the same identity as their local counterparts across the
         // round-trip. Legacy files without the anchor get a fresh UUID and fall
         // back to title matching during merge.
-        id: parsedTask.id ?? generateUUID(),
+        id,
         username,
         repoFullName,
         title: parsedTask.title,
@@ -670,6 +680,13 @@ export async function fetchRemoteTasksForRepo(
         isCompleted: parsedTask.isCompleted,
         completedAt,
         processedBy: parsedTask.processedBy ?? null,
+        captureRevision: parsedTask.captureRevision ?? undefined,
+        seenRevision: parsedTask.seenRevision ?? null,
+        seenAt: parsedTask.seenAt ?? null,
+        seenBy: parsedTask.seenBy ?? null,
+        handoffStatus: parsedTask.handoffStatus ?? null,
+        proofUrl: parsedTask.proofUrl ?? null,
+        handledAt: parsedTask.handledAt ?? null,
         order: index,
         syncStatus: 'synced' as const,
         githubIssueNumber: null,
@@ -685,13 +702,14 @@ export async function fetchRemoteTasksForRepo(
 export async function fetchRemoteFileContent(
   repoFullName: string,
   username: string,
+  branch?: string,
 ): Promise<{ content: string | null; sha: string | null; error?: string }> {
   const [owner, repo] = repoFullName.split('/')
   const filePath = getScopedFileName(username)
   const octokit = await recoverOctokit()
 
   try {
-    const existing = await getFileContent(octokit, owner, repo, filePath)
+    const existing = await getFileContent(octokit, owner, repo, filePath, branch)
     if (!existing) {
       return { content: null, sha: null }
     }

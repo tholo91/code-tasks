@@ -9,6 +9,8 @@ export type PriorityFilter = 'all' | 'important' | 'not-important'
 
 export type SortMode = 'manual' | 'created-desc' | 'updated-desc' | 'priority-first'
 
+export type HandoffStatus = 'filed' | 'done'
+
 export interface Task {
   /** UUID v4 — unique per task, scoped by username */
   id: string
@@ -32,6 +34,20 @@ export interface Task {
   updatedAt: string | null
   /** Agent name from [Processed by: AgentName] markdown tag, null if not set */
   processedBy?: string | null
+  /** Changes when the phone edits the original capture, so agents only surface it once per revision. */
+  captureRevision?: string
+  /** Capture revision that an agent has already acknowledged, null until first seen. */
+  seenRevision?: string | null
+  /** ISO 8601 timestamp from the agent's Seen receipt, null until first seen. */
+  seenAt?: string | null
+  /** Agent name from the Seen receipt, null until first seen. */
+  seenBy?: string | null
+  /** Explicit agent handoff state. Absence means the capture is still an inbox item. */
+  handoffStatus?: HandoffStatus | null
+  /** HTTPS proof link for an explicit Filed or Done handoff. */
+  proofUrl?: string | null
+  /** ISO 8601 timestamp when the agent filed or completed the handoff. */
+  handledAt?: string | null
   /** Sort position for drag & drop reorder (lower = higher in list) */
   order: number
   /** Sync status: 'pending' = local only, 'synced' = pushed to GitHub */

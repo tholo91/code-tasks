@@ -63,6 +63,21 @@ describe('computeImportDiff', () => {
     expect(diff.processedByAdded).toBe(1)
   })
 
+  it('counts a matching remote handoff receipt as actionable', () => {
+    const local = [makeTask({ id: 'task-1', captureRevision: 'revision-1' })]
+    const remote = [makeTask({
+      id: 'task-1',
+      captureRevision: 'revision-1',
+      seenRevision: 'revision-1',
+      seenBy: 'Codex',
+      seenAt: '2026-07-22T10:00:00.000Z',
+      handoffStatus: 'filed',
+      proofUrl: 'https://github.com/owner/repo/issues/42',
+    })]
+
+    expect(computeImportDiff(local, remote).handoffUpdates).toBe(1)
+  })
+
   it('counts archived (kept, not deleted) for local synced tasks missing from remote', () => {
     const local = [makeTask({ title: 'Task A', syncStatus: 'synced' })]
     const remote: Task[] = []
@@ -146,6 +161,106 @@ describe('buildMergedTaskList', () => {
     const result = buildMergedTaskList([local], [remote])
     expect(result[0].isCompleted).toBe(true)
     expect(result[0].completedAt).toBe('2026-03-18T10:00:00.000Z')
+  })
+
+  it('imports a matching receipt without changing the capture content', () => {
+    const local = makeTask({ id: 'task-1', captureRevision: 'revision-1', title: 'Original capture' })
+    const remote = makeTask({
+      id: 'task-1',
+      captureRevision: 'revision-1',
+      seenRevision: 'revision-1',
+      seenBy: 'Codex',
+      seenAt: '2026-07-22T10:00:00.000Z',
+      handoffStatus: 'done',
+      proofUrl: 'https://github.com/owner/repo/pull/42',
+      handledAt: '2026-07-22T10:10:00.000Z',
+      processedBy: 'Codex',
+      title: 'Original capture',
+    })
+
+    const merged = buildMergedTaskList([local], [remote])[0]
+
+    expect(merged.title).toBe('Original capture')
+    expect(merged.seenRevision).toBe('revision-1')
+    expect(merged.handoffStatus).toBe('done')
+    expect(merged.proofUrl).toBe('https://github.com/owner/repo/pull/42')
+  })
+
+  it('ignores a stale receipt for an older capture revision', () => {
+    const local = makeTask({ id: 'task-1', captureRevision: 'revision-2', title: 'Newer capture' })
+    const remote = makeTask({
+      id: 'task-1',
+      captureRevision: 'revision-1',
+      seenRevision: 'revision-1',
+      seenBy: 'Codex',
+      seenAt: '2026-07-22T10:00:00.000Z',
+      handoffStatus: 'done',
+      proofUrl: 'https://github.com/owner/repo/pull/42',
+      processedBy: 'Codex',
+      isCompleted: true,
+      body: 'Old agent note',
+      title: 'Older capture',
+    })
+
+    const merged = buildMergedTaskList([local], [remote])[0]
+
+    expect(merged.captureRevision).toBe('revision-2')
+    expect(merged.handoffStatus).toBeUndefined()
+    expect(merged.title).toBe('Newer capture')
+    expect(merged.processedBy).toBeUndefined()
+    expect(merged.isCompleted).toBe(false)
+    expect(merged.body).toBe('')
+  })
+
+  it('keeps newer audit metadata when an equal-rank receipt is re-imported', () => {
+    const local = makeTask({
+      id: 'task-1',
+      captureRevision: 'revision-1',
+      seenRevision: 'revision-1',
+      seenBy: 'Codex',
+      seenAt: '2026-07-22T11:00:00.000Z',
+      handoffStatus: 'filed',
+      proofUrl: 'https://github.com/owner/repo/issues/42',
+      handledAt: '2026-07-22T11:10:00.000Z',
+      processedBy: 'Codex',
+    })
+    const remote = makeTask({
+      id: 'task-1',
+      captureRevision: 'revision-1',
+      seenRevision: 'revision-1',
+      seenBy: 'Claude',
+      seenAt: '2026-07-22T10:00:00.000Z',
+      handoffStatus: 'filed',
+      proofUrl: 'https://github.com/owner/repo/issues/42',
+      handledAt: '2026-07-22T10:10:00.000Z',
+      processedBy: 'Claude',
+    })
+
+    const merged = buildMergedTaskList([local], [remote])[0]
+
+    expect(merged.seenBy).toBe('Codex')
+    expect(merged.seenAt).toBe('2026-07-22T11:00:00.000Z')
+    expect(merged.handledAt).toBe('2026-07-22T11:10:00.000Z')
+    expect(merged.processedBy).toBe('Codex')
+  })
+
+  it('does not apply a receipt that lacks agent audit metadata', () => {
+    const local = makeTask({ id: 'task-1', captureRevision: 'revision-1' })
+    const remote = makeTask({
+      id: 'task-1',
+      captureRevision: 'revision-1',
+      seenRevision: 'revision-1',
+      handoffStatus: 'filed',
+      proofUrl: 'https://github.com/owner/repo/issues/42',
+      isCompleted: true,
+      processedBy: 'Codex',
+    })
+
+    const merged = buildMergedTaskList([local], [remote])[0]
+
+    expect(merged.handoffStatus).toBeUndefined()
+    expect(merged.isCompleted).toBe(false)
+    expect(merged.processedBy).toBeUndefined()
   })
 
   it('takes remote body when longer AND local is synced', () => {

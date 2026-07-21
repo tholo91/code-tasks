@@ -3,8 +3,9 @@ import type { Task } from '../types/task'
 let orderCounter = 0
 
 export function createTestTask(overrides: Partial<Task> = {}): Task {
+  const id = overrides.id ?? `test-${Date.now()}-${Math.random()}`
   return {
-    id: `test-${Date.now()}-${Math.random()}`,
+    id,
     username: 'testuser',
     repoFullName: 'owner/repo',
     title: 'Test Task',
@@ -17,6 +18,13 @@ export function createTestTask(overrides: Partial<Task> = {}): Task {
     order: orderCounter++,
     syncStatus: 'pending',
     githubIssueNumber: null,
+    captureRevision: id,
+    seenRevision: null,
+    seenAt: null,
+    seenBy: null,
+    handoffStatus: null,
+    proofUrl: null,
+    handledAt: null,
     ...overrides,
   }
 }

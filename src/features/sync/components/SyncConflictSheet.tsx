@@ -34,7 +34,8 @@ export function SyncConflictSheet({ isOpen, repoFullName, username, onClose }: S
     setIsLoading(true)
     setRemoteError(null)
 
-    fetchRemoteFileContent(repoFullName, username).then((result) => {
+    const syncBranch = repoSyncBranches[repoFullName.toLowerCase()]
+    fetchRemoteFileContent(repoFullName, username, syncBranch).then((result) => {
       if (!active) return
       if (result.error) {
         setRemoteError(result.error)
@@ -46,7 +47,7 @@ export function SyncConflictSheet({ isOpen, repoFullName, username, onClose }: S
     return () => {
       active = false
     }
-  }, [isOpen, repoFullName, username])
+  }, [isOpen, repoFullName, username, repoSyncBranches])
 
   const repoKey = repoFullName.toLowerCase()
   const localTasks = useMemo(
@@ -102,7 +103,7 @@ export function SyncConflictSheet({ isOpen, repoFullName, username, onClose }: S
     setIsResolving(true)
     setSyncStatus('syncing')
     try {
-      const result = await fetchRemoteTasksForRepo(repoFullName, username)
+      const result = await fetchRemoteTasksForRepo(repoFullName, username, conflictSyncBranch)
       if (result.error) {
         setSyncStatus('error', result.error)
         return

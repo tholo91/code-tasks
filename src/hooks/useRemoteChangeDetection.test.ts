@@ -32,6 +32,7 @@ function makeStoreState(overrides: Record<string, unknown> = {}) {
     repoSyncMeta: {
       'owner/repo': { lastSyncedSha: 'abc123', lastSyncAt: null, localRevision: 0, lastSyncedRevision: 0, conflict: null },
     },
+    repoSyncBranches: {},
     setRepoSyncMeta: vi.fn(),
     ...overrides,
   }
@@ -84,6 +85,18 @@ describe('useRemoteChangeDetection', () => {
 
     triggerVisibilityChange('visible')
     await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledWith('owner/repo', 'testuser'))
+  })
+
+  it('reads the configured capture branch when visibility changes to visible', async () => {
+    const storeState = makeStoreState({ repoSyncBranches: { 'owner/repo': 'gitty/testuser' } })
+    mockUseSyncStore.mockImplementation((selector: (s: ReturnType<typeof makeStoreState>) => unknown) => selector(storeState))
+    ;(useSyncStore as unknown as { getState: () => ReturnType<typeof makeStoreState> }).getState = () => storeState
+    mockFetchRemote.mockResolvedValue({ tasks: makeRemoteTasks(), sha: 'def456' })
+
+    renderHook(() => useRemoteChangeDetection(vi.fn()))
+
+    triggerVisibilityChange('visible')
+    await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledWith('owner/repo', 'testuser', 'gitty/testuser'))
   })
 
   it('skips check when offline', async () => {

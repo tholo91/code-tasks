@@ -74,6 +74,7 @@ import {
   commitTasks,
   getScopedFileName,
   classifySyncError,
+  fetchRemoteTasksForRepo,
 } from './sync-service'
 import { useSyncStore } from '../../stores/useSyncStore'
 import { HEADER_SIGNATURE, MANAGED_START, MANAGED_END } from '../../features/sync/utils/markdown-templates'
@@ -186,6 +187,42 @@ describe('sync-service', () => {
           'test.md',
         ),
       ).rejects.toEqual({ status: 500, message: 'Server error' })
+    })
+
+    it('reads a configured branch when ref is provided', async () => {
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: { content: btoa('# My File'), sha: 'branch-sha' },
+      })
+
+      await getFileContent(mockOctokit as any, 'testuser', 'my-repo', 'test.md', 'gitty/testuser')
+
+      expect(mockOctokit.rest.repos.getContent).toHaveBeenCalledWith({
+        owner: 'testuser',
+        repo: 'my-repo',
+        path: 'test.md',
+        ref: 'gitty/testuser',
+      })
+    })
+  })
+
+  describe('fetchRemoteTasksForRepo', () => {
+    it('maps a receipt from the configured capture branch', async () => {
+      const content = '- [x] **Ship handoff** ([Created: 2026-07-22]) (Priority: ⚪ Normal) [Capture revision: revision-1] [Seen revision: revision-1] [Seen by: Codex] [Seen: 2026-07-22T10:00:00.000Z] [Gitty: Done] [Proof: https://github.com/testuser/my-repo/pull/42] [Handled: 2026-07-22T10:10:00.000Z] [Processed by: Codex] <!-- ct:task-1 -->'
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: { content: Buffer.from(content, 'utf-8').toString('base64'), sha: 'receipt-sha' },
+      })
+
+      const result = await fetchRemoteTasksForRepo('testuser/my-repo', 'testuser', 'gitty/testuser')
+
+      expect(mockOctokit.rest.repos.getContent).toHaveBeenCalledWith(expect.objectContaining({ ref: 'gitty/testuser' }))
+      expect(result.tasks[0]).toMatchObject({
+        id: 'task-1',
+        captureRevision: 'revision-1',
+        seenRevision: 'revision-1',
+        seenBy: 'Codex',
+        handoffStatus: 'done',
+        proofUrl: 'https://github.com/testuser/my-repo/pull/42',
+      })
     })
   })
 
@@ -856,6 +893,7 @@ describe('sync-service', () => {
         message: 'Resource not accessible by personal access token',
       })
       expect(result.errorType).toBe('auth')
+      expect(result.message).toContain('cannot write to this repository')
     })
 
     it('returns network for errors without status', () => {

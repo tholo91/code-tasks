@@ -68,7 +68,7 @@ describe('markdown-templates', () => {
       expect(header).toContain('Instructions for AI Agents')
       expect(header).toContain('managed-start')
       expect(header).toContain('managed-end')
-      expect(header).toContain('Tasks between the `managed-start` and `managed-end` markers are auto-generated. Never edit them by hand.')
+      expect(header).toContain('Keep task title, order, and priority unchanged')
     })
 
     it('includes the MANAGED_START marker', () => {
@@ -86,12 +86,12 @@ describe('markdown-templates', () => {
       expect(header).toContain('[Processed by: YourAgentName]')
     })
 
-    it('directively tells the agent to scan and print unchecked tasks grouped by priority', () => {
+    it('directs the agent to inspect captures quietly and mark unseen revisions once', () => {
       const header = getAIReadyHeader('testuser')
       expect(header).toContain('First action every session:')
-      expect(header).toContain('scan the managed block for unchecked items')
-      expect(header).toContain('grouped by priority')
-      expect(header).toContain('Then wait for direction. Do not execute silently.')
+      expect(header).toContain('silently inspect the managed block')
+      expect(header).toContain('Seen revision')
+      expect(header).toContain('If all revisions were already seen, say nothing about Gitty unless the user asks.')
     })
 
     it('provides trivial-vs-non-trivial decision criteria', () => {
@@ -99,7 +99,7 @@ describe('markdown-templates', () => {
       expect(header).toContain('Trivial')
       expect(header).toContain('≤ 30 min, clearly bounded, no design choices')
       expect(header).toContain('Non-trivial')
-      expect(header).toContain('propose turning it into a story or quick spec')
+      expect(header).toContain('create a precise hand-off receipt')
     })
 
     it('does not use the old passive task-check phrasing', () => {
@@ -176,7 +176,7 @@ describe('markdown-templates', () => {
       const task = createTask({ body: '' })
       const result = formatTaskAsMarkdown(task)
       expect(result).toBe(
-        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal) <!-- ct:test-id-1 -->',
+        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: test-id-1] <!-- ct:test-id-1 -->',
       )
     })
 
@@ -184,7 +184,7 @@ describe('markdown-templates', () => {
       const task = createTask()
       const result = formatTaskAsMarkdown(task)
       expect(result).toBe(
-        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal) <!-- ct:test-id-1 -->\n  Users are seeing an error on the login page',
+        '- [ ] **Fix the login bug** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: test-id-1] <!-- ct:test-id-1 -->\n  Users are seeing an error on the login page',
       )
     })
 
@@ -468,12 +468,12 @@ Some content without a separator line
       expect(secondSync.split(HEADER_SIGNATURE).length - 1).toBe(1)
     })
 
-    it('preserves the existing header on incremental sync when no syncBranch is passed (Case 4)', () => {
+    it('refreshes the managed header on incremental sync when no syncBranch is passed (Case 4)', () => {
       const tasks = [createTask({ body: '' })]
       const firstSync = buildFileContent(null, tasks, username, 'gitty/main')
       const secondSync = buildFileContent(firstSync, tasks, username)
-      // Common main-branch path: header untouched, stale-or-not, to avoid latency churn.
-      expect(secondSync).toContain('synced to branch `gitty/main`')
+      expect(secondSync).not.toContain('synced to branch `gitty/main`')
+      expect(secondSync).toContain('silently inspect the managed block')
     })
   })
 
@@ -746,10 +746,62 @@ ${MANAGED_END}
     })
   })
 
+  describe('formatTaskAsMarkdown — handoff receipts', () => {
+    it('round-trips a Seen receipt for the current capture revision', () => {
+      const task = createTask({
+        captureRevision: 'revision-1',
+        seenRevision: 'revision-1',
+        seenBy: 'Codex',
+        seenAt: '2026-07-22T10:00:00.000Z',
+      })
+      const parsed = parseTasksFromMarkdown(formatTaskAsMarkdown(task))[0]
+
+      expect(parsed.captureRevision).toBe('revision-1')
+      expect(parsed.seenRevision).toBe('revision-1')
+      expect(parsed.seenBy).toBe('Codex')
+      expect(parsed.seenAt).toBe('2026-07-22T10:00:00.000Z')
+    })
+
+    it('round-trips a Filed receipt with an HTTPS proof URL', () => {
+      const task = createTask({
+        captureRevision: 'revision-2',
+        seenRevision: 'revision-2',
+        handoffStatus: 'filed',
+        proofUrl: 'https://github.com/example/repo/issues/42',
+        handledAt: '2026-07-22T10:00:00.000Z',
+      })
+      const parsed = parseTasksFromMarkdown(formatTaskAsMarkdown(task))[0]
+
+      expect(parsed.handoffStatus).toBe('filed')
+      expect(parsed.proofUrl).toBe('https://github.com/example/repo/issues/42')
+      expect(parsed.handledAt).toBe('2026-07-22T10:00:00.000Z')
+    })
+
+    it('does not serialize or parse Done without an HTTPS proof URL', () => {
+      const task = createTask({ handoffStatus: 'done', proofUrl: 'http://example.com/proof' })
+      const markdown = formatTaskAsMarkdown(task)
+      const parsed = parseTasksFromMarkdown(markdown)[0]
+
+      expect(markdown).not.toContain('[Gitty: Done]')
+      expect(parsed.handoffStatus).toBeNull()
+      expect(parsed.proofUrl).toBeNull()
+    })
+
+    it('ignores proof and handled tags without a Filed or Done receipt', () => {
+      const parsed = parseTasksFromMarkdown(
+        '- [ ] **Loose proof** ([Created: 2026-07-22]) (Priority: ⚪ Normal) [Proof: https://github.com/example/repo/pull/42] [Handled: 2026-07-22T10:00:00.000Z] <!-- ct:task-1 -->',
+      )[0]
+
+      expect(parsed.handoffStatus).toBeNull()
+      expect(parsed.proofUrl).toBeNull()
+      expect(parsed.handledAt).toBeNull()
+    })
+  })
+
   describe('Agent Front-Door Block', () => {
     describe('AGENT_FRONT_DOOR_SIGNATURE', () => {
       it('is an HTML comment marker', () => {
-        expect(AGENT_FRONT_DOOR_SIGNATURE).toBe('<!-- code-tasks:agent-front-door -->')
+        expect(AGENT_FRONT_DOOR_SIGNATURE).toBe('<!-- code-tasks:agent-front-door:v2 -->')
       })
     })
 
@@ -772,6 +824,15 @@ ${MANAGED_END}
       it('includes AI agent instructions heading', () => {
         const block = getAgentFrontDoor()
         expect(block).toContain('Captured Ideas (Gitty)')
+      })
+
+      it('supersedes the noisy legacy instruction with quiet receipt guidance', () => {
+        const legacy = '<!-- code-tasks:agent-front-door -->\n## Captured Ideas (Gitty)\nOld instructions'
+        const result = appendAgentFrontDoor(legacy)
+
+        expect(result).not.toContain(legacy)
+        expect(result).toContain(AGENT_FRONT_DOOR_SIGNATURE)
+        expect(result).toContain('do not list the backlog or block the user\'s request')
       })
     })
 

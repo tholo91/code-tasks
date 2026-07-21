@@ -56,7 +56,10 @@ export function useRemoteChangeDetection(
 
       if (!selectedRepo || !user) return
 
-      const result = await fetchRemoteTasksForRepo(selectedRepo.fullName, user.login)
+      const syncBranch = state.repoSyncBranches?.[selectedRepo.fullName.toLowerCase()]
+      const result = syncBranch
+        ? await fetchRemoteTasksForRepo(selectedRepo.fullName, user.login, syncBranch)
+        : await fetchRemoteTasksForRepo(selectedRepo.fullName, user.login)
       if (result.error) {
         lastCheckRef.current = 0 // Allow retry immediately if error occurred
         return

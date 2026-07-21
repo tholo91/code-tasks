@@ -217,6 +217,48 @@ describe('TaskDetailSheet', () => {
     expect(screen.getByTestId('task-detail-completed')).toBeInTheDocument()
   })
 
+  it('shows a quiet Seen handoff receipt inside Details', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(
+      <TaskDetailSheet
+        task={createTask({
+          captureRevision: 'revision-1',
+          seenRevision: 'revision-1',
+          seenBy: 'Codex',
+          seenAt: '2026-03-14T12:00:00Z',
+        })}
+        {...defaultProps}
+      />,
+    )
+
+    await expandMore(user)
+
+    expect(screen.getByTestId('task-detail-handoff')).toHaveTextContent('Seen by Codex')
+  })
+
+  it('shows an HTTPS proof link for a verified Done receipt', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(
+      <TaskDetailSheet
+        task={createTask({
+          captureRevision: 'revision-1',
+          seenRevision: 'revision-1',
+          handoffStatus: 'done',
+          proofUrl: 'https://github.com/testuser/repo/pull/42',
+        })}
+        {...defaultProps}
+      />,
+    )
+
+    await expandMore(user)
+
+    expect(screen.getByTestId('task-detail-handoff')).toHaveTextContent('Done')
+    expect(screen.getByTestId('task-detail-handoff-proof')).toHaveAttribute(
+      'href',
+      'https://github.com/testuser/repo/pull/42',
+    )
+  })
+
   it('shows current repo name after expanding More', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<TaskDetailSheet task={createTask({ repoFullName: 'testuser/my-project' })} {...defaultProps} />)

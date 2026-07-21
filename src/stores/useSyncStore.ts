@@ -314,8 +314,9 @@ export const useSyncStore = create<SyncState>()(
           throw new Error('Cannot create task without a selected repository')
         }
 
+        const taskId = generateUUID()
         const task: Task = {
-          id: generateUUID(),
+          id: taskId,
           username,
           repoFullName: selectedRepo.fullName,
           title,
@@ -328,6 +329,13 @@ export const useSyncStore = create<SyncState>()(
           createdAt: new Date().toISOString(),
           syncStatus: 'pending',
           githubIssueNumber: null,
+          captureRevision: taskId,
+          seenRevision: null,
+          seenAt: null,
+          seenBy: null,
+          handoffStatus: null,
+          proofUrl: null,
+          handledAt: null,
         }
 
         // Async: persist to IndexedDB (fire-and-forget, non-blocking)
@@ -366,7 +374,31 @@ export const useSyncStore = create<SyncState>()(
           const updatedTasks = state.tasks.map(t => {
             if (t.id !== taskId) return t
             targetRepoKey = normalizeRepoKey(t.repoFullName)
-            return { ...t, ...updates, updatedAt: new Date().toISOString(), syncStatus: 'pending' as const }
+            const captureChanged =
+              ('title' in updates && updates.title !== t.title) ||
+              ('body' in updates && updates.body !== t.body) ||
+              ('isImportant' in updates && updates.isImportant !== t.isImportant)
+
+            return {
+              ...t,
+              ...updates,
+              updatedAt: new Date().toISOString(),
+              syncStatus: 'pending' as const,
+              ...(captureChanged
+                ? {
+                    captureRevision: generateUUID(),
+                    seenRevision: null,
+                    seenAt: null,
+                    seenBy: null,
+                    handoffStatus: null,
+                    proofUrl: null,
+                    handledAt: null,
+                    ...(t.handoffStatus === 'done'
+                      ? { isCompleted: false, completedAt: null }
+                      : {}),
+                  }
+                : {}),
+            }
           })
           const updatedTask = updatedTasks.find(t => t.id === taskId)
           if (updatedTask) {

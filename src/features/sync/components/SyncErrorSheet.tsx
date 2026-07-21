@@ -16,6 +16,8 @@ const errorMeta: Record<SyncErrorType, { title: string; icon: string }> = {
   unknown: { title: 'Sync Failed', icon: '⚠️' },
 }
 
+const GITHUB_TOKEN_SETTINGS_URL = 'https://github.com/settings/personal-access-tokens'
+
 export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
   const syncError = useSyncStore((s) => s.syncError)
   const syncErrorType = useSyncStore((s) => s.syncErrorType)
@@ -30,6 +32,9 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
   const repoKey = selectedRepo?.fullName.toLowerCase()
   const repoError = repoKey ? repoSyncErrors[repoKey] : null
   const rawError = repoError?.rawError
+  const isTokenRepoAccessError =
+    rawError?.status === 403 &&
+    rawError.message.toLowerCase().includes('resource not accessible by personal access token')
 
   const handleCopyDebug = async () => {
     const lines = [
@@ -75,24 +80,54 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
               {syncError ?? 'An unknown error occurred during sync.'}
             </p>
 
+            {isTokenRepoAccessError && (
+              <div
+                className="rounded-lg border p-3 text-sm leading-relaxed"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-canvas)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                <p>
+                  Add this repository to your GitHub token, then sync again. The token needs
+                  Contents: Read and Write access.
+                </p>
+                <a
+                  href={GITHUB_TOKEN_SETTINGS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 block rounded-md px-3 py-2 text-center text-sm font-medium"
+                  style={{
+                    backgroundColor: 'var(--color-accent)',
+                    color: '#ffffff',
+                  }}
+                >
+                  Open GitHub token settings
+                </a>
+              </div>
+            )}
+
             {/* Debug info box */}
             <div
-              className="rounded-lg p-3 text-xs font-mono space-y-0.5"
+              className="min-w-0 overflow-hidden rounded-lg p-3 text-xs font-mono space-y-0.5"
               style={{
                 backgroundColor: 'var(--color-canvas)',
                 color: 'var(--color-text-secondary)',
                 border: '1px solid var(--color-border)',
               }}
             >
-              <div>Type: {syncErrorType ?? 'unknown'}</div>
-              <div>Repo: {selectedRepo?.fullName ?? '—'}</div>
-              <div>Last sync: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : 'never'}</div>
+              <DebugLine label="Type" value={syncErrorType ?? 'unknown'} />
+              <DebugLine label="Repo" value={selectedRepo?.fullName ?? '—'} />
+              <DebugLine label="Last sync" value={lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : 'never'} />
               {rawError && (
-                <>
-                  <div className="pt-1 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-                    HTTP {rawError.status ?? '?'}: {rawError.message}
-                  </div>
-                </>
+                <div
+                  className="min-w-0 truncate pt-1 mt-1"
+                  title={`HTTP ${rawError.status ?? '?'}: ${rawError.message}`}
+                  style={{ borderTop: '1px solid var(--color-border)' }}
+                >
+                  HTTP {rawError.status ?? '?'}: {rawError.message}
+                </div>
               )}
             </div>
 
@@ -113,5 +148,14 @@ export function SyncErrorSheet({ open, onClose }: SyncErrorSheetProps) {
         </BottomSheet>
       )}
     </AnimatePresence>
+  )
+}
+
+function DebugLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 gap-2">
+      <span className="shrink-0">{label}:</span>
+      <span className="min-w-0 truncate" title={value}>{value}</span>
+    </div>
   )
 }

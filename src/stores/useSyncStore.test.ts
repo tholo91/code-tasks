@@ -178,6 +178,7 @@ describe('useSyncStore', () => {
       expect(task.repoFullName).toBe('testuser/my-repo')
       expect(task.username).toBe('testuser')
       expect(task.syncStatus).toBe('pending')
+      expect(task.captureRevision).toBe(task.id)
     })
 
     it('throws when no repo is selected', async () => {
@@ -289,6 +290,33 @@ describe('useSyncStore', () => {
       expect(updated.title).toBe('New title')
       expect(updated.updatedAt).toBeTruthy()
       expect(updated.syncStatus).toBe('pending')
+    })
+
+    it('rotates the capture revision and clears an old agent receipt after a capture edit', () => {
+      const task = useSyncStore.getState().addTask('Original title', 'Body')
+      useSyncStore.setState({
+        tasks: useSyncStore.getState().tasks.map((item) => item.id === task.id ? {
+          ...item,
+          seenRevision: task.captureRevision,
+          seenAt: '2026-07-22T10:00:00.000Z',
+          seenBy: 'Codex',
+          handoffStatus: 'done',
+          proofUrl: 'https://github.com/testuser/my-repo/pull/42',
+          handledAt: '2026-07-22T10:10:00.000Z',
+          isCompleted: true,
+          completedAt: '2026-07-22T10:10:00.000Z',
+        } : item),
+      })
+
+      useSyncStore.getState().updateTask(task.id, { body: 'Changed on phone' })
+
+      const updated = useSyncStore.getState().tasks.find(t => t.id === task.id)!
+      expect(updated.captureRevision).not.toBe(task.captureRevision)
+      expect(updated.seenRevision).toBeNull()
+      expect(updated.handoffStatus).toBeNull()
+      expect(updated.proofUrl).toBeNull()
+      expect(updated.isCompleted).toBe(false)
+      expect(updated.completedAt).toBeNull()
     })
 
     it('updates body', () => {
