@@ -276,7 +276,7 @@ describe('App', () => {
       render(<App />)
     })
 
-    expect(screen.getByTestId('auth-form')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /capture coding ideas on the go/i })).toBeInTheDocument()
   })
 
   it('shows main interface when authenticated', async () => {

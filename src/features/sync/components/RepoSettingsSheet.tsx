@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { BottomSheet } from '../../../components/ui/BottomSheet'
-import { useSyncStore, selectSyncBranch, selectRepoSkipCi } from '../../../stores/useSyncStore'
+import { useSyncStore, selectSyncBranch, selectRepoSkipCi, selectRepoAutoSync } from '../../../stores/useSyncStore'
 import { TRANSITION_FAST } from '../../../config/motion'
 
 interface RepoSettingsSheetProps {
@@ -16,15 +16,18 @@ export function RepoSettingsSheet({ onClose }: RepoSettingsSheetProps) {
   const selectedRepo = useSyncStore((s) => s.selectedRepo)
   const setRepoSyncBranch = useSyncStore((s) => s.setRepoSyncBranch)
   const setRepoSkipCi = useSyncStore((s) => s.setRepoSkipCi)
+  const setRepoAutoSync = useSyncStore((s) => s.setRepoAutoSync)
   const user = useSyncStore((s) => s.user)
 
   const repoFullName = selectedRepo?.fullName ?? ''
   const currentBranch = useSyncStore(repoFullName ? selectSyncBranch(repoFullName) : () => null)
   const currentSkipCi = useSyncStore(repoFullName ? selectRepoSkipCi(repoFullName) : () => false)
+  const currentAutoSync = useSyncStore(repoFullName ? selectRepoAutoSync(repoFullName) : () => false)
 
   const [branchMode, setBranchMode] = useState<'default' | 'custom'>(currentBranch ? 'custom' : 'default')
   const [branchName, setBranchName] = useState(currentBranch ?? `gitty/${user?.login ?? 'user'}`)
   const [skipCi, setSkipCi] = useState(currentSkipCi)
+  const [autoSync, setAutoSync] = useState(currentAutoSync)
 
   if (!selectedRepo) return null
 
@@ -40,6 +43,7 @@ export function RepoSettingsSheet({ onClose }: RepoSettingsSheetProps) {
 
     // Save skip-ci setting
     setRepoSkipCi(repoFullName, skipCi)
+    setRepoAutoSync(repoFullName, autoSync)
 
     onClose()
   }
@@ -157,6 +161,15 @@ export function RepoSettingsSheet({ onClose }: RepoSettingsSheetProps) {
               spellCheck={false}
             />
           </motion.div>
+        </div>
+
+        {/* ── Skip CI Toggle ── */}
+        <div className="flex items-center justify-between rounded-lg px-3 py-3 min-h-[44px]" style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
+          <div className="flex flex-col gap-0.5 pr-3">
+            <span className="text-body font-medium" style={{ color: 'var(--color-text-primary)' }}>Automatic sync</span>
+            <span className="text-label" style={{ color: 'var(--color-text-secondary)' }}>Send completed captures after 2–3s and edits after 10s</span>
+          </div>
+          <ToggleSwitch checked={autoSync} onChange={setAutoSync} testId="auto-sync-toggle" />
         </div>
 
         {/* ── Skip CI Toggle ── */}

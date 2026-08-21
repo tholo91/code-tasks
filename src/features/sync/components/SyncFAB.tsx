@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges, selectRepoSkipCi } from '../../../stores/useSyncStore'
-import { syncAllRepoTasks, classifySyncError } from '../../../services/github/sync-service'
+import { useSyncStore, selectPendingSyncCount, selectHasUnsyncedChanges, selectRepoSkipCi, selectRepoAutoSync } from '../../../stores/useSyncStore'
+import { syncRepo, classifySyncError } from '../../../services/github/sync-service'
 import { triggerSelectionHaptic } from '../../../services/native/haptic-service'
 import { TRANSITION_SPRING, TRANSITION_FAST, successFlash } from '../../../config/motion'
 
@@ -19,13 +19,17 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
   const repoSyncBranches = useSyncStore((s) => s.repoSyncBranches)
   const fallbackBranch = selectedRepo ? repoSyncBranches[selectedRepo.fullName.toLowerCase()] : null
   const skipCi = useSyncStore(selectedRepo ? selectRepoSkipCi(selectedRepo.fullName) : () => false)
+  const autoSync = useSyncStore(selectedRepo ? selectRepoAutoSync(selectedRepo.fullName) : () => false)
+  const deliveryState = useSyncStore((state) => selectedRepo
+    ? state.repoSyncMeta[selectedRepo.fullName.toLowerCase()]?.deliveryState
+    : undefined)
   const isConflict = syncEngineStatus === 'conflict'
 
   const [fabState, setFabState] = useState<FabState>('pending')
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Show FAB when there are unsynced changes (or during success/error animation)
-  const isVisible = (hasUnsyncedChanges && !isConflict) || fabState === 'success' || fabState === 'error'
+  const isVisible = deliveryState === 'needs-attention' || (!autoSync && hasUnsyncedChanges && !isConflict) || fabState === 'success' || fabState === 'error'
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -33,14 +37,6 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
       if (successTimerRef.current) clearTimeout(successTimerRef.current)
     }
   }, [])
-
-  // Reset fabState to pending when new changes appear (e.g., after success fade or on fresh changes)
-  // Do NOT reset during syncing, success animation, or error state
-  useEffect(() => {
-    if (hasUnsyncedChanges && fabState !== 'syncing' && fabState !== 'success' && fabState !== 'error') {
-      setFabState('pending')
-    }
-  }, [hasUnsyncedChanges, fabState])
 
   const handleSync = useCallback(async () => {
     if (fabState === 'syncing' || fabState === 'success') return
@@ -53,7 +49,8 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
       const syncOptions: { maxRetries: number; branch?: string; skipCi?: boolean } = { maxRetries: 2 }
       if (fallbackBranch) syncOptions.branch = fallbackBranch
       if (skipCi) syncOptions.skipCi = true
-      const result = await syncAllRepoTasks(syncOptions)
+      if (!selectedRepo) return
+      const result = await syncRepo({ ...syncOptions, repoFullName: selectedRepo.fullName, reason: 'retry' })
       if (result.status === 'conflict') {
         setSyncStatus('conflict', result.error)
         setFabState('pending')
@@ -77,7 +74,7 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
       setSyncStatus('error', classified.message, classified.errorType, classified.rawError)
       setFabState('error')
     }
-  }, [fabState])
+  }, [fabState, fallbackBranch, skipCi, selectedRepo, onSyncComplete])
 
   if (!isVisible) return null
 
@@ -98,16 +95,14 @@ export function SyncFAB({ onSyncComplete }: SyncFABProps = {}) {
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{
         opacity: 1,
-        scale: fabState === 'pending' ? [1, 1.06, 1] : 1,
+        scale: 1,
         x: fabState === 'error' ? [0, -6, 6, -4, 4, 0] : 0,
         backgroundColor: bgColor,
       }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{
         ...TRANSITION_SPRING,
-        scale: fabState === 'pending'
-          ? { repeat: Infinity, duration: 2.5, ease: 'easeInOut' }
-          : { duration: 0.2 },
+        scale: { duration: 0.2 },
         x: fabState === 'error'
           ? { duration: 0.4 }
           : { duration: 0 },

@@ -22,24 +22,20 @@ export const MANAGED_END = '<!-- code-tasks:managed-end -->'
  */
 export function getAIReadyHeader(username: string, syncBranch?: string): string {
   const branchLine = syncBranch
-    ? `> 8. 📍 This file is synced to branch \`${syncBranch}\` in this repo. To get the latest captures from another branch, run: \`git fetch && git show origin/${syncBranch}:captured-ideas-${username}.md\`.\n`
+    ? `> 7. This inbox lives on \`${syncBranch}\`. On an explicit inbox request, run \`git fetch origin ${syncBranch}\` and read \`git show origin/${syncBranch}:captured-ideas-${username}.md\`.\n`
     : ''
 
   return `${HEADER_SIGNATURE}
 # Captured Ideas - ${username}
 
-> **Instructions for AI Agents (read this first, every session):**
+> **Gitty Inbox Protocol v1 — instructions for AI agents:**
 >
-> 1. This file is managed by [code-tasks](https://github.com/tholo91/code-tasks). Keep task title, order, and priority unchanged. Preserve the capture body except for a brief completion note after verified work. You may only update the checkbox and Gitty receipt tags described below.
-> 2. **First action every session:** silently inspect the managed block. Do not list tasks or block the user's request. A task is new when its \`[Capture revision: ...]\` does not match its \`[Seen revision: ...]\`. For each new task, write matching \`Seen revision\`, \`Seen by\`, and \`Seen\` tags, then commit them to this file's sync branch. After handling the user's actual request, mention only one compact sentence that new Gitty captures exist. If all revisions were already seen, say nothing about Gitty unless the user asks.
-> 3. **These are on-the-go captures** — quick sketches and loose thoughts typed on the go, not polished specs. If the user asks to work on one and its intent, scope, or wording is ambiguous, ask clarifying questions before acting.
-> 4. **Decide per selected task:**
->    - **Trivial** (≤ 30 min, clearly bounded, no design choices) → execute, mark \`- [x]\`, append \`[Processed by: YourAgentName]\` to the task line, and add a brief note in the task body describing the change.
->    - **Non-trivial** → create a precise hand-off receipt: \`[Gitty: Filed]\`, \`[Handled: ISO-8601]\`, and \`[Processed by: YourAgentName]\`. Include \`[Proof: https://...]\` when there is a relevant issue, story, PR, or other hand-off target. Do not implement until the user confirms scope.
->    - **Verified implementation** → use \`[Gitty: Done]\` only with a HTTPS proof URL to the PR, commit, or deployed work.
-> 5. Tasks use markdown checkboxes (\`- [ ]\` / \`- [x]\`). Priority: 🔴 Important or ⚪ Normal. Receipt tags are \`Capture revision\`, \`Seen revision\`, \`Seen by\`, \`Seen\`, \`Gitty\`, \`Proof\`, \`Handled\`, and \`Processed by\`.
-> 6. Never delete or reorder tasks. Only the mobile app manages capture lifecycle.
-> 7. You may add notes or context **below** the \`managed-end\` marker. They will not be overwritten.
+> 1. Stay silent about Gitty during normal work. Only inspect this inbox when the user says “Check my Gitty inbox”, \`/gitty\`, \`/captured-ideas\`, or an equivalent explicit request.
+> 2. On request, fetch the exact capture branch, list open Inbox items compactly, and wait for the user to choose one. Never execute a capture automatically.
+> 3. These are rough, on-the-go thoughts, not polished specs. Ask a clarifying question when a selected capture is ambiguous.
+> 4. Keep task identity, title, order, priority, body, and \`Capture revision\` unchanged. Only Gitty manages capture content and deletion.
+> 5. A selected task may move from Inbox to \`[Gitty: Filed]\` when deliberately transferred to an issue, story, or plan. Add \`[Handled: ISO-8601]\` and \`[Processed by: AgentName]\`; add \`[Proof: https://...]\` when available.
+> 6. Use \`[Gitty: Done]\` only for verified work with a valid HTTPS \`[Proof: ...]\`. Receipts are accepted only while their \`Capture revision\` still matches the phone's capture.
 ${branchLine}
 ---
 
@@ -118,18 +114,6 @@ export function formatTaskAsMarkdown(task: Task): string {
   const captureRevision = task.captureRevision ?? task.id
   line += ` [Capture revision: ${captureRevision}]`
 
-  if (task.seenRevision) {
-    line += ` [Seen revision: ${task.seenRevision}]`
-  }
-
-  if (task.seenBy) {
-    line += ` [Seen by: ${task.seenBy}]`
-  }
-
-  if (task.seenAt) {
-    line += ` [Seen: ${task.seenAt}]`
-  }
-
   const proofUrl = getSafeProofUrl(task.proofUrl)
   const handoffStatus = task.handoffStatus === 'done' && !proofUrl
     ? null
@@ -184,9 +168,6 @@ export interface ParsedMarkdownTask {
   isImportant: boolean
   processedBy: string | null
   captureRevision: string | null
-  seenRevision: string | null
-  seenAt: string | null
-  seenBy: string | null
   handoffStatus: HandoffStatus | null
   proofUrl: string | null
   handledAt: string | null
@@ -206,7 +187,7 @@ function normalizeDate(dateValue: string | null | undefined): string | null {
 
 function extractBracketValue(
   source: string,
-  label: 'Created' | 'Updated' | 'Completed' | 'Processed by' | 'Capture revision' | 'Seen revision' | 'Seen by' | 'Seen' | 'Gitty' | 'Proof' | 'Handled',
+  label: 'Created' | 'Updated' | 'Completed' | 'Processed by' | 'Capture revision' | 'Gitty' | 'Proof' | 'Handled',
 ): string | null {
   const match = source.match(new RegExp(`\\[${label}:\\s*([^\\]]+)\\]`))
   return match ? match[1].trim() : null
@@ -265,9 +246,6 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
     const completedAt = normalizeDate(extractBracketValue(meta, 'Completed'))
     const processedBy = extractBracketValue(meta, 'Processed by')
     const captureRevision = extractBracketValue(meta, 'Capture revision')
-    const seenRevision = extractBracketValue(meta, 'Seen revision')
-    const seenAt = normalizeDate(extractBracketValue(meta, 'Seen'))
-    const seenBy = extractBracketValue(meta, 'Seen by')
     const parsedProofUrl = getSafeProofUrl(extractBracketValue(meta, 'Proof'))
     const handoffStatus = parseHandoffStatus(extractBracketValue(meta, 'Gitty'), parsedProofUrl)
     const proofUrl = handoffStatus ? parsedProofUrl : null
@@ -294,9 +272,6 @@ export function parseTasksFromMarkdown(content: string): ParsedMarkdownTask[] {
       isImportant,
       processedBy,
       captureRevision,
-      seenRevision,
-      seenAt,
-      seenBy,
       handoffStatus,
       proofUrl,
       handledAt,
@@ -437,9 +412,11 @@ export function buildFileContent(
 /**
  * Signature string used to detect if the agent front-door block is already present.
  */
-export const AGENT_FRONT_DOOR_SIGNATURE = '<!-- code-tasks:agent-front-door:v2 -->'
+export const AGENT_FRONT_DOOR_SIGNATURE = '<!-- gitty:agent-connect:v3 -->'
 export const LEGACY_AGENT_FRONT_DOOR_SIGNATURE = '<!-- code-tasks:agent-front-door -->'
-const AGENT_FRONT_DOOR_END = '<!-- /code-tasks:agent-front-door -->'
+const LEGACY_V2_AGENT_FRONT_DOOR_SIGNATURE = '<!-- code-tasks:agent-front-door:v2 -->'
+const LEGACY_AGENT_FRONT_DOOR_END = '<!-- /code-tasks:agent-front-door -->'
+const AGENT_FRONT_DOOR_END = '<!-- /gitty:agent-connect -->'
 
 /**
  * Generates the shared agent front-door block (language-agnostic).
@@ -448,39 +425,32 @@ const AGENT_FRONT_DOOR_END = '<!-- /code-tasks:agent-front-door -->'
  * 2. Read the freshest captured-ideas-*.md file
  * 3. Follow its built-in AI agent instructions
  */
-export function getAgentFrontDoor(): string {
+export function getAgentFrontDoor(username: string, captureBranch: string): string {
   return `${AGENT_FRONT_DOOR_SIGNATURE}
-## Captured Ideas (Gitty)
+## Gitty mobile repo inbox
 
-This repo is connected to the Gitty app for mobile task capture. Captures land in \`captured-ideas-<username>.md\`.
+Gitty captures for \`${username}\` live at \`${getScopedInboxPath(username)}\` on \`${captureBranch}\`.
 
-This block supersedes any earlier Gitty instructions in this repository.
+Stay silent about Gitty during normal work. Only open the inbox when the user says “Check my Gitty inbox”, \`/gitty\`, \`/captured-ideas\`, or an equivalent explicit request.
 
-**At the start of every session, before other work:**
-1. Run \`git fetch --quiet\` to get the latest without touching the working tree.
-2. Read the freshest \`captured-ideas-*.md\` — if the local copy may be behind, read the remote directly: \`git show origin/<branch>:captured-ideas-<username>.md\`.
-3. Follow the "Instructions for AI Agents" header inside that file. Inspect captures silently; do not list the backlog or block the user's request. Only write one Seen receipt per unseen capture revision and then give one compact, non-blocking summary. If there are no unseen revisions, say nothing about Gitty unless the user asks.
+On an explicit request:
+1. Run \`git fetch origin ${captureBranch}\`.
+2. Read \`git show origin/${captureBranch}:${getScopedInboxPath(username)}\`.
+3. List Inbox items compactly and wait for the user to choose. Never execute captures automatically.
+4. Follow the Gitty Inbox Protocol in that file for Filed and Done receipts.
 ${AGENT_FRONT_DOOR_END}
 `
+}
+
+function getScopedInboxPath(username: string): string {
+  return `captured-ideas-${username}.md`
 }
 
 /**
  * Generates the agent front-door block in German (for German-speaking repos).
  */
-export function getAgentFrontDoorDE(): string {
-  return `${AGENT_FRONT_DOOR_SIGNATURE}
-## Captured Ideas (Gitty)
-
-Dieses Repo ist mit der Gitty-App für mobiles Task-Capturing verbunden. Captures landen in \`captured-ideas-<username>.md\`.
-
-Dieser Block ersetzt frühere Gitty-Anweisungen in diesem Repository.
-
-**Zu Beginn jeder Session, vor allem anderen:**
-1. \`git fetch --quiet\` ausführen, um den neuesten Stand zu holen, ohne den Working Tree anzufassen.
-2. Die frischeste \`captured-ideas-*.md\` lesen — falls die lokale Kopie veraltet sein könnte, direkt remote: \`git show origin/<branch>:captured-ideas-<username>.md\`.
-3. Dem Header „Instructions for AI Agents" in der Datei folgen. Captures still prüfen; weder den Backlog auflisten noch die Anfrage des Users blockieren. Pro ungesehener Capture-Revision genau einen Seen-Receipt schreiben und danach höchstens eine kurze, nicht-blockierende Zusammenfassung geben. Ohne ungesehene Revision nichts über Gitty sagen, außer der User fragt danach.
-${AGENT_FRONT_DOOR_END}
-`
+export function getAgentFrontDoorDE(username: string, captureBranch: string): string {
+  return getAgentFrontDoor(username, captureBranch)
 }
 
 /**
@@ -497,18 +467,33 @@ export function hasAgentFrontDoor(content: string): boolean {
  */
 export function appendAgentFrontDoor(
   existingContent: string | null,
-  isGerman: boolean = false,
+  username: string,
+  captureBranch: string,
 ): string {
-  const block = isGerman ? getAgentFrontDoorDE() : getAgentFrontDoor()
+  const block = getAgentFrontDoor(username, captureBranch)
 
   // If no content yet, just return the block
   if (existingContent === null || existingContent.trim() === '') {
     return block + '\n'
   }
 
-  // If the v2 block is already present, return unchanged.
+  // Replace an existing managed block so branch and username cannot go stale.
   if (hasAgentFrontDoor(existingContent)) {
-    return existingContent
+    const start = existingContent.indexOf(AGENT_FRONT_DOOR_SIGNATURE)
+    const end = existingContent.indexOf(AGENT_FRONT_DOOR_END, start)
+    if (end !== -1) {
+      const after = end + AGENT_FRONT_DOOR_END.length
+      return existingContent.slice(0, start) + block.trimEnd() + existingContent.slice(after)
+    }
+  }
+
+  const legacyV2Index = existingContent.indexOf(LEGACY_V2_AGENT_FRONT_DOOR_SIGNATURE)
+  if (legacyV2Index !== -1) {
+    const legacyEnd = existingContent.indexOf(LEGACY_AGENT_FRONT_DOOR_END, legacyV2Index)
+    if (legacyEnd !== -1) {
+      const after = legacyEnd + LEGACY_AGENT_FRONT_DOOR_END.length
+      return existingContent.slice(0, legacyV2Index) + block.trimEnd() + existingContent.slice(after)
+    }
   }
 
   const legacyBlockIndex = existingContent.indexOf(LEGACY_AGENT_FRONT_DOOR_SIGNATURE)

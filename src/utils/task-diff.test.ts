@@ -3,7 +3,7 @@ import { computeImportDiff, buildMergedTaskList, buildImportFeedbackMessage, isA
 import type { Task } from '../types/task'
 
 function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
+  const task: Task = {
     id: 'task-' + Math.random().toString(36).slice(2),
     username: 'user',
     repoFullName: 'owner/repo',
@@ -19,17 +19,25 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     githubIssueNumber: null,
     ...overrides,
   }
+  if (task.isCompleted && !Object.prototype.hasOwnProperty.call(overrides, 'handoffStatus')) {
+    task.captureRevision = task.captureRevision ?? task.id
+    task.handoffStatus = 'done'
+    task.proofUrl = 'https://github.com/owner/repo/commit/proof'
+    task.processedBy = 'TestAgent'
+    task.handledAt = task.completedAt ?? '2026-03-18T00:00:00.000Z'
+  }
+  return task
 }
 
 describe('computeImportDiff', () => {
   it('counts completions by agent (remote completed, local not)', () => {
     const local = [
-      makeTask({ title: 'Task A', isCompleted: false, syncStatus: 'synced' }),
-      makeTask({ title: 'Task B', isCompleted: false, syncStatus: 'synced' }),
+      makeTask({ id: 'a', captureRevision: 'ra', title: 'Task A', isCompleted: false, syncStatus: 'synced' }),
+      makeTask({ id: 'b', captureRevision: 'rb', title: 'Task B', isCompleted: false, syncStatus: 'synced' }),
     ]
     const remote = [
-      makeTask({ title: 'Task A', isCompleted: true }),
-      makeTask({ title: 'Task B', isCompleted: true }),
+      makeTask({ id: 'a', captureRevision: 'ra', title: 'Task A', isCompleted: true }),
+      makeTask({ id: 'b', captureRevision: 'rb', title: 'Task B', isCompleted: true }),
     ]
     const diff = computeImportDiff(local, remote)
     expect(diff.completedByAgent).toBe(2)
@@ -68,9 +76,8 @@ describe('computeImportDiff', () => {
     const remote = [makeTask({
       id: 'task-1',
       captureRevision: 'revision-1',
-      seenRevision: 'revision-1',
-      seenBy: 'Codex',
-      seenAt: '2026-07-22T10:00:00.000Z',
+      processedBy: 'Codex',
+      handledAt: '2026-07-22T10:00:00.000Z',
       handoffStatus: 'filed',
       proofUrl: 'https://github.com/owner/repo/issues/42',
     })]
@@ -105,10 +112,10 @@ describe('computeImportDiff', () => {
 
   it('does not double-count for duplicate-titled local tasks', () => {
     const local = [
-      makeTask({ title: 'Dup', isCompleted: false, syncStatus: 'synced' }),
-      makeTask({ title: 'Dup', isCompleted: false, syncStatus: 'synced' }),
+      makeTask({ id: 'dup-1', captureRevision: 'dup-r1', title: 'Dup', isCompleted: false, syncStatus: 'synced' }),
+      makeTask({ id: 'dup-2', captureRevision: 'dup-r2', title: 'Dup', isCompleted: false, syncStatus: 'synced' }),
     ]
-    const remote = [makeTask({ title: 'Dup', isCompleted: true })]
+    const remote = [makeTask({ id: 'dup-1', captureRevision: 'dup-r1', title: 'Dup', isCompleted: true })]
     const diff = computeImportDiff(local, remote)
     expect(diff.completedByAgent).toBe(1)
     // Second local task is unmatched synced → archived
@@ -156,8 +163,8 @@ describe('buildMergedTaskList', () => {
   })
 
   it('updates completion from remote', () => {
-    const local = makeTask({ title: 'Fix bug', isCompleted: false, syncStatus: 'synced' })
-    const remote = makeTask({ title: 'Fix bug', isCompleted: true, completedAt: '2026-03-18T10:00:00.000Z' })
+    const local = makeTask({ id: 'fix', captureRevision: 'fix-r', title: 'Fix bug', isCompleted: false, syncStatus: 'synced' })
+    const remote = makeTask({ id: 'fix', captureRevision: 'fix-r', title: 'Fix bug', isCompleted: true, completedAt: '2026-03-18T10:00:00.000Z' })
     const result = buildMergedTaskList([local], [remote])
     expect(result[0].isCompleted).toBe(true)
     expect(result[0].completedAt).toBe('2026-03-18T10:00:00.000Z')
@@ -181,7 +188,6 @@ describe('buildMergedTaskList', () => {
     const merged = buildMergedTaskList([local], [remote])[0]
 
     expect(merged.title).toBe('Original capture')
-    expect(merged.seenRevision).toBe('revision-1')
     expect(merged.handoffStatus).toBe('done')
     expect(merged.proofUrl).toBe('https://github.com/owner/repo/pull/42')
   })
@@ -304,16 +310,16 @@ describe('buildMergedTaskList', () => {
   })
 
   it('title matching is case-insensitive and trims whitespace', () => {
-    const local = makeTask({ title: '  Fix Bug  ', syncStatus: 'synced' })
-    const remote = makeTask({ title: 'fix bug', isCompleted: true, completedAt: '2026-03-18T00:00:00.000Z' })
+    const local = makeTask({ id: 'fix', captureRevision: 'fix-r', title: '  Fix Bug  ', syncStatus: 'synced' })
+    const remote = makeTask({ id: 'fix', captureRevision: 'fix-r', title: 'fix bug', isCompleted: true, completedAt: '2026-03-18T00:00:00.000Z' })
     const result = buildMergedTaskList([local], [remote])
     expect(result[0].isCompleted).toBe(true)
   })
 
   it('first-occurrence wins when duplicate titles exist; the unmatched twin is kept untouched', () => {
-    const local1 = makeTask({ id: 'id-1', title: 'Duplicate', syncStatus: 'synced', order: 0 })
-    const local2 = makeTask({ id: 'id-2', title: 'Duplicate', syncStatus: 'synced', order: 1, isCompleted: false })
-    const remote = makeTask({ title: 'Duplicate', isCompleted: true, completedAt: '2026-03-18T00:00:00.000Z' })
+    const local1 = makeTask({ id: 'id-1', captureRevision: 'dup-r1', title: 'Duplicate', syncStatus: 'synced', order: 0 })
+    const local2 = makeTask({ id: 'id-2', captureRevision: 'dup-r2', title: 'Duplicate', syncStatus: 'synced', order: 1, isCompleted: false })
+    const remote = makeTask({ id: 'id-1', captureRevision: 'dup-r1', title: 'Duplicate', isCompleted: true, completedAt: '2026-03-18T00:00:00.000Z' })
     const result = buildMergedTaskList([local1, local2], [remote])
     // First local task is updated; the second has no remote to match and is kept as-is (not archived).
     expect(result.find((t) => t.id === 'id-1')?.isCompleted).toBe(true)

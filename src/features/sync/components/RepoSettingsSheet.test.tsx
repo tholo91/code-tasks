@@ -15,17 +15,20 @@ vi.mock('framer-motion', () => ({
 // Mock the store
 const mockSetRepoSyncBranch = vi.fn()
 const mockSetRepoSkipCi = vi.fn()
+const mockSetRepoAutoSync = vi.fn()
 
 vi.mock('../../../stores/useSyncStore', () => {
   const store = vi.fn((selector: any) => {
     // Return mock state based on what the selector requests
     const state = {
-      selectedRepo: { id: 1, fullName: 'owner/repo', owner: 'owner' },
+      selectedRepo: { id: 1, fullName: 'owner/repo', owner: 'owner', defaultBranch: 'main' },
       user: { login: 'testuser' },
       setRepoSyncBranch: mockSetRepoSyncBranch,
       setRepoSkipCi: mockSetRepoSkipCi,
+      setRepoAutoSync: mockSetRepoAutoSync,
       repoSyncBranches: {},
       repoSkipCi: {},
+      repoAutoSync: {},
     }
     return selector(state)
   })
@@ -36,6 +39,8 @@ vi.mock('../../../stores/useSyncStore', () => {
       state.repoSyncBranches[repoFullName.toLowerCase()] ?? null,
     selectRepoSkipCi: (repoFullName: string) => (state: any) =>
       state.repoSkipCi[repoFullName.toLowerCase()] ?? false,
+    selectRepoAutoSync: (repoFullName: string) => (state: any) =>
+      state.repoAutoSync[repoFullName.toLowerCase()] ?? false,
   }
 })
 

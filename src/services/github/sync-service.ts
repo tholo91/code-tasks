@@ -3,8 +3,8 @@ import type { Task } from '../../types/task'
 import { recoverOctokit } from './octokit-provider'
 import { useSyncStore } from '../../stores/useSyncStore'
 import { buildFileContent, buildFullFileContent, parseTasksFromMarkdown, appendAgentFrontDoor } from '../../features/sync/utils/markdown-templates'
-import { sortTasksForDisplay } from '../../utils/task-sorting'
 import { generateUUID } from '../../utils/uuid'
+import { buildMergedTaskList } from '../../utils/task-diff'
 
 const MAX_CONFLICT_RETRIES = 3
 const DEFAULT_MAX_RETRIES = 2
@@ -71,6 +71,25 @@ export interface SyncOptions {
   maxRetries?: number
   branch?: string
   skipCi?: boolean
+}
+
+export interface SyncRepoInput extends SyncOptions {
+  repoFullName: string
+  reason: 'capture' | 'debounce' | 'background' | 'repo-switch' | 'reconnect' | 'resume' | 'retry'
+}
+
+const repoSyncFlights = new Map<string, Promise<SyncResult>>()
+
+export function syncRepo({ repoFullName, reason, ...options }: SyncRepoInput): Promise<SyncResult> {
+  void reason
+  const key = repoFullName.toLowerCase()
+  const current = repoSyncFlights.get(key)
+  if (current) return current
+  const flight = syncAllRepoTasksForRepo(repoFullName, options).finally(() => {
+    repoSyncFlights.delete(key)
+  })
+  repoSyncFlights.set(key, flight)
+  return flight
 }
 
 /**
@@ -189,76 +208,70 @@ async function commitTasks(
   throw new Error('Failed to commit after maximum conflict retries')
 }
 
-/**
- * Ensures AGENTS.md and CLAUDE.md exist at repo root with the agent front-door block.
- * Idempotent: if the block is already present, does not duplicate.
- * Errors are swallowed (secondary goal) but logged.
- *
- * Language detection (write-once):
- * - Detects language from repo name patterns (German repos: "bremen-", "spiesser", "brief-nach-berlin", "rauchfrei")
- * - Uses German block for those, English for everything else
- * - NOTE: Language choice is write-once. If a repo is renamed across the German/English boundary
- *   (e.g., "bremen-rauchfrei" → "rauchfrei-app"), the original language block persists and is NOT updated.
- *   This is an accepted design trade-off: (1) block content is functionally identical in both languages,
- *   (2) renames are rare, (3) avoiding block replacement prevents churn. If update-on-rename behavior is
- *   needed in the future, add a language version field to the signature and detect mismatches.
- */
-async function ensureAgentFrontDoor(
-  octokit: Octokit,
-  owner: string,
-  repo: string,
-  branch?: string,
-): Promise<void> {
-  // Detect language from repo name (simple heuristic)
-  const isGerman = /^(bremen-|spiesser|brief-nach-berlin|rauchfrei)/i.test(repo)
+export interface PrepareAgentConnectInput {
+  repo: string
+  defaultBranch: string
+  captureBranch: string
+  username: string
+}
 
-  const filesToUpdate = ['AGENTS.md', 'CLAUDE.md']
+export interface AgentConnectResult {
+  setupBranch: string
+  compareUrl: string
+  preview: string
+}
 
-  for (const fileName of filesToUpdate) {
-    try {
-      // Fetch existing file (if any)
-      const existing = await getFileContent(octokit, owner, repo, fileName, branch)
-      const existingContent = existing?.content ?? null
+export function getAgentConnectPreview(username: string, captureBranch: string): string {
+  return appendAgentFrontDoor(null, username, captureBranch).trim()
+}
 
-      // Append the front-door block (idempotent if already present)
-      const updated = appendAgentFrontDoor(existingContent, isGerman)
+export async function prepareAgentConnectBranch({
+  repo: repoFullName,
+  defaultBranch,
+  captureBranch,
+  username,
+}: PrepareAgentConnectInput): Promise<AgentConnectResult> {
+  const octokit = await recoverOctokit()
+  const [owner, repo] = repoFullName.split('/')
+  const setupBranch = `gitty/connect-${username}`
+  await ensureBranchExists(octokit, owner, repo, setupBranch, defaultBranch)
 
-      // Skip if no change (idempotent re-run)
-      if (existing && existing.content === updated) {
-        continue
-      }
-
-      // Write the file
-      const commitParams: {
-        owner: string
-        repo: string
-        path: string
-        message: string
-        content: string
-        sha?: string
-        branch?: string
-      } = {
-        owner,
-        repo,
-        path: fileName,
-        message: `docs: add agent front-door for Gitty captures via code-tasks [skip ci]`,
-        content: utf8ToBase64(updated),
-      }
-
-      if (existing?.sha) {
-        commitParams.sha = existing.sha
-      }
-
-      if (branch) {
-        commitParams.branch = branch
-      }
-
-      await octokit.rest.repos.createOrUpdateFileContents(commitParams)
-    } catch (err) {
-      // Log but don't rethrow — this is a best-effort secondary goal
-      console.warn(`Failed to ensure ${fileName} front-door block:`, err)
-    }
+  for (const fileName of ['AGENTS.md', 'CLAUDE.md']) {
+    const existing = await getFileContent(octokit, owner, repo, fileName, setupBranch)
+    const updated = appendAgentFrontDoor(existing?.content ?? null, username, captureBranch)
+    if (existing?.content === updated) continue
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: fileName,
+      message: 'docs: connect Gitty inbox [skip ci]',
+      content: utf8ToBase64(updated),
+      branch: setupBranch,
+      ...(existing?.sha ? { sha: existing.sha } : {}),
+    })
   }
+
+  return {
+    setupBranch,
+    compareUrl: `https://github.com/${repoFullName}/compare/${encodeURIComponent(defaultBranch)}...${encodeURIComponent(setupBranch)}?expand=1`,
+    preview: getAgentConnectPreview(username, captureBranch),
+  }
+}
+
+export async function isAgentConnected({
+  repo: repoFullName,
+  defaultBranch,
+  captureBranch,
+  username,
+}: PrepareAgentConnectInput): Promise<boolean> {
+  const octokit = await recoverOctokit()
+  const [owner, repo] = repoFullName.split('/')
+  const expected = getAgentConnectPreview(username, captureBranch)
+  for (const fileName of ['AGENTS.md', 'CLAUDE.md']) {
+    const existing = await getFileContent(octokit, owner, repo, fileName, defaultBranch)
+    if (existing?.content.includes(expected)) return true
+  }
+  return false
 }
 
 function getRetryDelay(attempt: number): number {
@@ -294,6 +307,35 @@ function getErrorMessage(err: unknown, fallback: string): string {
     return String((err as { message?: string }).message ?? fallback)
   }
   return fallback
+}
+
+function taskSyncFingerprint(task: Task): string {
+  return JSON.stringify([
+    task.id,
+    task.username,
+    task.repoFullName.toLowerCase(),
+    task.title,
+    task.body,
+    task.createdAt,
+    task.isImportant,
+    task.isCompleted,
+    task.completedAt,
+    task.updatedAt,
+    task.processedBy ?? null,
+    task.captureRevision ?? task.id,
+    task.handoffStatus ?? null,
+    task.proofUrl ?? null,
+    task.handledAt ?? null,
+    task.order,
+  ])
+}
+
+function hasSameCaptureContent(local: Task, remote: Task): boolean {
+  return (
+    local.title === remote.title &&
+    local.body === remote.body &&
+    local.isImportant === remote.isImportant
+  )
 }
 
 async function delay(ms: number): Promise<void> {
@@ -397,12 +439,18 @@ export function classifySyncError(err: unknown): {
  * 5. Reset hasPendingDeletions
  */
 export async function syncAllRepoTasks(options: SyncOptions = {}): Promise<SyncResult> {
+  const repoFullName = useSyncStore.getState().selectedRepo?.fullName
+  if (!repoFullName) return { syncedCount: 0, error: 'No repo or user selected' }
+  return syncAllRepoTasksForRepo(repoFullName, options)
+}
+
+async function syncAllRepoTasksForRepo(repoFullName: string, options: SyncOptions = {}): Promise<SyncResult> {
   const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES
   let attempt = 0
 
   while (attempt <= maxRetries) {
     try {
-      return await syncAllRepoTasksOnce(options)
+      return await syncAllRepoTasksOnce(repoFullName, options)
     } catch (err) {
       if (attempt < maxRetries && isRetryableError(err)) {
         await delay(getRetryDelay(attempt))
@@ -422,27 +470,32 @@ export async function syncAllRepoTasks(options: SyncOptions = {}): Promise<SyncR
   return { syncedCount: 0 }
 }
 
-async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
-  const { tasks, selectedRepo, user, repoSyncMeta, repoSyncBranches, setRepoSyncMeta } = useSyncStore.getState()
+async function syncAllRepoTasksOnce(repoFullName: string, options: SyncOptions): Promise<SyncResult> {
+  const { tasks, user, repoSyncMeta, repoSyncBranches, repoTombstones, setRepoSyncMeta } = useSyncStore.getState()
 
-  if (!selectedRepo || !user) {
+  if (!user) {
     return { syncedCount: 0, error: 'No repo or user selected' }
   }
 
-  const selectedLower = selectedRepo.fullName.toLowerCase()
+  const selectedLower = repoFullName.toLowerCase()
 
   const repoTasks = tasks.filter(
     (t) =>
       t.username === user.login &&
       t.repoFullName.toLowerCase() === selectedLower,
   )
+  const pendingTasks = repoTasks.filter((task) => task.syncStatus === 'pending')
+  const tombstones = repoTombstones[selectedLower] ?? []
+  if (pendingTasks.length === 0 && tombstones.length === 0) {
+    return { syncedCount: 0 }
+  }
 
   const filePath = getScopedFileName(user.login)
-  const [owner, repo] = selectedRepo.fullName.split('/')
+  const [owner, repo] = repoFullName.split('/')
 
   const octokit = await recoverOctokit()
 
-  const repoKey = selectedRepo.fullName.toLowerCase()
+  const repoKey = repoFullName.toLowerCase()
   const syncMeta = repoSyncMeta[repoKey]
   const targetBranch = options.branch
 
@@ -466,46 +519,100 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
   const existing = await getFileContent(octokit, owner, repo, filePath, targetBranch)
   const remoteSha = existing?.sha ?? null
 
-  // Conflict detection — applies to branch syncs too, since desktop AI agents
-  // may write check-offs back to the fallback branch.
-  if (!options.allowConflict && syncMeta?.lastSyncedSha) {
-    if (remoteSha !== syncMeta.lastSyncedSha) {
-      setRepoSyncMeta(selectedRepo.fullName, {
+  const mergeLatestRemote = async (): Promise<SyncResult | null> => {
+    const remoteResult = await fetchRemoteTasksForRepo(repoFullName, user.login, targetBranch)
+    if (remoteResult.error) {
+      throw new Error(remoteResult.error)
+    }
+    const liveState = useSyncStore.getState()
+    const liveRepoTasks = liveState.tasks.filter(
+      (task) =>
+        task.username === user.login &&
+        task.repoFullName.toLowerCase() === repoKey,
+    )
+    const liveTombstones = liveState.repoTombstones[repoKey] ?? []
+    const localById = new Map(liveRepoTasks.map((task) => [task.id, task]))
+    const tombstoneById = new Map(liveTombstones.map((item) => [item.taskId, item]))
+    const conflictTaskIds = remoteResult.tasks.flatMap((remoteTask) => {
+      const local = localById.get(remoteTask.id)
+      const tombstone = tombstoneById.get(remoteTask.id)
+      const remoteRevision = remoteTask.captureRevision ?? remoteTask.id
+      const localRevision = local?.captureRevision ?? local?.id
+
+      if (
+        local?.syncStatus === 'pending' &&
+        localRevision === remoteRevision &&
+        !hasSameCaptureContent(local, remoteTask)
+      ) {
+        return [remoteTask.id]
+      }
+      if (tombstone && tombstone.captureRevision !== remoteRevision) {
+        return [remoteTask.id]
+      }
+      return []
+    })
+
+    if (conflictTaskIds.length > 0) {
+      setRepoSyncMeta(repoFullName, {
+        deliveryState: 'needs-attention',
         conflict: {
-          remoteSha,
+          remoteSha: remoteResult.sha,
           detectedAt: new Date().toISOString(),
+          taskIds: conflictTaskIds,
         },
       })
       return {
         syncedCount: 0,
-        error: 'Remote file changed since last sync',
+        error: 'A capture changed on the phone and in the repository',
         status: 'conflict',
-        remoteSha,
+        remoteSha: remoteResult.sha,
       }
     }
+
+    const remoteWithoutDeleted = remoteResult.tasks.filter((task) => !tombstoneById.has(task.id))
+    const merged = buildMergedTaskList(liveRepoTasks, remoteWithoutDeleted)
+    useSyncStore.setState((state) => ({
+      tasks: [
+        ...state.tasks.filter((task) => task.repoFullName.toLowerCase() !== repoKey),
+        ...merged,
+      ],
+    }))
+    repoTasks.splice(0, repoTasks.length, ...merged)
+    return null
   }
 
-  // Full rebuild from all current tasks. Pass the existing remote content so
-  // agent notes below the managed-end marker survive the rebuild (header rule #7).
-  const content = buildFullFileContent(repoTasks, user.login, syncBranch, existing?.content)
-
-  // Descriptive commit message with task counts — exclude archived tasks so
-  // the counts match the file content written by buildFullFileContent().
-  const countedTasks = repoTasks.filter(t => !t.body.startsWith('[Archived] '))
-  const activeCount = countedTasks.filter(t => !t.isCompleted).length
-  const completedCount = countedTasks.filter(t => t.isCompleted).length
-  const total = countedTasks.length
-  const skipCiSuffix = options.skipCi ? ' [skip ci]' : ''
-  const commitMessage = total > 0
-    ? `sync: ${total} tasks (${activeCount} active, ${completedCount} completed) via code-tasks${skipCiSuffix}`
-    : `sync: clear tasks via code-tasks${skipCiSuffix}`
+  // Conflict detection — applies to branch syncs too, since desktop AI agents
+  // may write check-offs back to the fallback branch.
+  if (!options.allowConflict && remoteSha !== (syncMeta?.lastSyncedSha ?? null)) {
+    const conflict = await mergeLatestRemote()
+    if (conflict) return conflict
+  }
 
   // Push to GitHub with conflict retry loop
   let newSha: string | null = null
+  let committedTasks: Task[] = []
   for (let conflictAttempt = 0; conflictAttempt < MAX_CONFLICT_RETRIES; conflictAttempt++) {
     const currentExisting = conflictAttempt === 0
       ? existing
       : await getFileContent(octokit, owner, repo, filePath, targetBranch)
+
+    if (conflictAttempt > 0 && !options.allowConflict) {
+      const conflict = await mergeLatestRemote()
+      if (conflict) return conflict
+    }
+
+    // Rebuild on every attempt so a remote update racing the first PUT is merged
+    // into the retry instead of being overwritten by stale Markdown.
+    const attemptTasks = repoTasks.map((task) => ({ ...task }))
+    const content = buildFullFileContent(attemptTasks, user.login, syncBranch, currentExisting?.content)
+    const countedTasks = attemptTasks.filter(t => !t.body.startsWith('[Archived] '))
+    const activeCount = countedTasks.filter(t => !t.isCompleted).length
+    const completedCount = countedTasks.filter(t => t.isCompleted).length
+    const total = countedTasks.length
+    const skipCiSuffix = options.skipCi ? ' [skip ci]' : ''
+    const commitMessage = total > 0
+      ? `sync: ${total} tasks (${activeCount} active, ${completedCount} completed) via code-tasks${skipCiSuffix}`
+      : `sync: clear tasks via code-tasks${skipCiSuffix}`
 
     try {
       const commitParams: {
@@ -540,65 +647,73 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
         return null
       })()
       newSha = responseSha ?? currentExisting?.sha ?? null
+      committedTasks = attemptTasks
       break
     } catch (err: unknown) {
       const is409 =
         err && typeof err === 'object' && 'status' in err && err.status === 409
 
-      // A 409 means remote moved between our SHA check and this PUT — typically a
-      // desktop AI agent committing a check-off in the same window. Unless the
-      // user explicitly chose "keep local" (allowConflict), retrying with the
-      // same content would silently clobber the agent's commit. Surface it as a
-      // conflict instead so the safe merge path runs.
-      if (is409 && !options.allowConflict) {
-        const latest = await getFileContent(octokit, owner, repo, filePath, targetBranch)
-        setRepoSyncMeta(selectedRepo.fullName, {
-          conflict: {
-            remoteSha: latest?.sha ?? null,
-            detectedAt: new Date().toISOString(),
-          },
-        })
-        return {
-          syncedCount: 0,
-          error: 'Remote file changed during push',
-          status: 'conflict',
-          remoteSha: latest?.sha ?? null,
-        }
-      }
-
       if (is409 && conflictAttempt < MAX_CONFLICT_RETRIES - 1) {
-        // allowConflict (keep-local): retry to force the local state through.
         continue
       }
       throw err
     }
   }
 
-  // Update sync meta
-  setRepoSyncMeta(selectedRepo.fullName, {
+  // Only acknowledge the exact task versions that were included in the
+  // successful PUT. A phone edit while the request is in flight must remain
+  // pending for the next sync.
+  const committedPendingById = new Map(
+    committedTasks
+      .filter((task) => task.syncStatus === 'pending')
+      .map((task) => [task.id, task]),
+  )
+  const { markTaskSynced } = useSyncStore.getState()
+  for (const currentTask of useSyncStore.getState().tasks) {
+    const committedTask = committedPendingById.get(currentTask.id)
+    if (
+      committedTask &&
+      currentTask.syncStatus === 'pending' &&
+      taskSyncFingerprint(currentTask) === taskSyncFingerprint(committedTask)
+    ) {
+      markTaskSynced(currentTask.id, null)
+    }
+  }
+
+  // Tombstones are also snapshot-scoped. New deletions created while the PUT
+  // is in flight remain queued instead of being cleared with the old batch.
+  const committedTombstones = new Set(tombstones)
+  useSyncStore.setState((state) => {
+    const remaining = (state.repoTombstones[repoKey] ?? [])
+      .filter((tombstone) => !committedTombstones.has(tombstone))
+    const repoTombstones = { ...state.repoTombstones }
+    if (remaining.length > 0) repoTombstones[repoKey] = remaining
+    else delete repoTombstones[repoKey]
+    return { repoTombstones }
+  })
+
+  const currentState = useSyncStore.getState()
+  const hasRemainingChanges =
+    currentState.tasks.some(
+      (task) =>
+        task.username === user.login &&
+        task.repoFullName.toLowerCase() === repoKey &&
+        task.syncStatus === 'pending',
+    ) || (currentState.repoTombstones[repoKey]?.length ?? 0) > 0
+
+  setRepoSyncMeta(repoFullName, {
     lastSyncedSha: newSha ?? remoteSha,
     lastSyncAt: new Date().toISOString(),
     lastSyncedRevision: syncMeta?.localRevision ?? 0,
     conflict: null,
+    setupState:
+      syncMeta?.setupState === 'ready' || syncMeta?.setupState === 'connect-pending'
+        ? syncMeta.setupState
+        : 'inbox-ready',
+    deliveryState: hasRemainingChanges ? 'queued' : 'in-repo',
   })
 
-  // Mark ALL repo tasks as synced
-  const { markTaskSynced } = useSyncStore.getState()
-  for (const task of repoTasks) {
-    markTaskSynced(task.id, null)
-  }
-
-  // Reset pending deletions
-  useSyncStore.setState({ hasPendingDeletions: false })
-
-  // Ensure agent front-door files (AGENTS.md, CLAUDE.md) exist with Gitty instructions.
-  // This is best-effort (errors are swallowed) so it doesn't block sync completion.
-  // Fire-and-forget: don't await, don't block return.
-  ensureAgentFrontDoor(octokit, owner, repo, targetBranch).catch(() => {
-    // Silently ignore failures — front-door is secondary goal
-  })
-
-  return { syncedCount: Math.max(repoTasks.length, 1) }
+  return { syncedCount: Math.max(pendingTasks.length, tombstones.length > 0 ? 1 : 0) }
 }
 
 /**
@@ -612,29 +727,7 @@ async function syncAllRepoTasksOnce(options: SyncOptions): Promise<SyncResult> {
  * 4. Mark tasks as synced in store
  */
 export async function syncPendingTasks(options: SyncOptions = {}): Promise<SyncResult> {
-  const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES
-  let attempt = 0
-
-  while (attempt <= maxRetries) {
-    try {
-      return await syncPendingTasksOnce(options)
-    } catch (err) {
-      if (attempt < maxRetries && isRetryableError(err)) {
-        await delay(getRetryDelay(attempt))
-        attempt += 1
-        continue
-      }
-      const classified = classifySyncError(err)
-      return {
-        syncedCount: 0,
-        error: classified.message,
-        errorType: classified.errorType,
-        rawError: classified.rawError,
-      }
-    }
-  }
-
-  return { syncedCount: 0 }
+  return syncAllRepoTasks(options)
 }
 
 export async function fetchRemoteTasksForRepo(
@@ -681,9 +774,6 @@ export async function fetchRemoteTasksForRepo(
         completedAt,
         processedBy: parsedTask.processedBy ?? null,
         captureRevision: parsedTask.captureRevision ?? undefined,
-        seenRevision: parsedTask.seenRevision ?? null,
-        seenAt: parsedTask.seenAt ?? null,
-        seenBy: parsedTask.seenBy ?? null,
         handoffStatus: parsedTask.handoffStatus ?? null,
         proofUrl: parsedTask.proofUrl ?? null,
         handledAt: parsedTask.handledAt ?? null,
@@ -719,114 +809,6 @@ export async function fetchRemoteFileContent(
   }
 }
 
-async function syncPendingTasksOnce(options: SyncOptions): Promise<SyncResult> {
-  const { tasks, selectedRepo, user, repoSyncMeta, repoSyncBranches, setRepoSyncMeta } = useSyncStore.getState()
-
-  if (!selectedRepo || !user) {
-    return { syncedCount: 0, error: 'No repo or user selected' }
-  }
-
-  const selectedLower = selectedRepo.fullName.toLowerCase()
-
-  // Get ALL tasks for this repo (for full file rewrite)
-  const repoTasks = tasks.filter(
-    (t) =>
-      t.username === user.login &&
-      t.repoFullName.toLowerCase() === selectedLower,
-  )
-
-  // Only sync if there are pending changes or pending deletions
-  const pendingTasks = repoTasks.filter((t) => t.syncStatus === 'pending')
-  const { hasPendingDeletions } = useSyncStore.getState()
-  if (pendingTasks.length === 0 && !hasPendingDeletions) {
-    return { syncedCount: 0 }
-  }
-
-  const filePath = getScopedFileName(user.login)
-  const [owner, repo] = selectedRepo.fullName.split('/')
-
-  const octokit = await recoverOctokit()
-
-  const repoKey = selectedRepo.fullName.toLowerCase()
-  const syncMeta = repoSyncMeta[repoKey]
-  const targetBranch = options.branch
-
-  // Resolve the branch that briefs the AI agent in the header (Story 9-15, F2).
-  // Same strategy as syncAllRepoTasksOnce: per-repo override → explicit
-  // targetBranch → already-fetched default branch (fallback-branch path only).
-  // No extra network round-trip on the common no-override path.
-  const branchOverride = repoSyncBranches[repoKey]
-  let syncBranch: string | undefined = branchOverride ?? targetBranch
-
-  // If pushing to a fallback branch, ensure it exists
-  if (targetBranch) {
-    const defaultBranch = await getDefaultBranch(octokit, owner, repo)
-    await ensureBranchExists(octokit, owner, repo, targetBranch, defaultBranch)
-    syncBranch = branchOverride ?? targetBranch ?? defaultBranch
-  }
-
-  const existing = await getFileContent(octokit, owner, repo, filePath, targetBranch)
-  const remoteSha = existing?.sha ?? null
-
-  // Conflict detection — applies to branch syncs too, since desktop AI agents
-  // may write check-offs back to the fallback branch.
-  if (!options.allowConflict && syncMeta?.lastSyncedSha) {
-    if (remoteSha !== syncMeta.lastSyncedSha) {
-      setRepoSyncMeta(selectedRepo.fullName, {
-        conflict: {
-          remoteSha,
-          detectedAt: new Date().toISOString(),
-        },
-      })
-      return {
-        syncedCount: 0,
-        error: 'Remote file changed since last sync',
-        status: 'conflict',
-        remoteSha,
-      }
-    }
-  }
-
-  const sortedTasks = sortTasksForDisplay(repoTasks).all
-
-  const newSha = await commitTasks(
-    octokit,
-    owner,
-    repo,
-    filePath,
-    sortedTasks,
-    user.login,
-    pendingTasks.length,
-    targetBranch,
-    options.skipCi,
-    syncBranch,
-  )
-
-  setRepoSyncMeta(selectedRepo.fullName, {
-    lastSyncedSha: newSha ?? remoteSha,
-    lastSyncAt: new Date().toISOString(),
-    lastSyncedRevision: syncMeta?.localRevision ?? 0,
-    conflict: null,
-  })
-
-  // Mark ALL repo tasks as synced (full rebuild means all are now in sync)
-  const { markTaskSynced } = useSyncStore.getState()
-  for (const task of repoTasks) {
-    if (task.syncStatus === 'pending') {
-      markTaskSynced(task.id, null)
-    }
-  }
-
-  // Ensure agent front-door files (AGENTS.md, CLAUDE.md) exist with Gitty instructions.
-  // This is best-effort (errors are swallowed) so it doesn't block sync completion.
-  // Fire-and-forget: don't await, don't block return.
-  ensureAgentFrontDoor(octokit, owner, repo, targetBranch).catch(() => {
-    // Silently ignore failures — front-door is secondary goal
-  })
-
-  return { syncedCount: Math.max(pendingTasks.length, hasPendingDeletions ? 1 : 0) }
-}
-
 // Export for testing
-export { getFileContent, commitTasks, ensureAgentFrontDoor }
+export { getFileContent, commitTasks }
 // Re-export getScopedFileName, classifySyncError, syncAllRepoTasks (already exported at definition)

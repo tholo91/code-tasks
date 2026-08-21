@@ -31,8 +31,8 @@ export const roadmapData: RoadmapItem[] = [
   },
   {
     id: 'background-sync',
-    title: 'Background Sync Engine',
-    description: 'Automatic background sync of local data with GitHub.',
+    title: 'Visible App Auto-Sync',
+    description: 'Debounced repository-specific sync with reconnect, resume, and retry handling.',
     status: 'shipped',
     category: 'Core'
   },
@@ -40,7 +40,7 @@ export const roadmapData: RoadmapItem[] = [
     id: 'roadmap-teaser',
     title: 'Roadmap Teaser',
     description: 'A peek at planned features and current development progress right inside the app.',
-    status: 'in-progress',
+    status: 'shipped',
     category: 'Community'
   },
   {

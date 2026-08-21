@@ -8,6 +8,7 @@ export interface GitHubRepo {
   isPrivate: boolean
   stars: number
   updatedAt: string
+  defaultBranch: string
 }
 
 function mapRepo(repo: {
@@ -18,6 +19,7 @@ function mapRepo(repo: {
   private: boolean
   stargazers_count: number
   updated_at: string | null
+  default_branch: string
 }): GitHubRepo {
   return {
     id: repo.id,
@@ -27,6 +29,7 @@ function mapRepo(repo: {
     isPrivate: repo.private,
     stars: repo.stargazers_count,
     updatedAt: repo.updated_at ?? '',
+    defaultBranch: repo.default_branch,
   }
 }
 
@@ -81,16 +84,23 @@ export async function validateRepoAccess(
   repoId: number,
   cachedRepos?: GitHubRepo[],
 ): Promise<boolean> {
+  return (await getRepoById(octokit, repoId, cachedRepos)) !== null
+}
+
+export async function getRepoById(
+  octokit: Octokit,
+  repoId: number,
+  cachedRepos?: GitHubRepo[],
+): Promise<GitHubRepo | null> {
   // Check cached repos first to avoid redundant API calls
   if (cachedRepos) {
-    return cachedRepos.some((repo) => repo.id === repoId)
+    return cachedRepos.find((repo) => repo.id === repoId) ?? null
   }
 
   try {
     const repos = await getMyRepos(octokit)
-    return repos.some((repo) => repo.id === repoId)
+    return repos.find((repo) => repo.id === repoId) ?? null
   } catch {
-    // If we can't verify access (e.g. network error), return false
-    return false
+    return null
   }
 }

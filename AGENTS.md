@@ -1,12 +1,17 @@
 # Agent Instructions
 
-## Captured Ideas (Gitty)
+<!-- gitty:agent-connect:v3 -->
+## Gitty mobile repo inbox
 
-This repo is connected to the Gitty app for mobile task capture. Captures land in `captured-ideas-<username>.md`.
+Gitty captures for `tholo91` live at `captured-ideas-tholo91.md` on `gitty/tholo91`.
 
-**At the start of every session, before other work:**
-1. Run `git fetch --quiet` to get the latest without touching the working tree.
-2. Read the freshest `captured-ideas-*.md` — if the local copy may be behind, read the remote directly: `git show origin/<branch>:captured-ideas-<username>.md`.
-3. Follow the "Instructions for AI Agents" header inside that file. Inspect captures quietly and never block the user's request with a backlog. For an unseen capture revision, write one Seen receipt to its capture branch and give at most one compact, non-blocking summary. Otherwise say nothing about Gitty unless Thomas asks to review it or what to work on next.
+Stay silent about Gitty during normal work. Only open the inbox when the user says “Check my Gitty inbox”, `/gitty`, `/captured-ideas`, or an equivalent explicit request.
+
+On an explicit request:
+1. Run `git fetch origin gitty/tholo91`.
+2. Read `git show origin/gitty/tholo91:captured-ideas-tholo91.md`.
+3. List Inbox items compactly and wait for the user to choose. Never execute captures automatically.
+4. Follow the Gitty Inbox Protocol in that file for Filed and Done receipts.
+<!-- /gitty:agent-connect -->
 
 For deeper project conventions (BMAD workflows, tech stack, structure), see `CLAUDE.md`.

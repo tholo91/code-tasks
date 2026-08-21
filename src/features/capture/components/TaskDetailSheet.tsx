@@ -26,13 +26,6 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestValuesRef = useRef({ title: task.title, body: task.body, isImportant: task.isImportant })
 
-  const debouncedSave = useCallback(() => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveTimeoutRef.current = setTimeout(() => {
-      flushSave()
-    }, 500)
-  }, [onUpdate, task.id])
-
   const flushSave = useCallback(() => {
     const values = latestValuesRef.current
     const trimmedTitle = values.title.trim()
@@ -68,6 +61,11 @@ export function TaskDetailSheet({ task, onClose, onUpdate, onToggleComplete, onM
       saveTimeoutRef.current = null
     }
   }, [onUpdate, task.id, task.title, task.body, task.isImportant])
+
+  const debouncedSave = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(flushSave, 500)
+  }, [flushSave])
 
   // Flush pending save on unmount
   useEffect(() => {
@@ -429,21 +427,15 @@ function DetailRow({ label, children, ...rest }: { label: string; children: Reac
 }
 
 function HandoffReceipt({ task }: { task: Task }) {
-  const currentRevision = task.captureRevision ?? task.id
-  const hasBeenSeen = task.seenRevision === currentRevision
   const proofUrl = safeHttpsUrl(task.proofUrl)
-
-  if (!hasBeenSeen) {
-    return <span className="text-body" style={{ color: 'var(--color-text-secondary)' }}>New</span>
-  }
 
   const status = task.handoffStatus === 'done' && proofUrl
     ? 'Done'
     : task.handoffStatus === 'filed'
       ? 'Filed'
-      : 'Seen'
-  const agent = task.processedBy ?? task.seenBy
-  const timestamp = task.handledAt ?? task.seenAt
+      : 'Inbox'
+  const agent = task.processedBy
+  const timestamp = task.handledAt
 
   return (
     <span className="flex items-center gap-2 text-body" style={{ color: status === 'Done' ? 'var(--color-success)' : 'var(--color-text-primary)' }}>

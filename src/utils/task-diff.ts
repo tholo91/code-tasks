@@ -35,26 +35,23 @@ function hasSafeProofUrl(value: string | null | undefined): boolean {
 }
 
 function receiptRank(task: Task): number {
-  if (!task.seenRevision || task.seenRevision !== captureRevision(task)) return 0
   if (task.handoffStatus === 'done' && hasSafeProofUrl(task.proofUrl)) return 3
   if (task.handoffStatus === 'filed') return 2
-  return 1
+  return 0
 }
 
 function canApplyRemoteReceipt(local: Task, remote: Task): boolean {
   return Boolean(
-    remote.seenBy &&
-    remote.seenAt &&
-    remote.seenRevision === captureRevision(local) &&
-    remote.seenRevision === captureRevision(remote),
+    remote.handoffStatus &&
+    remote.processedBy &&
+    remote.handledAt &&
+    captureRevision(remote) === captureRevision(local) &&
+    (remote.handoffStatus !== 'done' || hasSafeProofUrl(remote.proofUrl)),
   )
 }
 
 function hasReceiptMetadata(task: Task): boolean {
   return Boolean(
-    task.seenRevision ||
-    task.seenAt ||
-    task.seenBy ||
     task.handoffStatus ||
     task.proofUrl ||
     task.handledAt,
@@ -69,8 +66,6 @@ function receiptChanged(local: Task, remote: Task): boolean {
   if (remoteRank < localRank || remoteRank === 0) return false
 
   return (
-    (!local.seenAt && Boolean(remote.seenAt)) ||
-    (!local.seenBy && Boolean(remote.seenBy)) ||
     (!local.proofUrl && Boolean(remote.proofUrl)) ||
     (!local.handledAt && Boolean(remote.handledAt)) ||
     (!local.processedBy && Boolean(remote.processedBy))
@@ -164,7 +159,7 @@ export function computeImportDiff(localTasks: Task[], remoteTasks: Task[]): Impo
       (hasReceiptMetadata(remote) && !canApplyRemoteReceipt(local, remote))
     ) continue
 
-    if (remote.isCompleted && !local.isCompleted) completedByAgent++
+    if (remote.isCompleted && remote.handoffStatus === 'done' && hasSafeProofUrl(remote.proofUrl) && !local.isCompleted) completedByAgent++
 
     if (local.syncStatus === 'synced') {
       if (remote.body !== local.body) updatedWithNotes++
@@ -259,7 +254,7 @@ function mergeOne(local: Task, remote: Task): Task {
   if (hasReceiptMetadata(remote) && !canApplyRemoteReceipt(local, remote)) return merged
 
   // Status — completed wins, no silent re-open.
-  if (remote.isCompleted && !local.isCompleted) {
+  if (remote.isCompleted && remote.handoffStatus === 'done' && hasSafeProofUrl(remote.proofUrl) && !local.isCompleted) {
     merged.isCompleted = true
     merged.completedAt = remote.completedAt ?? new Date().toISOString()
   }
@@ -274,15 +269,6 @@ function mergeOne(local: Task, remote: Task): Task {
     const remoteRank = receiptRank(remote)
 
     if (remoteRank > localRank || remoteRank === localRank) {
-      if (remoteRank > localRank || !merged.seenRevision) {
-        merged.seenRevision = remote.seenRevision
-      }
-      if (!merged.seenAt && remote.seenAt) {
-        merged.seenAt = remote.seenAt
-      }
-      if (!merged.seenBy && remote.seenBy) {
-        merged.seenBy = remote.seenBy
-      }
       if (remoteRank > localRank) {
         merged.handoffStatus = remote.handoffStatus ?? null
         merged.proofUrl = remote.proofUrl ?? null

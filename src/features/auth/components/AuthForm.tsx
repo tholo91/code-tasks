@@ -54,12 +54,13 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
 
   return (
     <div className={layout === 'inline' ? 'w-full' : 'flex min-h-screen items-center justify-center px-4'}>
-      <form action={formAction} className="card w-full max-w-md p-6">
+      <form action={formAction} className="card w-full max-w-md p-6" data-testid="auth-form">
+        <p className="mb-3 font-mono text-label" style={{ color: 'var(--color-accent)' }}>1 GitHub → 2 Repository → 3 First capture → 4 Agent Connect</p>
         <h2 className="mb-2 text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          Authenticate
+          Connect GitHub
         </h2>
         <p className="mb-6 text-body" style={{ color: 'var(--color-text-secondary)' }}>
-          Enter your GitHub Personal Access Token to connect.
+          Use a fine-grained personal access token limited to the repositories you choose, with Contents: Read and write.
         </p>
 
         {migrated && (
@@ -76,6 +77,7 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
         )}
 
         <div className="mb-4">
+          <label htmlFor="pat-input" className="sr-only">Personal access token</label>
           <input
             id="pat-input"
             name="token"
@@ -95,7 +97,7 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
             className="mt-2 flex min-h-[44px] w-full items-center justify-between rounded-md px-2 text-label"
             style={{ color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            <span>How do I get a Github access token?</span>
+            <span>How do I create a fine-grained token?</span>
             <svg
               width="16"
               height="16"
@@ -163,11 +165,11 @@ export function AuthForm({ onSuccess, layout = 'centered' }: AuthFormProps) {
           className="btn-primary"
           whileTap={{ scale: 0.97 }}
         >
-          {isPending ? 'Authenticating...' : 'Authenticate'}
+          {isPending ? 'Connecting…' : 'Connect GitHub'}
         </motion.button>
 
         <p className="mt-3 text-label" style={{ color: 'var(--color-text-secondary)' }}>
-          Your token never leaves this device and is encrypted at rest.
+          Stored encrypted on this device. Gitty has no user database.
         </p>
       </form>
     </div>

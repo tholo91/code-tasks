@@ -33,7 +33,7 @@ vi.mock('../services/storage/token-vault', () => ({
 }))
 
 // Import after mocks
-import { useSyncStore, selectHasUnsyncedChanges, selectRepoClaudeCodeHintSeen } from './useSyncStore'
+import { useSyncStore, selectHasUnsyncedChanges, selectPendingSyncCountsByRepo, selectRepoClaudeCodeHintSeen } from './useSyncStore'
 
 describe('useSyncStore', () => {
   beforeEach(() => {
@@ -47,7 +47,10 @@ describe('useSyncStore', () => {
       selectedRepo: null,
       isImportant: false,
       tasks: [],
-      hasPendingDeletions: false,
+      repoTombstones: {},
+      repoAutoSync: {},
+      repoSyncBranches: {},
+      repoSkipCi: {},
       syncEngineStatus: 'idle',
       syncError: null,
       repoSyncMeta: {},
@@ -297,12 +300,10 @@ describe('useSyncStore', () => {
       useSyncStore.setState({
         tasks: useSyncStore.getState().tasks.map((item) => item.id === task.id ? {
           ...item,
-          seenRevision: task.captureRevision,
-          seenAt: '2026-07-22T10:00:00.000Z',
-          seenBy: 'Codex',
           handoffStatus: 'done',
           proofUrl: 'https://github.com/testuser/my-repo/pull/42',
           handledAt: '2026-07-22T10:10:00.000Z',
+          processedBy: 'Codex',
           isCompleted: true,
           completedAt: '2026-07-22T10:10:00.000Z',
         } : item),
@@ -312,9 +313,9 @@ describe('useSyncStore', () => {
 
       const updated = useSyncStore.getState().tasks.find(t => t.id === task.id)!
       expect(updated.captureRevision).not.toBe(task.captureRevision)
-      expect(updated.seenRevision).toBeNull()
       expect(updated.handoffStatus).toBeNull()
       expect(updated.proofUrl).toBeNull()
+      expect(updated.processedBy).toBeNull()
       expect(updated.isCompleted).toBe(false)
       expect(updated.completedAt).toBeNull()
     })
@@ -485,13 +486,12 @@ describe('useSyncStore', () => {
       expect(useSyncStore.getState().tasks.find(t => t.id === task.id)).toBeUndefined()
     })
 
-    it('sets hasPendingDeletions to true', () => {
-      expect(useSyncStore.getState().hasPendingDeletions).toBe(false)
-
+    it('creates a repository-scoped tombstone', () => {
       const task = useSyncStore.getState().addTask('Task to delete', '')
       useSyncStore.getState().removeTask(task.id)
-
-      expect(useSyncStore.getState().hasPendingDeletions).toBe(true)
+      expect(useSyncStore.getState().repoTombstones['testuser/my-repo']).toEqual([
+        expect.objectContaining({ taskId: task.id, captureRevision: task.captureRevision }),
+      ])
     })
 
     it('does not affect other tasks', () => {
@@ -517,12 +517,8 @@ describe('useSyncStore', () => {
     })
   })
 
-  describe('hasPendingDeletions', () => {
-    it('is false in initial state', () => {
-      expect(useSyncStore.getState().hasPendingDeletions).toBe(false)
-    })
-
-    it('resets to false when setSyncStatus is called with success', async () => {
+  describe('repository tombstones', () => {
+    it('are cleared only through the repository-scoped action', async () => {
       await useSyncStore.getState().setAuth(
         'ghp_testtoken123',
         { login: 'testuser', avatarUrl: 'https://example.com/avatar.png', name: 'Test User' },
@@ -534,14 +530,12 @@ describe('useSyncStore', () => {
       })
       const task = useSyncStore.getState().addTask('Task', '')
       useSyncStore.getState().removeTask(task.id)
-      expect(useSyncStore.getState().hasPendingDeletions).toBe(true)
-
-      useSyncStore.getState().setSyncStatus('success')
-
-      expect(useSyncStore.getState().hasPendingDeletions).toBe(false)
+      expect(useSyncStore.getState().repoTombstones['testuser/my-repo']).toHaveLength(1)
+      useSyncStore.getState().clearRepoTombstones('testuser/my-repo')
+      expect(useSyncStore.getState().repoTombstones['testuser/my-repo']).toBeUndefined()
     })
 
-    it('does not reset on non-success status', async () => {
+    it('are not cleared by a sync status change', async () => {
       await useSyncStore.getState().setAuth(
         'ghp_testtoken123',
         { login: 'testuser', avatarUrl: 'https://example.com/avatar.png', name: 'Test User' },
@@ -555,10 +549,10 @@ describe('useSyncStore', () => {
       useSyncStore.getState().removeTask(task.id)
 
       useSyncStore.getState().setSyncStatus('syncing')
-      expect(useSyncStore.getState().hasPendingDeletions).toBe(true)
+      expect(useSyncStore.getState().repoTombstones['testuser/my-repo']).toHaveLength(1)
 
       useSyncStore.getState().setSyncStatus('error', 'Some error')
-      expect(useSyncStore.getState().hasPendingDeletions).toBe(true)
+      expect(useSyncStore.getState().repoTombstones['testuser/my-repo']).toHaveLength(1)
     })
   })
 
@@ -643,7 +637,7 @@ describe('useSyncStore', () => {
       expect(selectHasUnsyncedChanges(useSyncStore.getState())).toBe(false)
     })
 
-    it('returns true when hasPendingDeletions is true', () => {
+    it('returns true when the selected repository has tombstones', () => {
       const task = useSyncStore.getState().addTask('Test task', '')
       useSyncStore.getState().markTaskSynced(task.id, null)
       useSyncStore.getState().removeTask(task.id)
@@ -660,13 +654,13 @@ describe('useSyncStore', () => {
       expect(selectHasUnsyncedChanges(useSyncStore.getState())).toBe(false)
     })
 
-    it('resets to false after successful sync status', () => {
+    it('resets to false after the repository tombstones are cleared', () => {
       const task = useSyncStore.getState().addTask('Test task', '')
       useSyncStore.getState().markTaskSynced(task.id, null)
       useSyncStore.getState().removeTask(task.id)
       expect(selectHasUnsyncedChanges(useSyncStore.getState())).toBe(true)
 
-      useSyncStore.getState().setSyncStatus('success')
+      useSyncStore.getState().clearRepoTombstones('testuser/my-repo')
       expect(selectHasUnsyncedChanges(useSyncStore.getState())).toBe(false)
     })
   })
@@ -675,6 +669,91 @@ describe('useSyncStore', () => {
     it('is configured with skipHydration and persist API', () => {
       expect(useSyncStore.persist).toBeDefined()
       expect(useSyncStore.persist.rehydrate).toBeDefined()
+    })
+
+    it('migrates unknown default branches and unusable legacy conflicts safely', async () => {
+      const migrate = useSyncStore.persist.getOptions().migrate!
+      const migrated = await migrate({
+        selectedRepo: { id: 1, fullName: 'owner/repo', owner: 'owner' },
+        repoSyncMeta: {
+          'owner/repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: null,
+            localRevision: 1,
+            lastSyncedRevision: 0,
+            conflict: { remoteSha: 'new-sha', detectedAt: new Date().toISOString() },
+            setupState: 'inbox-ready',
+            deliveryState: 'syncing',
+            lastMutationKind: 'edit',
+            lastMutationAt: new Date().toISOString(),
+            retryCount: 0,
+            nextRetryAt: null,
+          },
+        },
+      } as never, 2) as ReturnType<typeof useSyncStore.getState>
+
+      expect(migrated.selectedRepo?.defaultBranch).toBe('')
+      expect(migrated.repoSyncMeta['owner/repo']).toMatchObject({
+        conflict: null,
+        deliveryState: 'queued',
+      })
+    })
+  })
+
+  describe('repository sync configuration', () => {
+    it('invalidates agent setup and queues existing tasks when the branch changes', async () => {
+      await useSyncStore.getState().setAuth(
+        'ghp_testtoken123',
+        { login: 'testuser', avatarUrl: '', name: null },
+      )
+      useSyncStore.getState().setSelectedRepo({
+        id: 1,
+        fullName: 'testuser/my-repo',
+        owner: 'testuser',
+        defaultBranch: 'main',
+      })
+      const task = useSyncStore.getState().addTask('Captured idea', '')
+      useSyncStore.getState().markTaskSynced(task.id, null)
+      useSyncStore.setState({
+        repoSyncBranches: { 'testuser/my-repo': 'gitty/old' },
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'sha',
+            lastSyncAt: null,
+            localRevision: 1,
+            lastSyncedRevision: 1,
+            conflict: null,
+            setupState: 'ready',
+            deliveryState: 'in-repo',
+            lastMutationKind: null,
+            lastMutationAt: null,
+            retryCount: 0,
+            nextRetryAt: null,
+          },
+        },
+      })
+
+      useSyncStore.getState().setRepoSyncBranch('testuser/my-repo', 'gitty/new')
+
+      expect(useSyncStore.getState().repoSyncMeta['testuser/my-repo']).toMatchObject({
+        setupState: 'unconfigured',
+        deliveryState: 'queued',
+      })
+      expect(useSyncStore.getState().tasks.find((item) => item.id === task.id)?.syncStatus).toBe('pending')
+    })
+
+    it('counts deletion-only outboxes in repository pending badges', async () => {
+      await useSyncStore.getState().setAuth(
+        'ghp_testtoken123',
+        { login: 'testuser', avatarUrl: '', name: null },
+      )
+      useSyncStore.setState({
+        repoTombstones: {
+          'testuser/my-repo': [{ taskId: 'deleted', captureRevision: 'r1', deletedAt: new Date().toISOString() }],
+        },
+      })
+
+      expect(selectPendingSyncCountsByRepo(useSyncStore.getState())).toEqual({ 'testuser/my-repo': 1 })
     })
   })
 

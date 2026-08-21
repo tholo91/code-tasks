@@ -13,9 +13,19 @@ export interface SelectedRepo {
   id: number
   fullName: string
   owner: string
+  defaultBranch: string
 }
 
 export type SyncEngineStatus = 'idle' | 'syncing' | 'success' | 'error' | 'conflict'
+export type RepoSetupState = 'unconfigured' | 'inbox-ready' | 'connect-pending' | 'ready'
+export type RepoDeliveryState = 'local-only' | 'queued' | 'syncing' | 'in-repo' | 'needs-attention'
+export type RepoMutationKind = 'capture' | 'edit' | 'reorder' | 'completion' | 'deletion'
+
+export interface RepoTombstone {
+  taskId: string
+  captureRevision: string
+  deletedAt: string
+}
 
 export interface RepoSyncMeta {
   lastSyncedSha: string | null
@@ -25,7 +35,14 @@ export interface RepoSyncMeta {
   conflict: {
     remoteSha: string | null
     detectedAt: string
+    taskIds: string[]
   } | null
+  setupState: RepoSetupState
+  deliveryState: RepoDeliveryState
+  lastMutationKind: RepoMutationKind | null
+  lastMutationAt: string | null
+  retryCount: number
+  nextRetryAt: string | null
 }
 
 export interface RepoSyncError {
@@ -52,6 +69,20 @@ const createDefaultRepoMeta = (): RepoSyncMeta => ({
   localRevision: 0,
   lastSyncedRevision: 0,
   conflict: null,
+  setupState: 'unconfigured',
+  deliveryState: 'local-only',
+  lastMutationKind: null,
+  lastMutationAt: null,
+  retryCount: 0,
+  nextRetryAt: null,
+})
+
+const withMutation = (meta: RepoSyncMeta, kind: RepoMutationKind): RepoSyncMeta => ({
+  ...meta,
+  localRevision: meta.localRevision + 1,
+  deliveryState: 'queued',
+  lastMutationKind: kind,
+  lastMutationAt: new Date().toISOString(),
 })
 
 interface SyncState {
@@ -68,7 +99,8 @@ interface SyncState {
   syncError: string | null
   syncErrorType: SyncErrorType | null
   authError: string | null
-  hasPendingDeletions: boolean
+  repoTombstones: Record<string, RepoTombstone[]>
+  repoAutoSync: Record<string, boolean>
   repoSortModes: Record<string, SortMode>
   repoSyncBranches: Record<string, string>
   repoSkipCi: Record<string, boolean>
@@ -105,6 +137,8 @@ interface SyncState {
   setRepoSortMode: (repoFullName: string, mode: SortMode) => void
   setRepoSyncBranch: (repoFullName: string, branch: string | null) => void
   setRepoSkipCi: (repoFullName: string, enabled: boolean) => void
+  setRepoAutoSync: (repoFullName: string, enabled: boolean) => void
+  clearRepoTombstones: (repoFullName: string) => void
   setRepoClaudeCodeHintSeen: (repoFullName: string, seen: boolean) => void
 }
 
@@ -112,7 +146,7 @@ interface SyncState {
  * Selector for pending sync count scoped to current user and repo.
  */
 export const selectPendingSyncCount = (state: SyncState) => {
-  const { tasks, user, selectedRepo, hasPendingDeletions } = state
+  const { tasks, user, selectedRepo, repoTombstones } = state
   if (!user || !selectedRepo) return 0
 
   const selectedLower = selectedRepo.fullName.toLowerCase()
@@ -123,7 +157,7 @@ export const selectPendingSyncCount = (state: SyncState) => {
       t.repoFullName.toLowerCase() === selectedLower
   ).length
   // Treat pending deletions as at least 1 pending change for SyncFAB visibility
-  return hasPendingDeletions ? Math.max(pendingCount, 1) : pendingCount
+  return (repoTombstones[selectedLower]?.length ?? 0) > 0 ? Math.max(pendingCount, 1) : pendingCount
 }
 
 /**
@@ -131,12 +165,12 @@ export const selectPendingSyncCount = (state: SyncState) => {
  * Used by SyncFAB to determine visibility.
  */
 export const selectHasUnsyncedChanges = (state: SyncState) => {
-  const { tasks, user, selectedRepo, hasPendingDeletions } = state
+  const { tasks, user, selectedRepo, repoTombstones } = state
   if (!user || !selectedRepo) return false
 
-  if (hasPendingDeletions) return true
-
   const selectedLower = selectedRepo.fullName.toLowerCase()
+  if ((repoTombstones[selectedLower]?.length ?? 0) > 0) return true
+
   return tasks.some(
     (t) =>
       t.syncStatus === 'pending' &&
@@ -147,11 +181,16 @@ export const selectHasUnsyncedChanges = (state: SyncState) => {
 
 let lastPendingCountsTasks: Task[] | null = null
 let lastPendingCountsUser: GitHubUser | null = null
+let lastPendingCountsTombstones: Record<string, RepoTombstone[]> | null = null
 let lastPendingCountsResult: Record<string, number> = {}
 
 export const selectPendingSyncCountsByRepo = (state: SyncState) => {
-  const { tasks, user } = state
-  if (tasks === lastPendingCountsTasks && user === lastPendingCountsUser) {
+  const { tasks, user, repoTombstones } = state
+  if (
+    tasks === lastPendingCountsTasks &&
+    user === lastPendingCountsUser &&
+    repoTombstones === lastPendingCountsTombstones
+  ) {
     return lastPendingCountsResult
   }
 
@@ -162,10 +201,14 @@ export const selectPendingSyncCountsByRepo = (state: SyncState) => {
       const repoKey = task.repoFullName.toLowerCase()
       counts[repoKey] = (counts[repoKey] ?? 0) + 1
     }
+    for (const [repoKey, tombstones] of Object.entries(repoTombstones)) {
+      if (tombstones.length > 0) counts[repoKey] = (counts[repoKey] ?? 0) + tombstones.length
+    }
   }
 
   lastPendingCountsTasks = tasks
   lastPendingCountsUser = user
+  lastPendingCountsTombstones = repoTombstones
   lastPendingCountsResult = counts
   return counts
 }
@@ -177,6 +220,9 @@ export const selectSyncBranch = (repoFullName: string) => (state: SyncState) =>
 
 export const selectRepoSkipCi = (repoFullName: string) => (state: SyncState) =>
   state.repoSkipCi[repoFullName.toLowerCase()] ?? true
+
+export const selectRepoAutoSync = (repoFullName: string) => (state: SyncState) =>
+  state.repoAutoSync[repoFullName.toLowerCase()] ?? false
 
 export const selectRepoClaudeCodeHintSeen = (repoFullName: string) => (state: SyncState) =>
   state.repoClaudeCodeHintSeen[repoFullName.toLowerCase()] ?? false
@@ -234,7 +280,8 @@ export const useSyncStore = create<SyncState>()(
       syncError: null,
       syncErrorType: null,
       authError: null,
-      hasPendingDeletions: false,
+      repoTombstones: {},
+      repoAutoSync: {},
       repoSortModes: {},
       repoSyncBranches: {},
       repoSkipCi: {},
@@ -330,9 +377,6 @@ export const useSyncStore = create<SyncState>()(
           syncStatus: 'pending',
           githubIssueNumber: null,
           captureRevision: taskId,
-          seenRevision: null,
-          seenAt: null,
-          seenBy: null,
           handoffStatus: null,
           proofUrl: null,
           handledAt: null,
@@ -358,8 +402,7 @@ export const useSyncStore = create<SyncState>()(
             repoSyncMeta: {
               ...state.repoSyncMeta,
               [repoLower]: {
-                ...existingMeta,
-                localRevision: existingMeta.localRevision + 1,
+                ...withMutation(existingMeta, 'capture'),
               },
             },
           }
@@ -387,12 +430,10 @@ export const useSyncStore = create<SyncState>()(
               ...(captureChanged
                 ? {
                     captureRevision: generateUUID(),
-                    seenRevision: null,
-                    seenAt: null,
-                    seenBy: null,
                     handoffStatus: null,
                     proofUrl: null,
                     handledAt: null,
+                    processedBy: null,
                     ...(t.handoffStatus === 'done'
                       ? { isCompleted: false, completedAt: null }
                       : {}),
@@ -413,8 +454,7 @@ export const useSyncStore = create<SyncState>()(
             repoSyncMeta: {
               ...state.repoSyncMeta,
               [targetRepoKey]: {
-                ...existingMeta,
-                localRevision: existingMeta.localRevision + 1,
+                ...withMutation(existingMeta, 'edit'),
               },
             },
           }
@@ -423,11 +463,11 @@ export const useSyncStore = create<SyncState>()(
 
       moveTaskToRepo: (taskId: string, targetRepoFullName: string) => {
         set((state) => {
-          let sourceRepoKey: string | null = null
+          const sourceTask = state.tasks.find((task) => task.id === taskId)
+          const sourceRepoKey = sourceTask ? normalizeRepoKey(sourceTask.repoFullName) : null
           const targetRepoKey = normalizeRepoKey(targetRepoFullName)
           const updatedTasks = state.tasks.map(t => {
             if (t.id !== taskId) return t
-            sourceRepoKey = normalizeRepoKey(t.repoFullName)
             return { ...t, repoFullName: targetRepoFullName, updatedAt: new Date().toISOString(), syncStatus: 'pending' as const }
           })
           const updatedTask = updatedTasks.find(t => t.id === taskId)
@@ -435,19 +475,28 @@ export const useSyncStore = create<SyncState>()(
             StorageService.persistTaskToIDB(updatedTask).catch(() => {})
           }
           const nextMeta = { ...state.repoSyncMeta }
+          const nextTombstones = { ...state.repoTombstones }
           if (sourceRepoKey) {
             const existingMeta = nextMeta[sourceRepoKey] ?? createDefaultRepoMeta()
             nextMeta[sourceRepoKey] = {
-              ...existingMeta,
-              localRevision: existingMeta.localRevision + 1,
+              ...withMutation(existingMeta, 'deletion'),
+            }
+            if (sourceTask) {
+              nextTombstones[sourceRepoKey] = [
+                ...(nextTombstones[sourceRepoKey] ?? []),
+                {
+                  taskId: sourceTask.id,
+                  captureRevision: sourceTask.captureRevision ?? sourceTask.id,
+                  deletedAt: new Date().toISOString(),
+                },
+              ]
             }
           }
           const targetMeta = nextMeta[targetRepoKey] ?? createDefaultRepoMeta()
           nextMeta[targetRepoKey] = {
-            ...targetMeta,
-            localRevision: targetMeta.localRevision + 1,
+            ...withMutation(targetMeta, 'capture'),
           }
-          return { tasks: updatedTasks, repoSyncMeta: nextMeta }
+          return { tasks: updatedTasks, repoSyncMeta: nextMeta, repoTombstones: nextTombstones }
         })
       },
 
@@ -471,8 +520,7 @@ export const useSyncStore = create<SyncState>()(
             return {
               ...state.repoSyncMeta,
               [repoKey]: {
-                ...existingMeta,
-                localRevision: existingMeta.localRevision + 1,
+                ...withMutation(existingMeta, 'completion'),
               },
             }
           })(),
@@ -499,8 +547,7 @@ export const useSyncStore = create<SyncState>()(
             repoSyncMeta: {
               ...state.repoSyncMeta,
               [repoLower]: {
-                ...existingMeta,
-                localRevision: existingMeta.localRevision + 1,
+                ...withMutation(existingMeta, 'reorder'),
               },
             },
           }
@@ -538,14 +585,21 @@ export const useSyncStore = create<SyncState>()(
           }
           const repoKey = normalizeRepoKey(targetTask.repoFullName)
           const existingMeta = state.repoSyncMeta[repoKey] ?? createDefaultRepoMeta()
+          const tombstone: RepoTombstone = {
+            taskId: targetTask.id,
+            captureRevision: targetTask.captureRevision ?? targetTask.id,
+            deletedAt: new Date().toISOString(),
+          }
           return {
             tasks: updatedTasks,
-            hasPendingDeletions: true,
+            repoTombstones: {
+              ...state.repoTombstones,
+              [repoKey]: [...(state.repoTombstones[repoKey] ?? []), tombstone],
+            },
             repoSyncMeta: {
               ...state.repoSyncMeta,
               [repoKey]: {
-                ...existingMeta,
-                localRevision: existingMeta.localRevision + 1,
+                ...withMutation(existingMeta, 'deletion'),
               },
             },
           }
@@ -567,20 +621,30 @@ export const useSyncStore = create<SyncState>()(
 
           // Bump localRevision for each affected repo
           const nextMeta = { ...state.repoSyncMeta }
+          const nextTombstones = { ...state.repoTombstones }
           const affectedRepoKeys = new Set(
             targetTasks.map((t) => normalizeRepoKey(t.repoFullName)),
           )
           for (const repoKey of affectedRepoKeys) {
             const existingMeta = nextMeta[repoKey] ?? createDefaultRepoMeta()
             nextMeta[repoKey] = {
-              ...existingMeta,
-              localRevision: existingMeta.localRevision + 1,
+              ...withMutation(existingMeta, 'deletion'),
             }
+            nextTombstones[repoKey] = [
+              ...(nextTombstones[repoKey] ?? []),
+              ...targetTasks
+                .filter((task) => normalizeRepoKey(task.repoFullName) === repoKey)
+                .map((task) => ({
+                  taskId: task.id,
+                  captureRevision: task.captureRevision ?? task.id,
+                  deletedAt: new Date().toISOString(),
+                })),
+            ]
           }
 
           return {
             tasks: remainingTasks,
-            hasPendingDeletions: true,
+            repoTombstones: nextTombstones,
             repoSyncMeta: nextMeta,
           }
         })
@@ -718,13 +782,30 @@ export const useSyncStore = create<SyncState>()(
           syncError: error ?? null,
           syncErrorType: status === 'error' ? (errorType ?? 'unknown') : null,
         }
+        if (selectedRepo) {
+          const repoKey = normalizeRepoKey(selectedRepo.fullName)
+          const existingMeta = get().repoSyncMeta[repoKey] ?? createDefaultRepoMeta()
+          updates.repoSyncMeta = {
+            ...get().repoSyncMeta,
+            [repoKey]: {
+              ...existingMeta,
+              deliveryState:
+                status === 'syncing' ? 'syncing' :
+                status === 'success' ? (existingMeta.deliveryState === 'queued' ? 'queued' : 'in-repo') :
+                status === 'error' || status === 'conflict' ? 'needs-attention' :
+                existingMeta.deliveryState,
+              retryCount: status === 'success' ? 0 : existingMeta.retryCount,
+              nextRetryAt: status === 'success' ? null : existingMeta.nextRetryAt,
+            },
+          }
+        }
         if (status === 'success') {
-          updates.hasPendingDeletions = false
           // Clear per-repo error on success
           if (selectedRepo) {
             const repoKey = normalizeRepoKey(selectedRepo.fullName)
-            const { [repoKey]: _, ...rest } = get().repoSyncErrors
-            updates.repoSyncErrors = rest
+            const nextErrors = { ...get().repoSyncErrors }
+            delete nextErrors[repoKey]
+            updates.repoSyncErrors = nextErrors
           }
         }
         if (status === 'error' && selectedRepo && error) {
@@ -760,8 +841,9 @@ export const useSyncStore = create<SyncState>()(
       clearRepoSyncError: (repoFullName: string) => {
         const repoKey = normalizeRepoKey(repoFullName)
         set((state) => {
-          const { [repoKey]: _, ...rest } = state.repoSyncErrors
-          return { repoSyncErrors: rest }
+          const nextErrors = { ...state.repoSyncErrors }
+          delete nextErrors[repoKey]
+          return { repoSyncErrors: nextErrors }
         })
       },
 
@@ -888,13 +970,39 @@ export const useSyncStore = create<SyncState>()(
       setRepoSyncBranch: (repoFullName: string, branch: string | null) => {
         const key = normalizeRepoKey(repoFullName)
         set((state) => {
+          const previousBranch = state.repoSyncBranches[key] ?? null
+          if (previousBranch === branch) return state
           const updated = { ...state.repoSyncBranches }
           if (branch) {
             updated[key] = branch
           } else {
             delete updated[key]
           }
-          return { repoSyncBranches: updated }
+          const existingMeta = state.repoSyncMeta[key] ?? createDefaultRepoMeta()
+          const wasConfigured =
+            Object.prototype.hasOwnProperty.call(state.repoSyncBranches, key) ||
+            existingMeta.setupState !== 'unconfigured' ||
+            state.tasks.some((task) => task.repoFullName.toLowerCase() === key)
+          if (!wasConfigured) return { repoSyncBranches: updated }
+
+          const tasks = state.tasks.map((task) => {
+            if (task.repoFullName.toLowerCase() !== key) return task
+            const pendingTask = { ...task, syncStatus: 'pending' as const }
+            StorageService.persistTaskToIDB(pendingTask).catch(() => {})
+            return pendingTask
+          })
+          return {
+            tasks,
+            repoSyncBranches: updated,
+            repoSyncMeta: {
+              ...state.repoSyncMeta,
+              [key]: {
+                ...withMutation(existingMeta, 'edit'),
+                setupState: 'unconfigured',
+                conflict: null,
+              },
+            },
+          }
         })
       },
 
@@ -905,6 +1013,22 @@ export const useSyncStore = create<SyncState>()(
           // an absent key reads as ON, so an explicit OFF must be stored.
           const updated = { ...state.repoSkipCi, [key]: enabled }
           return { repoSkipCi: updated }
+        })
+      },
+
+      setRepoAutoSync: (repoFullName: string, enabled: boolean) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => ({
+          repoAutoSync: { ...state.repoAutoSync, [key]: enabled },
+        }))
+      },
+
+      clearRepoTombstones: (repoFullName: string) => {
+        const key = normalizeRepoKey(repoFullName)
+        set((state) => {
+          const next = { ...state.repoTombstones }
+          delete next[key]
+          return { repoTombstones: next }
         })
       },
 
@@ -927,10 +1051,54 @@ export const useSyncStore = create<SyncState>()(
         repoSortModes: state.repoSortModes,
         repoSyncBranches: state.repoSyncBranches,
         repoSkipCi: state.repoSkipCi,
+        repoAutoSync: state.repoAutoSync,
+        repoTombstones: state.repoTombstones,
         repoClaudeCodeHintSeen: state.repoClaudeCodeHintSeen,
         repoSyncErrors: state.repoSyncErrors,
         repoDrafts: state.repoDrafts,
       }),
+      version: 3,
+      migrate: (persisted, version) => {
+        type LegacyTask = Task & { seenRevision?: string | null; seenAt?: string | null; seenBy?: string | null }
+        const state = persisted as Omit<Partial<SyncState>, 'tasks'> & { tasks?: LegacyTask[] }
+        if (version < 2) {
+          if (state.selectedRepo && !state.selectedRepo.defaultBranch) {
+            state.selectedRepo = { ...state.selectedRepo, defaultBranch: '' }
+          }
+          state.tasks = (state.tasks ?? []).map((task): Task => {
+            const cleanTask = { ...task }
+            delete cleanTask.seenRevision
+            delete cleanTask.seenAt
+            delete cleanTask.seenBy
+            return cleanTask as Task
+          })
+        }
+        if (version < 3) {
+          if (state.selectedRepo && !state.selectedRepo.defaultBranch) {
+            state.selectedRepo = { ...state.selectedRepo, defaultBranch: '' }
+          }
+          state.repoTombstones = state.repoTombstones ?? {}
+          state.repoAutoSync = state.repoAutoSync ?? {}
+          state.repoSyncMeta = Object.fromEntries(
+            Object.entries(state.repoSyncMeta ?? {}).map(([key, rawMeta]) => {
+              const meta = { ...createDefaultRepoMeta(), ...rawMeta }
+              const legacyConflict = meta.conflict && !Array.isArray(meta.conflict.taskIds)
+              return [
+                key,
+                {
+                  ...meta,
+                  conflict: legacyConflict ? null : meta.conflict,
+                  deliveryState:
+                    meta.deliveryState === 'syncing' || legacyConflict
+                      ? 'queued'
+                      : meta.deliveryState,
+                },
+              ]
+            }),
+          )
+        }
+        return state as SyncState
+      },
       skipHydration: true,
     },
   ),

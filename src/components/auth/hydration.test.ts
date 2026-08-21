@@ -13,11 +13,11 @@ vi.mock('../../services/github/auth-service', () => ({
 }))
 
 // Mock repo-service
-const { mockValidateRepoAccess } = vi.hoisted(() => ({
-  mockValidateRepoAccess: vi.fn(),
+const { mockGetRepoById } = vi.hoisted(() => ({
+  mockGetRepoById: vi.fn(),
 }))
 vi.mock('../../services/github/repo-service', () => ({
-  validateRepoAccess: mockValidateRepoAccess,
+  getRepoById: mockGetRepoById,
 }))
 
 // Mock token-vault
@@ -62,7 +62,7 @@ describe('hydration', () => {
     vi.spyOn(useSyncStore.persist, 'rehydrate').mockImplementation(() => Promise.resolve())
     mockValidateToken.mockResolvedValue({ valid: true, user: { login: 'test', avatarUrl: '', name: null } })
     mockGetOctokit.mockReturnValue({} as never)
-    mockValidateRepoAccess.mockResolvedValue(true)
+    mockGetRepoById.mockResolvedValue({ id: 42, fullName: 'testuser/my-repo', owner: 'testuser', defaultBranch: 'main' })
     mockLoadToken.mockResolvedValue(null)
   })
 
@@ -172,25 +172,25 @@ describe('hydration', () => {
       isAuthenticated: true,
       user: { login: 'testuser', avatarUrl: '', name: 'Test' },
       token: null,
-      selectedRepo: { id: 42, fullName: 'testuser/my-repo', owner: 'testuser' },
+      selectedRepo: { id: 42, fullName: 'testuser/my-repo', owner: 'testuser', defaultBranch: '' },
     }
 
     it('keeps selectedRepo when validation succeeds', async () => {
       mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
       useSyncStore.setState(validAuthState)
-      mockValidateRepoAccess.mockResolvedValueOnce(true)
+      mockGetRepoById.mockResolvedValueOnce({ id: 42, fullName: 'testuser/my-repo', owner: 'testuser', defaultBranch: 'trunk' })
 
       await getHydrationPromise()
 
       const state = useSyncStore.getState()
-      expect(state.selectedRepo).toEqual(validAuthState.selectedRepo)
-      expect(mockValidateRepoAccess).toHaveBeenCalledWith(expect.anything(), 42)
+      expect(state.selectedRepo).toEqual({ ...validAuthState.selectedRepo, defaultBranch: 'trunk' })
+      expect(mockGetRepoById).toHaveBeenCalledWith(expect.anything(), 42)
     })
 
     it('clears selectedRepo when repo is no longer accessible', async () => {
       mockLoadToken.mockResolvedValueOnce('ghp_validtoken123')
       useSyncStore.setState(validAuthState)
-      mockValidateRepoAccess.mockResolvedValueOnce(false)
+      mockGetRepoById.mockResolvedValueOnce(null)
 
       await getHydrationPromise()
 
@@ -208,7 +208,7 @@ describe('hydration', () => {
 
       await getHydrationPromise()
 
-      expect(mockValidateRepoAccess).not.toHaveBeenCalled()
+      expect(mockGetRepoById).not.toHaveBeenCalled()
     })
 
     it('skips repo validation when offline', async () => {
@@ -220,7 +220,7 @@ describe('hydration', () => {
 
       await getHydrationPromise()
 
-      expect(mockValidateRepoAccess).not.toHaveBeenCalled()
+      expect(mockGetRepoById).not.toHaveBeenCalled()
       const state = useSyncStore.getState()
       expect(state.selectedRepo).toEqual(validAuthState.selectedRepo)
 

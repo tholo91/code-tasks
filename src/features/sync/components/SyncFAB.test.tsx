@@ -27,9 +27,9 @@ vi.mock('framer-motion', () => ({
 }))
 
 // Mock sync-service
-const mockSyncAllRepoTasks = vi.fn()
+const mockSyncRepo = vi.fn()
 vi.mock('../../../services/github/sync-service', () => ({
-  syncAllRepoTasks: (...args: any[]) => mockSyncAllRepoTasks(...args),
+  syncRepo: (...args: any[]) => mockSyncRepo(...args),
   classifySyncError: (err: any) => ({
     message: err instanceof Error ? err.message : 'Sync failed',
     errorType: 'unknown' as const,
@@ -113,13 +113,14 @@ const resetStore = () => {
   useSyncStore.setState({
     tasks: [],
     user: { login: 'testuser', avatarUrl: '', name: null },
-    selectedRepo: { id: 1, fullName: 'testuser/my-repo', owner: 'testuser' },
+    selectedRepo: { id: 1, fullName: 'testuser/my-repo', owner: 'testuser', defaultBranch: 'main' },
     syncEngineStatus: 'idle',
     syncError: null,
     syncErrorType: null,
     isSyncing: false,
     lastSyncedAt: null,
-    hasPendingDeletions: false,
+    repoTombstones: {},
+    repoAutoSync: { 'testuser/my-repo': false },
   })
 }
 
@@ -151,10 +152,10 @@ describe('SyncFAB', () => {
     expect(screen.getByTestId('sync-fab')).toBeInTheDocument()
   })
 
-  it('renders when hasPendingDeletions is true even with no pending tasks', () => {
+  it('renders when this repository has a tombstone even with no pending tasks', () => {
     useSyncStore.setState({
       tasks: [makeSyncedTask('1')],
-      hasPendingDeletions: true,
+      repoTombstones: { 'testuser/my-repo': [{ taskId: '1', captureRevision: '1', deletedAt: new Date().toISOString() }] },
     })
     render(<SyncFAB />)
     expect(screen.getByTestId('sync-fab')).toBeInTheDocument()
@@ -200,14 +201,14 @@ describe('SyncFAB', () => {
   })
 
   it('calls syncAllRepoTasks when clicked', async () => {
-    mockSyncAllRepoTasks.mockResolvedValueOnce({ syncedCount: 1 })
+    mockSyncRepo.mockResolvedValueOnce({ syncedCount: 1 })
     useSyncStore.setState({ tasks: [makePendingTask('1')] })
 
     render(<SyncFAB />)
     const user = userEvent.setup()
     await user.click(screen.getByTestId('sync-fab'))
 
-    expect(mockSyncAllRepoTasks).toHaveBeenCalledTimes(1)
+    expect(mockSyncRepo).toHaveBeenCalledTimes(1)
   })
 
   it('shows spinner and disables FAB during sync', async () => {
@@ -215,7 +216,7 @@ describe('SyncFAB', () => {
     const syncPromise = new Promise((resolve) => {
       resolveSync = resolve
     })
-    mockSyncAllRepoTasks.mockReturnValueOnce(syncPromise)
+    mockSyncRepo.mockReturnValueOnce(syncPromise)
 
     useSyncStore.setState({ tasks: [makePendingTask('1')] })
 
@@ -233,7 +234,7 @@ describe('SyncFAB', () => {
   })
 
   it('shows checkmark on successful sync', async () => {
-    mockSyncAllRepoTasks.mockResolvedValueOnce({ syncedCount: 1 })
+    mockSyncRepo.mockResolvedValueOnce({ syncedCount: 1 })
     useSyncStore.setState({ tasks: [makePendingTask('1')] })
 
     render(<SyncFAB />)
@@ -247,7 +248,7 @@ describe('SyncFAB', () => {
   })
 
   it('fires haptic on successful sync', async () => {
-    mockSyncAllRepoTasks.mockResolvedValueOnce({ syncedCount: 1 })
+    mockSyncRepo.mockResolvedValueOnce({ syncedCount: 1 })
     useSyncStore.setState({ tasks: [makePendingTask('1')] })
 
     render(<SyncFAB />)
@@ -261,7 +262,7 @@ describe('SyncFAB', () => {
   })
 
   it('sets error status when sync fails', async () => {
-    mockSyncAllRepoTasks.mockRejectedValueOnce(new Error('Network error'))
+    mockSyncRepo.mockRejectedValueOnce(new Error('Network error'))
     useSyncStore.setState({ tasks: [makePendingTask('1')] })
 
     render(<SyncFAB />)
@@ -275,7 +276,7 @@ describe('SyncFAB', () => {
   })
 
   it('FAB is tappable after error (retry)', async () => {
-    mockSyncAllRepoTasks
+    mockSyncRepo
       .mockResolvedValueOnce({ syncedCount: 0, error: 'Failed', errorType: 'unknown' })
       .mockResolvedValueOnce({ syncedCount: 1 })
 
@@ -292,11 +293,11 @@ describe('SyncFAB', () => {
     expect(screen.getByTestId('sync-fab')).not.toBeDisabled()
 
     await user.click(screen.getByTestId('sync-fab'))
-    expect(mockSyncAllRepoTasks).toHaveBeenCalledTimes(2)
+    expect(mockSyncRepo).toHaveBeenCalledTimes(2)
   })
 
   it('updates lastSyncedAt on successful sync', async () => {
-    mockSyncAllRepoTasks.mockResolvedValueOnce({ syncedCount: 2 })
+    mockSyncRepo.mockResolvedValueOnce({ syncedCount: 2 })
     useSyncStore.setState({
       tasks: [makePendingTask('1'), makePendingTask('2')],
       lastSyncedAt: null,
@@ -319,7 +320,7 @@ describe('SyncFAB', () => {
   })
 
   it('passes errorType from sync result to setSyncStatus', async () => {
-    mockSyncAllRepoTasks.mockResolvedValueOnce({
+    mockSyncRepo.mockResolvedValueOnce({
       syncedCount: 0,
       error: 'Branch protection',
       errorType: 'branch-protection',
@@ -337,7 +338,7 @@ describe('SyncFAB', () => {
   })
 
   it('shows error aria-label after failure', async () => {
-    mockSyncAllRepoTasks.mockResolvedValueOnce({
+    mockSyncRepo.mockResolvedValueOnce({
       syncedCount: 0,
       error: 'Failed',
       errorType: 'unknown',
@@ -361,7 +362,7 @@ describe('SyncFAB', () => {
   it('success state eventually resets to allow FAB to hide', async () => {
     // Verifies the 2s success timer transitions fabState from 'success' back to 'pending'
     // Uses real timers with a short wait rather than fake timers to avoid async conflicts
-    mockSyncAllRepoTasks.mockResolvedValueOnce({ syncedCount: 1 })
+    mockSyncRepo.mockResolvedValueOnce({ syncedCount: 1 })
     useSyncStore.setState({ tasks: [makePendingTask('1')] })
 
     render(<SyncFAB />)

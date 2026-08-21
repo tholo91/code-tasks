@@ -1,24 +1,45 @@
 # Sync Model
 
-`code-tasks` uses a sophisticated sync model that balances simplicity with robustness.
+Gitty is local-first. The phone is the immediate source of truth while changes are queued; GitHub is the durable repository copy used by coding agents.
 
-## Source of Truth
-The primary source of truth is the GitHub repository. Each repository contains a `captured-ideas.md` (or `captured-ideas-{username}.md` in collaborative repos) file.
+## Repository layout
 
-## Offline-First Architecture
-1. **Local Storage**: Every user action (add, edit, reorder) is instantly saved to the device's local storage (IndexedDB).
-2. **Push to Remote**: A Floating Action Button (FAB) appears when local changes are ahead of the remote repository. Tapping this FAB initiates a commit and push to the `main` branch.
-3. **Pull from Remote**: On app startup or periodic refresh, the remote file is pulled and merged with any local changes.
+- Default capture branch: `gitty/{username}`
+- Capture file: `captured-ideas-{username}.md`
+- Default commit suffix: `[skip ci]`
+- Agent setup branch: `gitty/connect-{username}`
 
-## Conflict Resolution
-To prevent merge conflicts in collaborative repositories, `code-tasks` defaults to a user-specific file naming convention: `captured-ideas-{username}.md`. This ensures that each user's ideas are kept separate while still living in the same repository.
+Each connected repository has independent delivery state, retry metadata, and deletion tombstones. Work in one repository cannot clear the outbox of another.
 
-### Handling Collisions
-In the event that a single file is edited on two devices before a push:
-- **Last Write Wins**: Simple property updates (title, priority) use the most recent edit time.
-- **Append-Only**: Content changes and descriptions are appended to avoid data loss.
-- **Merge Logic**: The app attempts to merge changes by task ID (based on the `## Heading`).
+## Delivery states
+
+- `local-only` — saved on the phone, with no remote copy yet
+- `queued` — waiting for the debounce window or connectivity
+- `syncing` — a single sync flight is active for the repository
+- `in-repo` — the latest queued revision was committed
+- `needs-attention` — retry or task-level conflict resolution is required
+
+New repositories opt into automatic sync during setup. Existing repositories are asked once before automatic Git writes are enabled.
+
+## Timing
+
+- New capture: 2.5 seconds after completion
+- Edit, reorder, completion, or deletion: 10 quiet seconds
+- App background, resume, reconnect, and repository switch: immediate best-effort attempt
+- Visible queued work: at most 30 seconds before an attempt
+
+The sync button is a retry and details affordance, not the normal delivery mechanism.
+
+## Merge and conflicts
+
+Every task has a stable `ct` ID and a `Capture revision`. Gitty reads the remote file before writing and merges safe agent updates by task ID.
+
+- A remote Filed or Done receipt is accepted only when its capture revision matches the phone.
+- Done additionally requires a valid HTTPS proof URL.
+- Remote notes are preserved when the phone has a pending edit.
+- Deletions are represented as repository-specific tombstones until committed.
+- A conflict is raised for the affected task when the same capture revision lineage diverged locally and remotely. There is no global “keep remote” operation that discards every pending local change.
 
 ## Authentication
-- **OAuth 2.0**: The app uses standard GitHub OAuth for authentication.
-- **Scoped Permissions**: It requires only the `repo` scope to read and write the `captured-ideas.md` file.
+
+Gitty currently uses a fine-grained personal access token. Users select the repositories themselves and grant `Contents: Read and write`. The token is encrypted on the device. Gitty has no user database and does not claim OAuth support.

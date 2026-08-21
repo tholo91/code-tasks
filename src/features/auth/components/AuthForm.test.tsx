@@ -29,12 +29,12 @@ describe('AuthForm', () => {
     render(<AuthForm onSuccess={mockOnSuccess} />)
     expect(screen.getByLabelText(/personal access token/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/passphrase/i)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /authenticate/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /connect github/i })).toBeInTheDocument()
   })
 
   it('shows an error when submitting empty token', async () => {
     render(<AuthForm onSuccess={mockOnSuccess} />)
-    const button = screen.getByRole('button', { name: /authenticate/i })
+    const button = screen.getByRole('button', { name: /connect github/i })
     await userEvent.click(button)
     expect(screen.getByRole('alert')).toHaveTextContent(/token cannot be empty/i)
   })
@@ -51,7 +51,7 @@ describe('AuthForm', () => {
     const tokenInput = screen.getByLabelText(/personal access token/i)
     await userEvent.type(tokenInput, 'ghp_validtoken123')
 
-    const button = screen.getByRole('button', { name: /authenticate/i })
+    const button = screen.getByRole('button', { name: /connect github/i })
     await userEvent.click(button)
 
     expect(mockValidateToken).toHaveBeenCalledWith('ghp_validtoken123')
@@ -73,7 +73,7 @@ describe('AuthForm', () => {
     const tokenInput = screen.getByLabelText(/personal access token/i)
     await userEvent.type(tokenInput, 'bad-token')
 
-    const button = screen.getByRole('button', { name: /authenticate/i })
+    const button = screen.getByRole('button', { name: /connect github/i })
     await userEvent.click(button)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/bad credentials/i)
@@ -88,7 +88,7 @@ describe('AuthForm', () => {
     const tokenInput = screen.getByLabelText(/personal access token/i)
     await userEvent.type(tokenInput, 'some-token')
 
-    const button = screen.getByRole('button', { name: /authenticate/i })
+    const button = screen.getByRole('button', { name: /connect github/i })
     await userEvent.click(button)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/network error/i)
@@ -96,8 +96,8 @@ describe('AuthForm', () => {
 
   it('shows help text about local-only encrypted storage', () => {
     render(<AuthForm onSuccess={mockOnSuccess} />)
-    expect(screen.getByText(/never leaves this device/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/encrypted at rest/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/stored encrypted on this device/i)).toBeInTheDocument()
+    expect(screen.getByText(/no user database/i)).toBeInTheDocument()
     expect(screen.queryByText(/passphrase/i)).not.toBeInTheDocument()
   })
 })

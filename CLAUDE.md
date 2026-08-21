@@ -86,21 +86,19 @@ src/
 
 - **Project spirit:** Community-first indie project. "Wir bauen das zusammen." Not a startup, not SaaS.
 
-## Task Discovery — Quiet Gitty Handoff
+<!-- gitty:agent-connect:v3 -->
+## Gitty mobile repo inbox
 
-At the start of every session, silently check:
+Gitty captures for `tholo91` live at `captured-ideas-tholo91.md` on `gitty/tholo91`.
 
-```
-captured-ideas-{username}.md
-```
+Stay silent about Gitty during normal work. Only open the inbox when the user says “Check my Gitty inbox”, `/gitty`, `/captured-ideas`, or an equivalent explicit request.
 
-The live file for this repo is **`captured-ideas-tholo91.md`** in the root. It contains Thomas's on-the-go captures. Compare each task's `Capture revision` with its `Seen revision`; only unseen revisions receive a Seen receipt on the configured capture branch.
-
-Claude Code users can run `/captured-ideas` to fetch and review captures across all branches. Do not list them unprompted or let them interrupt Thomas's actual request.
-
-- Open items (`- [ ]`) = not yet planned or implemented
-- A `Gitty: Filed` receipt means deliberate hand-off; `Gitty: Done` requires a proof URL for verified implementation
-- Only update receipt metadata (`Seen`, `Gitty`, `Proof`, `Handled`, `Processed by`) on a task line and mark the checkbox after verified work. Preserve capture text, priority, and order; a brief verified completion note is the only allowed body change.
+On an explicit request:
+1. Run `git fetch origin gitty/tholo91`.
+2. Read `git show origin/gitty/tholo91:captured-ideas-tholo91.md`.
+3. List Inbox items compactly and wait for the user to choose. Never execute captures automatically.
+4. Follow the Gitty Inbox Protocol in that file for Filed and Done receipts.
+<!-- /gitty:agent-connect -->
 
 ## Versioning
 

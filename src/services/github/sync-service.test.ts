@@ -94,6 +94,10 @@ function createTask(overrides: Partial<Task> = {}): Task {
     order: 0,
     syncStatus: 'pending',
     githubIssueNumber: null,
+    handoffStatus: null,
+    proofUrl: null,
+    handledAt: null,
+    processedBy: null,
     ...overrides,
   }
 }
@@ -133,6 +137,7 @@ describe('sync-service', () => {
       isSyncing: false,
       lastSyncedAt: null,
       repoSyncMeta: {},
+      repoTombstones: {},
       syncEngineStatus: 'idle',
       syncError: null,
     })
@@ -207,7 +212,7 @@ describe('sync-service', () => {
 
   describe('fetchRemoteTasksForRepo', () => {
     it('maps a receipt from the configured capture branch', async () => {
-      const content = '- [x] **Ship handoff** ([Created: 2026-07-22]) (Priority: ⚪ Normal) [Capture revision: revision-1] [Seen revision: revision-1] [Seen by: Codex] [Seen: 2026-07-22T10:00:00.000Z] [Gitty: Done] [Proof: https://github.com/testuser/my-repo/pull/42] [Handled: 2026-07-22T10:10:00.000Z] [Processed by: Codex] <!-- ct:task-1 -->'
+      const content = '- [x] **Ship handoff** ([Created: 2026-07-22]) (Priority: ⚪ Normal) [Capture revision: revision-1] [Gitty: Done] [Proof: https://github.com/testuser/my-repo/pull/42] [Handled: 2026-07-22T10:10:00.000Z] [Processed by: Codex] <!-- ct:task-1 -->'
       mockOctokit.rest.repos.getContent.mockResolvedValue({
         data: { content: Buffer.from(content, 'utf-8').toString('base64'), sha: 'receipt-sha' },
       })
@@ -218,8 +223,7 @@ describe('sync-service', () => {
       expect(result.tasks[0]).toMatchObject({
         id: 'task-1',
         captureRevision: 'revision-1',
-        seenRevision: 'revision-1',
-        seenBy: 'Codex',
+        processedBy: 'Codex',
         handoffStatus: 'done',
         proofUrl: 'https://github.com/testuser/my-repo/pull/42',
       })
@@ -567,8 +571,7 @@ describe('sync-service', () => {
       expect(state.tasks.find((t: Task) => t.id === 'synced-1')?.syncStatus).toBe('synced')
       expect(state.tasks.find((t: Task) => t.id === 'pending-1')?.syncStatus).toBe('synced')
 
-      // Commit message should reference 1 (pending count, not total)
-      expect(call.message).toBe('sync: update 1 task via code-tasks')
+      expect(call.message).toBe('sync: 2 tasks (2 active, 0 completed) via code-tasks')
     })
 
     it('only syncs tasks belonging to the current user', async () => {
@@ -751,7 +754,7 @@ describe('sync-service', () => {
       expect(call.message).toContain('[skip ci]')
     })
 
-    it('returns conflict for a branch push when the branch remote changed', async () => {
+    it('safely merges a branch push when only the remote SHA changed', async () => {
       const task = createTask()
       useSyncStore.setState({
         tasks: [task],
@@ -774,10 +777,9 @@ describe('sync-service', () => {
 
       const result = await syncPendingTasks({ branch: 'gitty/user' })
 
-      expect(result.status).toBe('conflict')
-      expect(result.remoteSha).toBe('new-remote-sha')
-      // Must NOT overwrite the remote on conflict
-      expect(mockOctokit.rest.repos.createOrUpdateFileContents).not.toHaveBeenCalled()
+      expect(result.status).toBeUndefined()
+      expect(result.error).toBeUndefined()
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalled()
     })
   })
 
@@ -824,8 +826,8 @@ describe('sync-service', () => {
       expect(content).not.toContain('**Archived task**')
     })
 
-    it('surfaces a conflict (no silent overwrite) when remote moves mid-push (409)', async () => {
-      const task = createTask({ id: 'race-1', title: 'Race task' })
+    it('re-reads and retries safely when remote moves mid-push (409)', async () => {
+      const task = createTask({ id: 'race-1', title: 'Race task', captureRevision: 'race-1' })
       useSyncStore.setState({
         tasks: [task],
         repoSyncMeta: {
@@ -839,21 +841,379 @@ describe('sync-service', () => {
         },
       })
 
-      // Initial fetch matches the baseline → pre-push conflict gate passes.
-      // After the 409, the catch re-fetches the latest SHA (agent's commit).
+      // Initial fetch matches the baseline. The retry reads the new SHA and the
+      // remote inbox again before rebuilding the Markdown.
       mockOctokit.rest.repos.getContent
         .mockResolvedValueOnce({ data: { content: btoa('# content'), sha: 'sha-baseline' } })
         .mockResolvedValueOnce({ data: { content: btoa('# agent edit'), sha: 'agent-sha' } })
+        .mockResolvedValueOnce({ data: { content: btoa('# agent edit'), sha: 'agent-sha' } })
 
-      // Agent committed in the same window → our PUT collides.
+      mockOctokit.rest.repos.createOrUpdateFileContents
+        .mockRejectedValueOnce({ status: 409 })
+        .mockResolvedValueOnce({ data: { content: { sha: 'merged-sha' } } })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.status).toBeUndefined()
+      expect(result.error).toBeUndefined()
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalledTimes(2)
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[1][0].sha).toBe('agent-sha')
+    })
+
+    it('opens a task-level conflict when the same capture revision diverges during a 409 retry', async () => {
+      const task = createTask({
+        id: 'race-1',
+        title: 'Race task',
+        body: 'Phone version',
+        captureRevision: 'race-1',
+      })
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'sha-baseline',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 1,
+            lastSyncedRevision: 1,
+            conflict: null,
+          },
+        },
+      })
+
+      const remoteContent = '- [ ] **Race task** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: race-1] <!-- ct:race-1 -->\n  Repository version'
+      const encodedRemoteContent = Buffer.from(remoteContent, 'utf-8').toString('base64')
+      mockOctokit.rest.repos.getContent
+        .mockResolvedValueOnce({ data: { content: btoa('# content'), sha: 'sha-baseline' } })
+        .mockResolvedValueOnce({ data: { content: encodedRemoteContent, sha: 'agent-sha' } })
+        .mockResolvedValueOnce({ data: { content: encodedRemoteContent, sha: 'agent-sha' } })
       mockOctokit.rest.repos.createOrUpdateFileContents.mockRejectedValueOnce({ status: 409 })
 
       const result = await syncAllRepoTasks({ maxRetries: 0 })
 
       expect(result.status).toBe('conflict')
       expect(result.remoteSha).toBe('agent-sha')
-      // Must have attempted the push exactly once and NOT retried-to-overwrite.
+      expect(useSyncStore.getState().repoSyncMeta['testuser/my-repo'].conflict?.taskIds).toEqual(['race-1'])
       expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps an edit made during the active PUT pending for the next sync', async () => {
+      const task = createTask({
+        id: 'in-flight-edit',
+        body: 'Snapshot body',
+        captureRevision: 'revision-before-put',
+      })
+      useSyncStore.setState({ tasks: [task] })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockImplementationOnce(async () => {
+        useSyncStore.getState().updateTask(task.id, { body: 'Edited while PUT was active' })
+        return { data: { content: { sha: 'uploaded-sha' } } }
+      })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.syncedCount).toBe(1)
+      const current = useSyncStore.getState().tasks.find((item) => item.id === task.id)
+      expect(current).toMatchObject({
+        body: 'Edited while PUT was active',
+        syncStatus: 'pending',
+      })
+      expect(current?.captureRevision).not.toBe('revision-before-put')
+      expect(useSyncStore.getState().repoSyncMeta['testuser/my-repo'].deliveryState).toBe('queued')
+
+      const uploaded = decodeURIComponent(escape(atob(
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0].content,
+      )))
+      expect(uploaded).toContain('Snapshot body')
+      expect(uploaded).not.toContain('Edited while PUT was active')
+    })
+
+    it('keeps an edit made during the remote merge read', async () => {
+      const task = createTask({
+        id: 'remote-read-edit',
+        body: 'Snapshot body',
+        captureRevision: 'revision-before-read',
+      })
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 1,
+            lastSyncedRevision: 0,
+            conflict: null,
+          },
+        },
+      })
+
+      const remoteContent = '- [ ] **Test Task** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: revision-before-read] <!-- ct:remote-read-edit -->\n  Snapshot body'
+      const encoded = Buffer.from(remoteContent, 'utf-8').toString('base64')
+      mockOctokit.rest.repos.getContent
+        .mockResolvedValueOnce({ data: { content: encoded, sha: 'new-sha' } })
+        .mockImplementationOnce(async () => {
+          useSyncStore.getState().updateTask(task.id, { body: 'Edited while remote read was active' })
+          return { data: { content: encoded, sha: 'new-sha' } }
+        })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'uploaded-sha' } },
+      })
+
+      await syncAllRepoTasks({ maxRetries: 0 })
+
+      const current = useSyncStore.getState().tasks.find((item) => item.id === task.id)
+      expect(current).toMatchObject({
+        body: 'Edited while remote read was active',
+        syncStatus: 'synced',
+      })
+      const uploaded = decodeURIComponent(escape(atob(
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0].content,
+      )))
+      expect(uploaded).toContain('Edited while remote read was active')
+      expect(uploaded).not.toContain('Snapshot body')
+    })
+
+    it('clears only tombstones included in the sync snapshot', async () => {
+      const snapshotTombstone = {
+        taskId: 'deleted-before-sync',
+        captureRevision: 'revision-1',
+        deletedAt: '2026-03-14T10:00:00.000Z',
+      }
+      const newerTombstone = {
+        taskId: 'deleted-during-sync',
+        captureRevision: 'revision-2',
+        deletedAt: '2026-03-14T10:01:00.000Z',
+      }
+      useSyncStore.setState({
+        repoTombstones: { 'testuser/my-repo': [snapshotTombstone] },
+      })
+
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockImplementationOnce(async () => {
+        useSyncStore.setState((state) => ({
+          repoTombstones: {
+            ...state.repoTombstones,
+            'testuser/my-repo': [
+              ...(state.repoTombstones['testuser/my-repo'] ?? []),
+              newerTombstone,
+            ],
+          },
+        }))
+        return { data: { content: { sha: 'uploaded-sha' } } }
+      })
+
+      await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(useSyncStore.getState().repoTombstones['testuser/my-repo']).toEqual([newerTombstone])
+      expect(useSyncStore.getState().repoSyncMeta['testuser/my-repo'].deliveryState).toBe('queued')
+    })
+
+    it('preserves connect-pending after a successful inbox sync', async () => {
+      const task = createTask()
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: null,
+            lastSyncAt: null,
+            localRevision: 1,
+            lastSyncedRevision: 0,
+            conflict: null,
+            setupState: 'connect-pending',
+          },
+        },
+      })
+      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'uploaded-sha' } },
+      })
+
+      await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(useSyncStore.getState().repoSyncMeta['testuser/my-repo'].setupState).toBe('connect-pending')
+    })
+
+    it('aborts when the remote merge read fails instead of merging an empty inbox', async () => {
+      const task = createTask({ captureRevision: 'revision-1' })
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 1,
+            lastSyncedRevision: 0,
+            conflict: null,
+          },
+        },
+      })
+      mockOctokit.rest.repos.getContent
+        .mockResolvedValueOnce({ data: { content: btoa('# moved'), sha: 'new-sha' } })
+        .mockRejectedValueOnce({ status: 500, message: 'Remote read failed' })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.syncedCount).toBe(0)
+      expect(result.error).toBe('Network error. Please check your connection.')
+      expect(result.rawError?.message).toBe('Remote read failed')
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).not.toHaveBeenCalled()
+      expect(useSyncStore.getState().tasks[0].syncStatus).toBe('pending')
+    })
+
+    it('merges a verified agent receipt only when the capture revision and content match', async () => {
+      const task = createTask({
+        id: 'receipt-task',
+        title: 'Phone capture',
+        body: 'Original details',
+        captureRevision: 'revision-1',
+      })
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 1,
+            lastSyncedRevision: 0,
+            conflict: null,
+          },
+        },
+      })
+      const remoteContent = '- [x] **Phone capture** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: revision-1] [Gitty: Done] [Proof: https://github.com/testuser/my-repo/pull/42] [Handled: 2026-03-14T11:00:00.000Z] [Processed by: Codex] <!-- ct:receipt-task -->\n  Original details'
+      const encoded = Buffer.from(remoteContent, 'utf-8').toString('base64')
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: { content: encoded, sha: 'receipt-sha' },
+      })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'merged-sha' } },
+      })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.status).toBeUndefined()
+      expect(useSyncStore.getState().tasks[0]).toMatchObject({
+        body: 'Original details',
+        captureRevision: 'revision-1',
+        handoffStatus: 'done',
+        processedBy: 'Codex',
+        proofUrl: 'https://github.com/testuser/my-repo/pull/42',
+        syncStatus: 'synced',
+      })
+    })
+
+    it('keeps a newer phone capture and does not import a stale receipt', async () => {
+      const task = createTask({
+        id: 'stale-receipt-task',
+        title: 'New phone title',
+        body: 'New phone details',
+        captureRevision: 'phone-revision-2',
+      })
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 2,
+            lastSyncedRevision: 1,
+            conflict: null,
+          },
+        },
+      })
+      const remoteContent = '- [x] **Old phone title** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: phone-revision-1] [Gitty: Done] [Proof: https://github.com/testuser/my-repo/pull/41] [Handled: 2026-03-14T11:00:00.000Z] [Processed by: Codex] <!-- ct:stale-receipt-task -->\n  Old phone details'
+      const encoded = Buffer.from(remoteContent, 'utf-8').toString('base64')
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: { content: encoded, sha: 'stale-receipt-sha' },
+      })
+      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
+        data: { content: { sha: 'new-phone-sha' } },
+      })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.status).toBeUndefined()
+      expect(useSyncStore.getState().tasks[0]).toMatchObject({
+        title: 'New phone title',
+        body: 'New phone details',
+        captureRevision: 'phone-revision-2',
+        handoffStatus: null,
+        processedBy: null,
+        proofUrl: null,
+      })
+      const uploaded = decodeURIComponent(escape(atob(
+        mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0].content,
+      )))
+      expect(uploaded).toContain('[Capture revision: phone-revision-2]')
+      expect(uploaded).not.toMatch(/- \[[ x]\].*\[Gitty: Done\]/)
+    })
+
+    it('conflicts when capture content diverges on the same revision even with a receipt', async () => {
+      const task = createTask({
+        id: 'divergent-task',
+        title: 'Same title',
+        body: 'Phone content',
+        captureRevision: 'shared-revision',
+      })
+      useSyncStore.setState({
+        tasks: [task],
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 1,
+            lastSyncedRevision: 0,
+            conflict: null,
+          },
+        },
+      })
+      const remoteContent = '- [x] **Same title** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: shared-revision] [Gitty: Done] [Proof: https://github.com/testuser/my-repo/pull/42] [Handled: 2026-03-14T11:00:00.000Z] [Processed by: Codex] <!-- ct:divergent-task -->\n  Repository content'
+      const encoded = Buffer.from(remoteContent, 'utf-8').toString('base64')
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: { content: encoded, sha: 'divergent-sha' },
+      })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.status).toBe('conflict')
+      expect(useSyncStore.getState().repoSyncMeta['testuser/my-repo'].conflict?.taskIds).toEqual(['divergent-task'])
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).not.toHaveBeenCalled()
+      expect(useSyncStore.getState().tasks[0]).toMatchObject({
+        body: 'Phone content',
+        syncStatus: 'pending',
+        handoffStatus: null,
+      })
+    })
+
+    it('conflicts instead of deleting a remote task with a different capture revision', async () => {
+      const tombstone = {
+        taskId: 'deleted-task',
+        captureRevision: 'deleted-revision-1',
+        deletedAt: '2026-03-14T10:00:00.000Z',
+      }
+      useSyncStore.setState({
+        repoTombstones: { 'testuser/my-repo': [tombstone] },
+        repoSyncMeta: {
+          'testuser/my-repo': {
+            lastSyncedSha: 'old-sha',
+            lastSyncAt: '2026-03-14T10:00:00.000Z',
+            localRevision: 2,
+            lastSyncedRevision: 1,
+            conflict: null,
+          },
+        },
+      })
+      const remoteContent = '- [ ] **Recreated remotely** ([Created: 2026-03-14]) (Priority: ⚪ Normal) [Capture revision: remote-revision-2] <!-- ct:deleted-task -->'
+      const encoded = Buffer.from(remoteContent, 'utf-8').toString('base64')
+      mockOctokit.rest.repos.getContent.mockResolvedValue({
+        data: { content: encoded, sha: 'new-remote-sha' },
+      })
+
+      const result = await syncAllRepoTasks({ maxRetries: 0 })
+
+      expect(result.status).toBe('conflict')
+      expect(useSyncStore.getState().repoSyncMeta['testuser/my-repo'].conflict?.taskIds).toEqual(['deleted-task'])
+      expect(useSyncStore.getState().repoTombstones['testuser/my-repo']).toEqual([tombstone])
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).not.toHaveBeenCalled()
     })
   })
 
@@ -912,21 +1272,15 @@ describe('sync-service', () => {
     })
   })
 
-  describe('ensureAgentFrontDoor', () => {
+  describe('prepareAgentConnectBranch', () => {
     beforeEach(() => {
       mockOctokit.rest.repos.getContent.mockReset()
       mockOctokit.rest.repos.createOrUpdateFileContents.mockReset()
     })
 
-    it('exports ensureAgentFrontDoor for testing', async () => {
-      const { ensureAgentFrontDoor } = await import('./sync-service')
-      expect(typeof ensureAgentFrontDoor).toBe('function')
-    })
-
-    it('handles missing files gracefully (creates new files with front-door block)', async () => {
-      const { ensureAgentFrontDoor } = await import('./sync-service')
-
-      // Simulate 404 by throwing — getFileContent does this
+    it('creates exact signed blocks on a deterministic setup branch', async () => {
+      const { prepareAgentConnectBranch } = await import('./sync-service')
+      mockOctokit.rest.git.getRef.mockResolvedValue({ data: { object: { sha: 'setup-sha' } } })
       mockOctokit.rest.repos.getContent.mockRejectedValue({
         status: 404,
         message: 'Not Found',
@@ -936,67 +1290,17 @@ describe('sync-service', () => {
         data: { content: { sha: 'newsha' } },
       })
 
-      // Should not throw
-      await expect(
-        ensureAgentFrontDoor(mockOctokit, 'owner', 'repo', undefined),
-      ).resolves.toBeUndefined()
-
-      // Should have attempted to create files
-      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalled()
-    })
-
-    it('detects German repos and uses German front-door block', async () => {
-      const { ensureAgentFrontDoor } = await import('./sync-service')
-
-      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
-      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
-        data: { content: { sha: 'newsha' } },
+      const result = await prepareAgentConnectBranch({
+        repo: 'owner/repo',
+        defaultBranch: 'main',
+        captureBranch: 'gitty/tholo91',
+        username: 'tholo91',
       })
-
-      // Test with German-named repo
-      await ensureAgentFrontDoor(mockOctokit, 'owner', 'bremen-rauchfrei', undefined)
-
-      // Check that the content written contains German text
-      const firstCall = mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0]?.[0]
-      if (firstCall?.content) {
-        const decoded = Buffer.from(firstCall.content, 'base64').toString('utf-8')
-        expect(decoded).toContain('Dieses Repo ist mit der Gitty-App')
-      }
-    })
-
-    it('passes branch parameter to file operations', async () => {
-      const { ensureAgentFrontDoor } = await import('./sync-service')
-
-      mockOctokit.rest.repos.getContent.mockRejectedValue({ status: 404 })
-      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
-        data: { content: { sha: 'newsha' } },
-      })
-
-      await ensureAgentFrontDoor(mockOctokit, 'owner', 'repo', 'feature-branch')
-
-      // Verify branch was passed to at least one file operation
-      const callsWithBranch = mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls.some(
-        (call) => call[0]?.branch === 'feature-branch',
-      )
-      expect(callsWithBranch).toBe(true)
-    })
-
-    it('catches errors and continues (fire-and-forget robustness)', async () => {
-      const { ensureAgentFrontDoor } = await import('./sync-service')
-
-      // First call fails, then succeeds
-      mockOctokit.rest.repos.getContent
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockRejectedValueOnce(new Error('Network error'))
-
-      mockOctokit.rest.repos.createOrUpdateFileContents.mockResolvedValue({
-        data: { content: { sha: 'newsha' } },
-      })
-
-      // Should not throw even with network errors
-      await expect(
-        ensureAgentFrontDoor(mockOctokit, 'owner', 'repo', undefined),
-      ).resolves.toBeUndefined()
+      expect(result.setupBranch).toBe('gitty/connect-tholo91')
+      expect(result.compareUrl).toContain('main...gitty%2Fconnect-tholo91')
+      expect(mockOctokit.rest.repos.createOrUpdateFileContents).toHaveBeenCalledTimes(2)
+      const decoded = Buffer.from(mockOctokit.rest.repos.createOrUpdateFileContents.mock.calls[0][0].content, 'base64').toString('utf-8')
+      expect(decoded).toContain('origin/gitty/tholo91:captured-ideas-tholo91.md')
     })
   })
 })

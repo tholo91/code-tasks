@@ -217,15 +217,12 @@ describe('TaskDetailSheet', () => {
     expect(screen.getByTestId('task-detail-completed')).toBeInTheDocument()
   })
 
-  it('shows a quiet Seen handoff receipt inside Details', async () => {
+  it('shows Inbox before a capture is filed', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(
       <TaskDetailSheet
         task={createTask({
           captureRevision: 'revision-1',
-          seenRevision: 'revision-1',
-          seenBy: 'Codex',
-          seenAt: '2026-03-14T12:00:00Z',
         })}
         {...defaultProps}
       />,
@@ -233,7 +230,7 @@ describe('TaskDetailSheet', () => {
 
     await expandMore(user)
 
-    expect(screen.getByTestId('task-detail-handoff')).toHaveTextContent('Seen by Codex')
+    expect(screen.getByTestId('task-detail-handoff')).toHaveTextContent('Inbox')
   })
 
   it('shows an HTTPS proof link for a verified Done receipt', async () => {
@@ -242,7 +239,6 @@ describe('TaskDetailSheet', () => {
       <TaskDetailSheet
         task={createTask({
           captureRevision: 'revision-1',
-          seenRevision: 'revision-1',
           handoffStatus: 'done',
           proofUrl: 'https://github.com/testuser/repo/pull/42',
         })}

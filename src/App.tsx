@@ -1,6 +1,6 @@
 import { Suspense, use, useMemo, useState, useEffect, useRef, useCallback, Component, type ReactNode } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { useSyncStore, selectSyncBranch, selectRepoSkipCi, selectRepoClaudeCodeHintSeen } from './stores/useSyncStore'
+import { useSyncStore, selectSyncBranch, selectRepoSkipCi } from './stores/useSyncStore'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { AuthSkeleton } from './components/ui/AuthSkeleton'
 import { AppHeader } from './components/layout/AppHeader'
@@ -22,7 +22,8 @@ import { SyncConflictBanner } from './features/sync/components/SyncConflictBanne
 import { BranchProtectionBanner } from './features/sync/components/BranchProtectionBanner'
 import { BranchFallbackPrompt } from './features/sync/components/BranchFallbackPrompt'
 import { SyncImportBanner } from './features/sync/components/SyncImportBanner'
-import { ClaudeCodeHintCard } from './features/sync/components/ClaudeCodeHintCard'
+import { AgentConnectCard } from './features/sync/components/AgentConnectCard'
+import { AutoSyncOptIn } from './features/sync/components/AutoSyncOptIn'
 import { useAutoSync } from './features/sync/hooks/useAutoSync'
 import { useRemoteChangeDetection } from './hooks/useRemoteChangeDetection'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
@@ -49,6 +50,7 @@ function RepoSelectorContainer({ onSelect, onRepoSelected }: { onSelect?: () => 
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="text-center">
+        <p className="mb-2 font-mono text-label" style={{ color: 'var(--color-accent)' }}>✓ GitHub connected · 2 Select repository</p>
         <h2 className="text-title font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           Select a Repository
         </h2>
@@ -63,11 +65,25 @@ function RepoSelectorContainer({ onSelect, onRepoSelected }: { onSelect?: () => 
           if (onRepoSelected) {
             onRepoSelected(repo.fullName)
           } else {
+            const state = useSyncStore.getState()
+            const key = repo.fullName.toLowerCase()
+            const alreadyConfigured =
+              state.selectedRepo?.fullName.toLowerCase() === key ||
+              Object.prototype.hasOwnProperty.call(state.repoSyncBranches, key) ||
+              Object.prototype.hasOwnProperty.call(state.repoSkipCi, key) ||
+              Object.prototype.hasOwnProperty.call(state.repoAutoSync, key) ||
+              state.tasks.some((task) => task.repoFullName.toLowerCase() === key)
             setSelectedRepo({
               id: repo.id,
               fullName: repo.fullName,
-              owner: repo.owner
+              owner: repo.owner,
+              defaultBranch: repo.defaultBranch,
             })
+            if (!alreadyConfigured) {
+              state.setRepoSyncBranch(repo.fullName, `gitty/${state.user?.login ?? 'inbox'}`)
+              state.setRepoSkipCi(repo.fullName, true)
+              state.setRepoAutoSync(repo.fullName, true)
+            }
           }
           onSelect?.()
         }}
@@ -194,13 +210,12 @@ function AppContent() {
   const setRepoSortMode = useSyncStore((s) => s.setRepoSortMode)
   const setRepoSyncBranch = useSyncStore((s) => s.setRepoSyncBranch)
   const setSyncStatus = useSyncStore((s) => s.setSyncStatus)
-  const setRepoClaudeCodeHintSeen = useSyncStore((s) => s.setRepoClaudeCodeHintSeen)
-  const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
   const fallbackBranch = useSyncStore(
     selectedRepo ? selectSyncBranch(selectedRepo.fullName) : () => null
   )
 
   const syncErrorType = useSyncStore((s) => s.syncErrorType)
+  const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
   const errorSheetOpen = useSyncStore((s) => s.errorSheetOpen)
 
   const currentSortMode: SortMode = selectedRepo
@@ -236,7 +251,6 @@ function AppContent() {
     sha: string | null
     source?: 'repo-switch' | 'remote-update'
   } | null>(null)
-  const [showClaudeCodeHint, setShowClaudeCodeHint] = useState(false)
   const [diffSummary, setDiffSummary] = useState<ImportDiffSummary | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   const [pullToRefreshResult, setPullToRefreshResult] = useState<'up-to-date' | null>(null)
@@ -274,13 +288,6 @@ function AppContent() {
 
   useAutoSync()
 
-  // Show the one-time Claude Code hint after the first successful sync per repo (AC: #1, #3, #5)
-  useEffect(() => {
-    if (syncEngineStatus !== 'success' || !selectedRepo) return
-    const alreadySeen = selectRepoClaudeCodeHintSeen(selectedRepo.fullName)(useSyncStore.getState())
-    if (!alreadySeen) setShowClaudeCodeHint(true)
-  }, [syncEngineStatus, selectedRepo])
-
   // Pull to refresh handler
   const handlePullRefresh = useCallback(async () => {
     if (!selectedRepo || !user || !isOnline) return
@@ -305,11 +312,11 @@ function AppContent() {
       setPullToRefreshResult('up-to-date')
       setTimeout(() => setPullToRefreshResult(null), 1500)
     }
-  }, [selectedRepo, user, isOnline, fallbackBranch, setRepoSyncMeta])
+  }, [selectedRepo, user, isOnline, fallbackBranch])
 
   const { pullDistance, isRefreshing: isPullRefreshing, handlers: pullHandlers } = usePullToRefresh({
     onRefresh: handlePullRefresh,
-    disabled: !isOnline || useSyncStore((s) => s.syncEngineStatus) === 'syncing',
+    disabled: !isOnline || syncEngineStatus === 'syncing',
   })
 
   // Show branch fallback prompt when branch-protection error occurs and no fallback is set
@@ -739,14 +746,8 @@ function AppContent() {
           />
 
           <SyncConflictBanner />
-          {showClaudeCodeHint && (
-            <ClaudeCodeHintCard
-              onDismiss={() => {
-                if (selectedRepo) setRepoClaudeCodeHintSeen(selectedRepo.fullName, true)
-                setShowClaudeCodeHint(false)
-              }}
-            />
-          )}
+          <AutoSyncOptIn />
+          <AgentConnectCard />
           {importPrompt && (
             <SyncImportBanner
               repoFullName={importPrompt.repoFullName}

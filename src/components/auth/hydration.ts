@@ -1,6 +1,6 @@
 import { useSyncStore } from '../../stores/useSyncStore'
 import { validateToken } from '../../services/github/auth-service'
-import { validateRepoAccess } from '../../services/github/repo-service'
+import { getRepoById } from '../../services/github/repo-service'
 import { getOctokit } from '../../services/github/auth-service'
 import { TokenVault } from '../../services/storage/token-vault'
 
@@ -74,10 +74,17 @@ async function performHydration(): Promise<void> {
     const { selectedRepo } = useSyncStore.getState()
     if (selectedRepo) {
       const octokit = getOctokit(token)
-      const hasAccess = await validateRepoAccess(octokit, selectedRepo.id)
-      if (!hasAccess) {
+      const verifiedRepo = await getRepoById(octokit, selectedRepo.id)
+      if (!verifiedRepo) {
         // Clear stale repo selection — user will be prompted to select a new repo
         useSyncStore.getState().setSelectedRepo(null)
+      } else {
+        useSyncStore.getState().setSelectedRepo({
+          id: verifiedRepo.id,
+          fullName: verifiedRepo.fullName,
+          owner: verifiedRepo.owner,
+          defaultBranch: verifiedRepo.defaultBranch,
+        })
       }
     }
   } catch {

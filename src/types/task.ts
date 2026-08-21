@@ -34,14 +34,8 @@ export interface Task {
   updatedAt: string | null
   /** Agent name from [Processed by: AgentName] markdown tag, null if not set */
   processedBy?: string | null
-  /** Changes when the phone edits the original capture, so agents only surface it once per revision. */
+  /** Changes whenever the phone edits the original capture. */
   captureRevision?: string
-  /** Capture revision that an agent has already acknowledged, null until first seen. */
-  seenRevision?: string | null
-  /** ISO 8601 timestamp from the agent's Seen receipt, null until first seen. */
-  seenAt?: string | null
-  /** Agent name from the Seen receipt, null until first seen. */
-  seenBy?: string | null
   /** Explicit agent handoff state. Absence means the capture is still an inbox item. */
   handoffStatus?: HandoffStatus | null
   /** HTTPS proof link for an explicit Filed or Done handoff. */

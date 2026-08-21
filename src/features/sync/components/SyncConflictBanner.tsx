@@ -1,7 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSyncStore } from '../../../stores/useSyncStore'
-import { syncPendingTasks } from '../../../services/github/sync-service'
 import { TRANSITION_NORMAL } from '../../../config/motion'
 import { SyncConflictSheet } from './SyncConflictSheet'
 
@@ -10,8 +9,6 @@ export function SyncConflictBanner() {
   const syncEngineStatus = useSyncStore((s) => s.syncEngineStatus)
   const syncError = useSyncStore((s) => s.syncError)
   const repoSyncMeta = useSyncStore((s) => s.repoSyncMeta)
-  const clearRepoConflict = useSyncStore((s) => s.clearRepoConflict)
-  const [isResolving, setIsResolving] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
 
   if (!selectedRepo) return null
@@ -20,36 +17,6 @@ export function SyncConflictBanner() {
   const repoKey = selectedRepo.fullName.toLowerCase()
   const conflict = repoSyncMeta[repoKey]?.conflict
   const isConflict = syncEngineStatus === 'conflict' || Boolean(conflict)
-
-  const handleForceSync = useCallback(async () => {
-    if (isResolving) return
-    setIsResolving(true)
-
-    const { setSyncStatus, updateLastSyncedAt } = useSyncStore.getState()
-    const repoSyncBranches = useSyncStore.getState().repoSyncBranches
-    const fallbackBranch = selectedRepo ? repoSyncBranches[selectedRepo.fullName.toLowerCase()] ?? null : null
-    setSyncStatus('syncing')
-
-    try {
-      const result = await syncPendingTasks({ 
-        allowConflict: true, 
-        maxRetries: 1,
-        branch: fallbackBranch ?? undefined
-      })
-      if (result.error) {
-        setSyncStatus('error', result.error)
-      } else {
-        clearRepoConflict(selectedRepo.fullName)
-        setSyncStatus('success')
-        updateLastSyncedAt()
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sync failed'
-      setSyncStatus('error', message)
-    } finally {
-      setIsResolving(false)
-    }
-  }, [clearRepoConflict, isResolving, selectedRepo])
 
   return (
     <>
@@ -90,15 +57,6 @@ export function SyncConflictBanner() {
                     style={{ width: 'auto', minHeight: 36, paddingInline: 16, backgroundColor: 'var(--color-warning)', color: '#1c2128' }}
                   >
                     Review
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleForceSync}
-                    disabled={isResolving}
-                    className="btn-primary"
-                    style={{ width: 'auto', minHeight: 36, paddingInline: 16, backgroundColor: 'var(--color-danger)' }}
-                  >
-                    {isResolving ? 'Syncing…' : 'Keep local'}
                   </button>
                 </div>
               </div>
