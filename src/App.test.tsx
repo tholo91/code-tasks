@@ -276,7 +276,7 @@ describe('App', () => {
       render(<App />)
     })
 
-    expect(screen.getByRole('heading', { name: /capture coding ideas on the go/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /capture now\. hand it to your coding agent later/i })).toBeInTheDocument()
   })
 
   it('shows main interface when authenticated', async () => {
